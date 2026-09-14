@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["catalog_id", "key_id", "public_key_hex", "cache_database"],
+  "properties": {
+    "catalog_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "key_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "public_key_hex": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "cache_database": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false
+}

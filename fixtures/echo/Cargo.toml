@@ -1,0 +1,23 @@
+[package]
+name = "lenso-marketplace-echo"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[package.metadata.lenso]
+plugin-id = "lenso.marketplace.echo"
+root-slot = "tool-providers"
+
+[package.metadata.lenso-cli]
+runtime = "process"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lenso = { package = "lenso-plugin-sdk", version = "0.2.0", git = "https://github.com/LioRael/lenso-runtime-rust", rev = "7c54f4065012d41769fefbb41098a4657f1f4825" }
+lenso-agent-tool-sdk = { version = "0.2.0", git = "https://github.com/LioRael/lenso-agent-harness", rev = "fd944a4ee56026be708b50c710635d1b17a59758" }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+
+[workspace]

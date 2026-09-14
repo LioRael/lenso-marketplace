@@ -1,0 +1,18 @@
+[package]
+name = "lenso-capability-marketplace-directory"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+license = "MIT"
+
+[dependencies]
+futures = "0.3"
+lenso-contract-runtime = "0.2.0"
+lenso-kernel = "0.3.6"
+lenso-plugin-authoring = "0.2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+lenso-contract-codegen = "0.9.0"
