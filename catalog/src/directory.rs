@@ -36,6 +36,36 @@ impl PublishedDirectory {
         Ok(Self { connection })
     }
 
+    /// Write a consistent standalone SQLite image to a new operator-owned path.
+    /// Failed attempts leave the destination for inspection; never overwrite it.
+    pub fn backup(&self, destination: &Path) -> Result<()> {
+        ensure!(destination.is_absolute(), "backup path must be absolute");
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt as _;
+            options.mode(0o600);
+        }
+        let file = options.open(destination)?;
+        let mut target = Connection::open(destination)?;
+        {
+            let backup = rusqlite::backup::Backup::new(&self.connection, &mut target)?;
+            ensure!(
+                backup.step(-1)? == rusqlite::backup::StepResult::Done,
+                "backup incomplete; preserve destination and retry with a new path"
+            );
+        }
+        let integrity: String = target.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+        ensure!(integrity == "ok", "backup integrity check failed");
+        target.close().map_err(|(_, error)| error)?;
+        file.sync_all()?;
+        if let Some(parent) = destination.parent() {
+            std::fs::File::open(parent)?.sync_all()?;
+        }
+        Ok(())
+    }
+
     pub fn latest(&self) -> Result<Option<String>> {
         let value: Option<Option<Vec<u8>>> = self.connection.query_row(
             "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM snapshots ORDER BY revision DESC LIMIT 1",

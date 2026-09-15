@@ -1,8 +1,36 @@
-# Marketplace implementation
+# Lenso Marketplace
 
-Status: verified catalog/publishing domain, directory Capability and a runnable
-public HTTP read Host with browse/detail pages.
-Not a deployed marketplace.
+Independent Lenso Plugin marketplace application: browse and detail UI, signed
+catalog publisher, native Host and Cloudflare Workers Host. The frontend uses
+released `@lenso/ui` and `@lenso/tokens`. Installation is performed by Console
+Agent tools; Marketplace never connects to an Agent to install plugins.
+
+## Build and verify
+
+Use Node 24+, pnpm (via Corepack) and Rust 1.94.0. No Console checkout is required.
+
+```sh
+pnpm install --frozen-lockfile
+pnpm --dir workers install --frozen-lockfile
+pnpm build
+CARGO=cargo pnpm test:native
+CARGO=cargo pnpm test:browser
+pnpm test:workers
+CARGO=cargo pnpm build:workers
+```
+
+Browser acceptance additionally requires `lenso-cli` and Playwright Chromium.
+Workers builds require the wasm32-unknown-unknown target and wasm-bindgen-cli
+0.2.127. Within the Lenso sibling workspace, set `CARGO` to the shared
+`.lenso-tools/bin/lenso-cargo` wrapper instead of cargo.
+
+Run `pnpm dev` for frontend development (`/?catalog=sample` is the explicit sample
+catalog). Run the native App below or a Workers Host for real signed catalog data.
+Production deployment remains a separate operation; see the
+[rollout guide](workers/docs/g5-rollout.md), [publisher guide](catalog/docs/operator.md)
+and [repository migration record](docs/migration.md).
+
+## Components and existing acceptance
 
 `catalog/` is an independently buildable private Rust package. It owns signed
 release identity, bounded search/exact selection, and the SQLite curated
@@ -41,9 +69,9 @@ From this worktree, use the workspace Cargo wrapper:
 
 ```sh
 export CARGO=/Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo
-bash plugins/marketplace/verify-local.sh
-"$CARGO" fmt --manifest-path plugins/marketplace/catalog/Cargo.toml -- --check
-"$CARGO" clippy --locked --manifest-path plugins/marketplace/catalog/Cargo.toml --all-targets -- -D warnings
+bash verify-local.sh
+"$CARGO" fmt --manifest-path catalog/Cargo.toml -- --check
+"$CARGO" clippy --locked --manifest-path catalog/Cargo.toml --all-targets -- -D warnings
 ```
 
 `verify-local.sh` uses temporary artifacts and removes them on exit. Ordinary
@@ -100,9 +128,9 @@ issuance, or user-target mutation is performed by this foundation.
 ## Directory Plugin checks
 
 ```sh
-"$CARGO" test --locked --manifest-path plugins/marketplace/directory/Cargo.toml --workspace
-"$CARGO" clippy --locked --manifest-path plugins/marketplace/directory/Cargo.toml --workspace --all-targets -- -D warnings
-pnpm exec tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck plugins/marketplace/directory/crates/lenso-capability-marketplace-directory/generated/bindings.ts
+"$CARGO" test --locked --manifest-path directory/Cargo.toml --workspace
+"$CARGO" clippy --locked --manifest-path directory/Cargo.toml --workspace --all-targets -- -D warnings
+pnpm exec tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck directory/crates/lenso-capability-marketplace-directory/generated/bindings.ts
 ```
 
 The generated-endpoint test proves not-published, exact persisted bytes, close
@@ -114,7 +142,7 @@ an App owner decision.
 
 ```sh
 CARGO=/Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo \
-  bash plugins/marketplace/verify-archive-handoff.sh /absolute/path/to/cli-checkout /absolute/path/to/echo.lenso-plugin
+  bash verify-archive-handoff.sh /absolute/path/to/cli-checkout /absolute/path/to/echo.lenso-plugin
 ```
 
 The script creates a temporary Cargo harness with an explicit source override,
@@ -131,8 +159,8 @@ a Console Shell dependency. The directory publisher database must already exist;
 the read service never initializes publisher state or accepts a signing key.
 
 ```sh
-pnpm marketplace:build
-"$CARGO" run --locked --manifest-path plugins/marketplace/app/Cargo.toml -- \
+pnpm build
+"$CARGO" run --locked --manifest-path app/Cargo.toml -- \
   --app-root /absolute/path/to/marketplace-app \
   --directory-database /absolute/path/to/published-directory.sqlite3 \
   --catalog-id YOUR_CATALOG_ID --key-id YOUR_KEY_ID \
@@ -162,8 +190,8 @@ It does not silently preserve an old route table. This test uses an empty signed
 catalog and does not constitute rendered UI or authenticated publisher acceptance.
 
 ```sh
-"$CARGO" test --locked --manifest-path plugins/marketplace/app/Cargo.toml
-"$CARGO" clippy --locked --manifest-path plugins/marketplace/app/Cargo.toml --all-targets -- -D warnings
+"$CARGO" test --locked --manifest-path app/Cargo.toml
+"$CARGO" clippy --locked --manifest-path app/Cargo.toml --all-targets -- -D warnings
 ```
 
 ## Browser acceptance
@@ -176,14 +204,14 @@ Console business code. The API and fixed static asset routes belong to the same
 removable Web Plugin. Source links come from verified release metadata. There is
 no installation or publishing button before those workflows exist.
 
-Build from the repository root with `pnpm marketplace:build` before Cargo checks.
+Build from the repository root with `pnpm build` before Cargo checks.
 The Web build script checks a source/lockfile fingerprint and rejects stale or
 missing assets. Build output is ignored; CI builds it from the frozen dependency
 lock. Static assets use revalidation rather than immutable caching at fixed URLs.
 
 ```sh
 CARGO=/Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo \
-  bash plugins/marketplace/verify-browser.sh
+  bash verify-browser.sh
 ```
 
 Requires the installed Lenso CLI and Playwright Chromium. This script builds and

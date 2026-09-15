@@ -16,7 +16,7 @@ fn main() {
         "index.html",
         "vite.config.ts",
         "tsconfig.json",
-        "../../../../pnpm-lock.yaml",
+        "../../pnpm-lock.yaml",
     ] {
         let path = format!("ui/{file}");
         println!("cargo:rerun-if-changed={path}");
@@ -30,6 +30,6 @@ fn main() {
     let built = std::fs::read_to_string("ui/dist/source.sha256").unwrap_or_default();
     assert_eq!(
         actual, built,
-        "Marketplace UI is missing or stale. Run pnpm marketplace:build from the workspace root."
+        "Marketplace UI is missing or stale. Run pnpm build from the workspace root."
     );
 }

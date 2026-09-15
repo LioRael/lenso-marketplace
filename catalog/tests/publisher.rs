@@ -100,6 +100,53 @@ fn operator_preserves_committed_bytes_and_rejects_stale_publication() {
     assert_eq!(checked["catalog_id"], "operator-test");
     assert!(!invoke(&config, &["verify"], Some(b"{}")).status.success());
 
+    // A live WAL image cannot be backed up by copying only the main file.
+    // Keep the connection open with auto-checkpoint disabled while backing up.
+    let wal = rusqlite::Connection::open(&database).unwrap();
+    wal.execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; CREATE TABLE backup_marker(value TEXT); INSERT INTO backup_marker VALUES('wal-only');").unwrap();
+    let backup = home.path().join("backup.sqlite3");
+    let backed_up = invoke(&config, &["backup", backup.to_str().unwrap()], None);
+    assert!(
+        backed_up.status.success(),
+        "{}",
+        String::from_utf8_lossy(&backed_up.stderr)
+    );
+    let before = fs::read(&backup).unwrap();
+    assert!(
+        !invoke(&config, &["backup", backup.to_str().unwrap()], None)
+            .status
+            .success()
+    );
+    assert_eq!(before, fs::read(&backup).unwrap());
+    let restored = home.path().join("restored.json");
+    let mut restored_config: serde_json::Value =
+        serde_json::from_slice(&fs::read(&config).unwrap()).unwrap();
+    restored_config["database"] = serde_json::json!(backup);
+    fs::write(&restored, serde_json::to_vec(&restored_config).unwrap()).unwrap();
+    assert_eq!(next.stdout, invoke(&restored, &["export"], None).stdout);
+    let image = rusqlite::Connection::open(&backup).unwrap();
+    let marker: String = image
+        .query_row("SELECT value FROM backup_marker", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(marker, "wal-only");
+    let history: i64 = image
+        .query_row("SELECT count(*) FROM snapshots", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(history, 2);
+    drop(image);
+    assert!(
+        !invoke(&restored, &["publish", "reviewer", "1", "3600"], Some(&key))
+            .status
+            .success()
+    );
+    assert!(
+        invoke(&restored, &["publish", "reviewer", "2", "3600"], Some(&key))
+            .status
+            .success()
+    );
+    assert_eq!(next.stdout, invoke(&config, &["export"], None).stdout);
+    drop(wal);
+
     let mut interrupted = Command::new(env!("CARGO_BIN_EXE_lenso-marketplace-publisher"))
         .arg(&config)
         .args(["publish", "reviewer", "2", "3600"])

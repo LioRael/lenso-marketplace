@@ -1,2 +1,9 @@
-fixtures/*/dist/
-web/ui/dist/
+node_modules/
+**/target/
+**/dist/
+**/pkg/
+**/.wrangler/
+.env
+.env.*
+.dev.vars
+.DS_Store

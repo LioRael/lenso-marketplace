@@ -29,7 +29,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|export|verify|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|export|verify|backup|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -77,6 +77,24 @@ fn run() -> Result<()> {
                 .open(&config.database)?;
             Directory::open(&config.database, &config.catalog_id, config.reviewers)?;
             writeln!(io::stdout().lock(), "{{\"initialized\":true}}")?;
+        }
+        "backup" => {
+            ensure!(
+                args.len() == 3,
+                "backup requires a new absolute destination path"
+            );
+            let view = PublishedDirectory::open(&config.database, &config.catalog_id)?;
+            let destination = PathBuf::from(&args[2]);
+            view.backup(&destination)?;
+            let copied = PublishedDirectory::open(&destination, &config.catalog_id)?;
+            let latest = copied.latest()?;
+            let receipt = serde_json::json!({
+                "backup": destination,
+                "catalog_id": config.catalog_id,
+                "publication_digest": latest.as_ref().map(|bytes| digest(bytes.as_bytes()))
+            });
+            serde_json::to_writer(io::stdout().lock(), &receipt)?;
+            writeln!(io::stdout().lock())?;
         }
         "export" => {
             ensure!(args.len() == 2, "export accepts no extra arguments");

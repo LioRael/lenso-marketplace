@@ -19,7 +19,7 @@ After generating the normal G3 fixtures, run from the Console checkout:
 
 ```sh
 /Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo +1.94.0 run \
-  --locked --manifest-path plugins/marketplace/catalog/Cargo.toml \
+  --locked --manifest-path catalog/Cargo.toml \
   --example workers_race_fixtures -- \
   /absolute/path/to/g3-fixtures /absolute/path/to/new-cas-fixtures
 ```
@@ -73,7 +73,7 @@ smoke must leave both publication and accepted state at restored revision 5.
 The client verifies that prerequisite through read-only D1/R2 calls; it will not
 reset a pointer, overwrite an object or invent a baseline to make the test run.
 
-From `plugins/marketplace/workers`, with `G3_PROOF_KEY` already supplied securely:
+From `workers`, with `G3_PROOF_KEY` already supplied securely:
 
 ```sh
 node proof/consumers-race.mjs \

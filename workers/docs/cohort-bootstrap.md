@@ -1,3 +1,6 @@
+> Historical qualification procedure from before repository extraction. Original
+> source names and paths below are retained; use the repository root for new builds.
+
 # Workers package bootstrap and historical cohort
 
 [`proof/cohort.py`](../proof/cohort.py) recreates the historical sibling layout used

@@ -18,7 +18,7 @@ The operator does not generate keys, choose production identities or create
 parent directories. Prepare and protect those outside the command.
 
 Build with `cargo build --locked --manifest-path
-plugins/marketplace/catalog/Cargo.toml --bin lenso-marketplace-publisher`.
+catalog/Cargo.toml --bin lenso-marketplace-publisher`.
 Invoke the built executable as follows:
 
 ```sh
@@ -62,3 +62,37 @@ The production key custodian and initial reviewed catalog remain launch inputs.
 revision and expiry using configured public trust and the current clock. It does
 not require a publisher database to exist. This is a cryptographic admission
 operation, not an upload, historical checkpoint check or publication authority.
+
+## Consistent publisher backup
+
+`lenso-marketplace-publisher CONFIG backup /absolute/new-backup.sqlite3` writes
+an SQLite online-backup image from a read-only, catalog-checked connection. The
+destination must not exist. It includes committed WAL state, all publication
+history, submissions, namespace ownership and audit tables. It validates SQLite
+integrity and flushes the image and parent directory before printing its receipt.
+On Unix the new file is owner-readable/writable only. Backups contain private
+review data and must remain in protected storage.
+
+The receipt's `publication_digest` identifies the latest envelope in the copied
+image, not a hash of the entire database. It is null for an unpublished directory.
+Record a separate whole-file checksum when transferring the backup. Do not copy
+only the live SQLite main file or use a fresh `initialize` as a restore operation.
+
+A busy or failed backup leaves its new destination for inspection; it is not a
+successful backup and the command will not overwrite it. Retry with another path
+after diagnosing the failure. Broken stdout does not remove a completed image.
+The single backup step holds a source read lock; run during a controlled operator
+window rather than using it as a high-frequency backup service.
+
+For recovery, preserve the original image and configure a separate protected copy
+as the publisher database. Check the catalog identity, full image checksum and
+exported signed envelope, and reconcile its revision/history with the highest
+known publication and consumer state before authorizing a new publication. A
+valid older backup cannot prove that no later revision exists. Never reset D1
+acceptance or promote an old pointer to make restoration appear successful.
+
+The process regression exercises a live WAL backup, exact export recovery, retained
+snapshot history, rejection of stale publication, and forward publication from an
+isolated restored image without changing the original database. This qualifies the
+local backup primitive; remote backup retention, storage protection, transfer and
+unattended Actions restore remain deployment work.

@@ -7,13 +7,22 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: import.meta.dirname,
+  build: {
+    cssCodeSplit: false,
+    emptyOutDir: true,
+    outDir: "dist",
+    rolldownOptions: {
+      output: {
+        assetFileNames: "marketplace.[ext]",
+        entryFileNames: "marketplace.js",
+      },
+    },
+  },
   plugins: [
     // Catalog styles must not reuse the independently numbered package CSS layers.
     stylex({ devMode: "off", useCSSLayers: false }),
     react(),
     {
-      name: "marketplace-source-fingerprint",
       closeBundle() {
         const hash = createHash("sha256");
         for (const file of [
@@ -31,7 +40,7 @@ export default defineConfig({
           "index.html",
           "vite.config.ts",
           "tsconfig.json",
-          "../../../../pnpm-lock.yaml",
+          "../../pnpm-lock.yaml",
         ]) {
           hash
             .update(file)
@@ -44,17 +53,8 @@ export default defineConfig({
           hash.digest("hex")
         );
       },
+      name: "marketplace-source-fingerprint",
     },
   ],
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-    cssCodeSplit: false,
-    rolldownOptions: {
-      output: {
-        entryFileNames: "marketplace.js",
-        assetFileNames: "marketplace.[ext]",
-      },
-    },
-  },
+  root: import.meta.dirname,
 });

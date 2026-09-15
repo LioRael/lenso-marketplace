@@ -3,7 +3,7 @@ set -euo pipefail
 export RUSTUP_TOOLCHAIN="${RUSTUP_TOOLCHAIN:-1.94.0}"
 : "${CARGO:?Set CARGO to the repository Cargo wrapper, or cargo in CI}"
 marketplace_root="$(cd "$(dirname "$0")" && pwd)"
-workspace_root="$(cd "$marketplace_root/../.." && pwd)"
+workspace_root="$marketplace_root"
 proof_root="$(mktemp -d "${TMPDIR:-/tmp}/lenso-marketplace-browser.XXXXXX")"
 server_pid=""
 cleanup() {
@@ -12,7 +12,7 @@ cleanup() {
 }
 trap cleanup EXIT
 cd "$workspace_root"
-pnpm marketplace:build
+pnpm build
 "$CARGO" generate-lockfile --manifest-path "$marketplace_root/fixtures/echo/Cargo.toml"
 lenso plugin pack --repo-root "$marketplace_root/fixtures/echo" --output "$proof_root/echo.lenso-plugin" --json
 # Only the locally built test fixture is extracted here. Production archive

@@ -1,0 +1,42 @@
+{
+  "name": "@lenso/marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p web/ui/tsconfig.json && vite build --config web/ui/vite.config.ts",
+    "dev": "vite --config web/ui/vite.config.ts",
+    "lint": "ultracite check --deny-warnings",
+    "format:check": "oxfmt --check .",
+    "test:browser": "bash verify-browser.sh",
+    "test:native": "bash scripts/check-native.sh",
+    "test:workers": "node --test workers/storage.test.mjs workers/storage-scope.test.mjs workers/operator/*.test.mjs",
+    "build:workers": "bash workers/build.sh"
+  },
+  "dependencies": {
+    "@lenso/tokens": "0.5.0",
+    "@lenso/ui": "0.5.0",
+    "@stylexjs/stylex": "0.19.0",
+    "lucide-react": "^1.28.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@stylexjs/unplugin": "0.19.0",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
+    "playwright": "1.62.1",
+    "typescript": "7.0.2",
+    "ultracite": "^7.10.1",
+    "unplugin": "2.3.11",
+    "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1"
+}
