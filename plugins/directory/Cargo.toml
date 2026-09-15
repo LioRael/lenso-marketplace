@@ -1,0 +1,40 @@
+[package]
+name = "lenso-marketplace-directory-plugin"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+license = "MIT"
+
+[package.metadata.lenso]
+plugin-id = "lenso.marketplace.directory"
+root-slot = "marketplace-directories"
+
+
+[features]
+default = ["native"]
+native = ["dep:rusqlite", "lenso-plugin-catalog/bundle-verification"]
+
+[dependencies]
+anyhow = "1"
+futures = "0.3"
+rusqlite = { version = "0.40", features = [
+  "bundled",
+  "backup",
+], optional = true }
+lenso = "0.5.17"
+lenso-kernel = "0.3.6"
+lenso-plugin-catalog.workspace = true
+lenso-native-adapter = "0.3.14"
+lenso-capability-marketplace-directory = { path = "../../contracts/directory" }
+serde_json = "1"
+ed25519-dalek = "2.2"
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+futures = "0.3"
+tempfile = "3"
+ed25519-dalek = "2.2"
+
+[lints.rust]
+unsafe_code = "forbid"

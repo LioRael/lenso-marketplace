@@ -1,0 +1,28 @@
+[package]
+name = "lenso-marketplace-workers-host"
+version = "0.1.0"
+edition = "2024"
+publish = false
+[lib]
+crate-type = ["cdylib"]
+[dependencies]
+lenso-workers-driver = "0.1.0"
+lenso-kernel.workspace = true
+lenso-app-plan.workspace = true
+lenso-native-adapter.workspace = true
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+js-sys = "=0.3.104"
+futures = "0.3"
+http = "1"
+bytes = "1"
+base64 = "0.22"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+lenso-plugin-catalog.workspace = true
+lenso-marketplace-directory-plugin = { path = "../../plugins/directory", default-features = false }
+lenso-marketplace-web-plugin = { path = "../../plugins/web", default-features = false }
+lenso-capability-marketplace-directory = { path = "../../contracts/directory" }
+lenso-capability-http-endpoint = "=0.3.1"
+lenso-web-ingress-plugin = { version = "0.4.3", default-features = false }

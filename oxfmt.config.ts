@@ -8,17 +8,10 @@ export default defineConfig({
   ignorePatterns: [
     ...(ultracite.ignorePatterns ?? []),
     "**/*.md",
-    "service/**/generated/**",
-    "contracts/**/generated/**",
-    "plugins/**/generated/**",
-    // Rust build output and frozen proof records have byte-level integrity checks.
-    "directory/config.schema.json",
-    "web/config.schema.json",
-    "workers/evidence/**",
-    "workers/recovery/evidence/**",
-    "workers/proof/cohort.json",
-    // These exact deployed configs are hashed by the qualification receipts.
-    "workers/wrangler.jsonc",
-    "workers/recovery/wrangler.jsonc",
+    "**/generated/**",
+    "plugins/directory/config.schema.json",
+    "plugins/web/config.schema.json",
+    "docs/archive/**",
+    "tests/workers/proof/cohort.json",
   ],
 });

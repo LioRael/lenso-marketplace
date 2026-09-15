@@ -21,31 +21,12 @@ jobs:
           node-version: 24
       - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
-          toolchain: "1.94"
+          toolchain: "1.94.0"
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
-        with:
-          workspaces: |
-            catalog
-            directory
-            web
-            app
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm exec oxlint web/ui/*.tsx web/ui/*.ts web/tests/browser.mjs
+      - run: CARGO=cargo pnpm test:native
       - run: pnpm exec playwright install --with-deps chromium
       - run: cargo install lenso-cli --version 0.5.2 --locked
-      - run: CARGO=cargo bash verify-browser.sh
-      - run: cargo fmt --manifest-path catalog/Cargo.toml -- --check
-      - run: cargo clippy --locked --manifest-path catalog/Cargo.toml --all-targets -- -D warnings
-      - run: cargo test --locked --manifest-path catalog/Cargo.toml
-      - run: node catalog/tests/cross-language.mjs
-      - run: cargo fmt --manifest-path directory/Cargo.toml --all -- --check
-      - run: cargo clippy --locked --manifest-path directory/Cargo.toml --workspace --all-targets -- -D warnings
-      - run: cargo test --locked --manifest-path directory/Cargo.toml --workspace
-      - run: pnpm exec tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck directory/crates/lenso-capability-marketplace-directory/generated/bindings.ts
-      - run: cargo fmt --manifest-path web/Cargo.toml --all -- --check
-      - run: cargo clippy --locked --manifest-path web/Cargo.toml --all-targets -- -D warnings
-      - run: cargo fmt --manifest-path app/Cargo.toml --all -- --check
-      - run: cargo clippy --locked --manifest-path app/Cargo.toml --all-targets -- -D warnings
-      - run: cargo test --locked --manifest-path app/Cargo.toml
+      - run: CARGO=cargo pnpm test:browser
+      - run: pnpm exec tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck contracts/directory/generated/bindings.ts

@@ -4,36 +4,43 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p web/ui/tsconfig.json && vite build --config web/ui/vite.config.ts",
-    "dev": "vite --config web/ui/vite.config.ts",
+    "build": "tsc -p plugins/web/ui/tsconfig.json && vite build --config plugins/web/ui/vite.config.ts",
+    "dev": "vite --config plugins/web/ui/vite.config.ts",
     "lint": "ultracite check --deny-warnings",
     "format:check": "oxfmt --check .",
-    "test:browser": "bash verify-browser.sh",
+    "test:browser": "bash scripts/verify-browser.sh",
     "test:native": "bash scripts/check-native.sh",
-    "test:workers": "node --test workers/storage.test.mjs workers/storage-scope.test.mjs workers/operator/*.test.mjs",
-    "build:workers": "bash workers/build.sh"
+    "test:workers": "node --test apps/workers/*.test.mjs tools/cloudflare/*.test.mjs",
+    "build:workers": "bash apps/workers/build.sh",
+    "dev:workers": "wrangler dev --config apps/workers/wrangler.jsonc",
+    "dev:proof": "wrangler dev --config tests/workers/wrangler.jsonc"
   },
   "dependencies": {
     "@lenso/tokens": "0.5.0",
     "@lenso/ui": "0.5.0",
+    "@lenso/workers-runtime": "0.1.1",
     "@stylexjs/stylex": "0.19.0",
+    "aws4fetch": "1.0.20",
     "lucide-react": "^1.28.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@lenso/contract-runtime": "0.3.0",
     "@stylexjs/unplugin": "0.19.0",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
+    "miniflare": "4.20260701.0",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.77.0",
     "playwright": "1.62.1",
     "typescript": "7.0.2",
     "ultracite": "^7.10.1",
     "unplugin": "2.3.11",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "wrangler": "4.107.0"
   },
   "engines": {
     "node": ">=22.12.0"
