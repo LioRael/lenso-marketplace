@@ -1,7 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["catalog_id", "key_id", "public_key_hex", "cache_database"],
+  "required": [
+    "catalog_id",
+    "key_id",
+    "public_key_hex"
+  ],
   "properties": {
     "catalog_id": {
       "type": "string",
@@ -21,6 +25,11 @@
     "cache_database": {
       "type": "string",
       "minLength": 1
+    },
+    "storage_binding": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
     }
   },
   "additionalProperties": false

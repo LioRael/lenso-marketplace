@@ -1,0 +1,876 @@
+{
+  "base": "https://lenso-marketplace-g3-proof.lenso.workers.dev",
+  "location": "--remote",
+  "passed": true,
+  "checks": 127,
+  "recreatedBoots": [
+    {
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "generations": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    }
+  ],
+  "records": [
+    {
+      "label": "not published",
+      "status": 503,
+      "generation": "1",
+      "boot": "79f94d2f-e042-4501-a7a1-13d4ac1523e4",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "verified published snapshot",
+      "status": 200,
+      "generation": "1",
+      "boot": "79f94d2f-e042-4501-a7a1-13d4ac1523e4",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "exact signed bytes",
+      "status": 200,
+      "generation": "1",
+      "boot": "79f94d2f-e042-4501-a7a1-13d4ac1523e4",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "bounded admission 2",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 1",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 3",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 7",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 5",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 4",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 6",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 8",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 9",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 11",
+      "status": 503
+    },
+    {
+      "label": "bounded admission 0",
+      "status": 200
+    },
+    {
+      "label": "bounded admission 10",
+      "status": 200
+    },
+    {
+      "label": "same revision equivocation",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "invalid signature",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "expired snapshot",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "new revision",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "checkpoint object tampering",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "removed identity cannot change artifact",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "rollback",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "storage outage fails closed",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "outage preserves rollback fence",
+      "status": 503,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 0",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 1",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 2",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 3",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 4",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 5",
+      "status": 200,
+      "generation": "1",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 6",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 7",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 8",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 9",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 10",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 11",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 12",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 13",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 14",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 15",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 16",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 17",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 18",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 19",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 20",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 21",
+      "status": 200,
+      "generation": "2",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 22",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 23",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 24",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 25",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 26",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 27",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 28",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 29",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 30",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 31",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 32",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 33",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 34",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 35",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 36",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 37",
+      "status": 200,
+      "generation": "3",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 38",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 39",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 40",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 41",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 42",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 43",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 44",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 45",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 46",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 47",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 48",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 49",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 50",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 51",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 52",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 53",
+      "status": 200,
+      "generation": "4",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 54",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 55",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 56",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 57",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 58",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 59",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 60",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 61",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 62",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 63",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 64",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 65",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 66",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 67",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 68",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 69",
+      "status": 200,
+      "generation": "5",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 70",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 71",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 72",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 73",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 74",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 75",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 76",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 77",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 78",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 79",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 80",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 81",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 82",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 83",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 84",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 85",
+      "status": 200,
+      "generation": "6",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10616832
+    },
+    {
+      "label": "recreation 86",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 87",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 88",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 89",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 90",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10420224
+    },
+    {
+      "label": "recreation 91",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 92",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 93",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 94",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10485760
+    },
+    {
+      "label": "recreation 95",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 96",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 97",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 98",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "recreation 99",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 10551296
+    },
+    {
+      "label": "large signed catalog verification",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 39845888
+    },
+    {
+      "label": "large signed snapshot response",
+      "status": 200,
+      "generation": "7",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 39845888
+    },
+    {
+      "label": "recovery after large catalog",
+      "status": 200,
+      "generation": "8",
+      "boot": "523687da-c748-4e57-8f84-69249951f3bc",
+      "wasmMemoryBytes": 28704768
+    }
+  ]
+}

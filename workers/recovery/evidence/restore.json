@@ -1,0 +1,164 @@
+{
+  "timestamp": "2026-09-14T17:00:09.221308+00:00",
+  "database_id": "256d0844-cff5-4ead-8770-ab62c7f181d1",
+  "bucket": "lenso-marketplace-recovery-proof",
+  "before": {
+    "marketplace_publications": {
+      "results": [],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.1737
+        },
+        "duration": 0.1737,
+        "changes": 0,
+        "last_row_id": 1,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    },
+    "marketplace_accepted": {
+      "results": [],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.1973
+        },
+        "duration": 0.1973,
+        "changes": 0,
+        "last_row_id": 1,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    }
+  },
+  "writes": [
+    {
+      "results": [],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.5532
+        },
+        "duration": 0.5532,
+        "changes": 1,
+        "last_row_id": 1,
+        "changed_db": true,
+        "size_after": 40960,
+        "rows_read": 0,
+        "rows_written": 2,
+        "total_attempts": 1
+      }
+    },
+    {
+      "results": [],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.3569
+        },
+        "duration": 0.3569,
+        "changes": 1,
+        "last_row_id": 1,
+        "changed_db": true,
+        "size_after": 40960,
+        "rows_read": 0,
+        "rows_written": 2,
+        "total_attempts": 1
+      }
+    }
+  ],
+  "after": {
+    "marketplace_publications": {
+      "results": [
+        {
+          "catalog_id": "workers-g3-proof",
+          "revision": 8,
+          "object_key": "proof/restored-8.json",
+          "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.2344
+        },
+        "duration": 0.2344,
+        "changes": 0,
+        "last_row_id": 1,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    },
+    "marketplace_accepted": {
+      "results": [
+        {
+          "catalog_id": "workers-g3-proof",
+          "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+          "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.1692
+        },
+        "duration": 0.1692,
+        "changes": 0,
+        "last_row_id": 1,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    }
+  },
+  "objects_verified": [
+    {
+      "file": "publication-8.json",
+      "key": "proof/restored-8.json",
+      "bytes": 351,
+      "sha256": "4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+    },
+    {
+      "file": "accepted-8.json",
+      "key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json",
+      "bytes": 16469,
+      "sha256": "a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5"
+    }
+  ]
+}

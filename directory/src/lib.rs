@@ -4,13 +4,27 @@ use lenso_capability_marketplace_directory as contract;
 use lenso_kernel::{
     DeactivateContext, InvocationContext, NativeRequestFuture, PrepareContext, RuntimeFailure,
 };
+#[cfg(feature = "native")]
 use lenso_marketplace_catalog::directory::PublishedDirectory;
-use std::{cell::RefCell, path::PathBuf, rc::Rc};
+use lenso_marketplace_catalog::persistence::SnapshotStorage;
+#[cfg(not(feature = "native"))]
+#[derive(Debug)]
+struct PublishedDirectory;
+mod event;
+pub use event::EventDirectoryFactory;
+use std::{
+    cell::{Cell, RefCell},
+    path::PathBuf,
+    rc::Rc,
+};
 
 #[derive(Clone, Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
-    database: PathBuf,
+    #[serde(default)]
+    database: Option<PathBuf>,
+    #[serde(default)]
+    storage_binding: Option<String>,
     catalog_id: String,
 }
 
@@ -20,21 +34,53 @@ struct MarketplaceDirectory {
     #[config]
     config: Config,
     reader: Rc<RefCell<Option<PublishedDirectory>>>,
+    storage: Option<Rc<dyn SnapshotStorage>>,
+    ready: Rc<Cell<bool>>,
     #[tasks]
     tasks: lenso::ManagedTasks,
 }
 
 impl MarketplaceDirectory {
     fn open(&self) -> Result<(), RuntimeFailure> {
-        if self.reader.borrow().is_some() {
-            return Err(failure("directory prepared twice"));
+        if self.storage.is_some() {
+            if self.config.database.is_some()
+                || self
+                    .config
+                    .storage_binding
+                    .as_deref()
+                    .is_none_or(str::is_empty)
+            {
+                return Err(failure(
+                    "event directory requires explicit storage_binding only",
+                ));
+            }
+            self.ready.set(true);
+            return Ok(());
         }
-        let reader = PublishedDirectory::open(&self.config.database, &self.config.catalog_id)
-            .map_err(failure)?;
-        self.reader.replace(Some(reader));
-        Ok(())
+        #[cfg(feature = "native")]
+        {
+            if self.config.storage_binding.is_some() {
+                return Err(failure("event storage binding was not supplied"));
+            }
+            if self.reader.borrow().is_some() {
+                return Err(failure("directory prepared twice"));
+            }
+            let path = self
+                .config
+                .database
+                .as_ref()
+                .ok_or_else(|| failure("directory database missing"))?;
+            self.reader.replace(Some(
+                PublishedDirectory::open(path, &self.config.catalog_id).map_err(failure)?,
+            ));
+            self.ready.set(true);
+            Ok(())
+        }
+        #[cfg(not(feature = "native"))]
+        Err(failure("event storage binding was not supplied"))
     }
     fn close(&self) {
+        self.ready.set(false);
         self.reader.take();
     }
 }
@@ -56,6 +102,26 @@ impl MarketplaceDirectory {
         _context: InvocationContext,
         _request: contract::ReadSnapshotRequest,
     ) -> NativeRequestFuture<contract::Directory> {
+        if !self.ready.get() {
+            return Box::pin(async {
+                Err(RuntimeFailure::Unavailable {
+                    capability: contract::CAPABILITY_ID,
+                })
+            });
+        }
+        if let Some(storage) = &self.storage {
+            let storage = storage.clone();
+            let catalog = self.config.catalog_id.clone();
+            return Box::pin(async move {
+                match storage.published(&catalog).await.map_err(failure)? {
+                    Some(envelope) => Ok(Ok(contract::ReadSnapshotResponse {
+                        envelope_json: envelope.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(contract::ReadSnapshotError::NotPublished)),
+                }
+            });
+        }
+        #[cfg(feature = "native")]
         let result = match self.reader.borrow().as_ref() {
             None => Err(RuntimeFailure::Unavailable {
                 capability: contract::CAPABILITY_ID,
@@ -70,6 +136,8 @@ impl MarketplaceDirectory {
                     None => Ok(Err(contract::ReadSnapshotError::NotPublished)),
                 }),
         };
+        #[cfg(not(feature = "native"))]
+        let result = Err(failure("directory storage unavailable"));
         Box::pin(async move { result })
     }
 }
@@ -83,7 +151,7 @@ fn failure(detail: impl std::fmt::Display) -> RuntimeFailure {
 /// Makes the generated native factory available; the Host chooses activation.
 pub fn link() {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
     use lenso_kernel::{CancellationToken, NativeRequestEndpoint};
@@ -93,10 +161,13 @@ mod tests {
     fn plugin(database: PathBuf) -> MarketplaceDirectory {
         MarketplaceDirectory {
             config: Config {
-                database,
+                database: Some(database),
+                storage_binding: None,
                 catalog_id: "test".into(),
             },
             reader: Rc::default(),
+            storage: None,
+            ready: Rc::default(),
             tasks: lenso::ManagedTasks::default(),
         }
     }

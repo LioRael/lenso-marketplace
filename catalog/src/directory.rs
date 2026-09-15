@@ -93,7 +93,7 @@ impl Directory {
         now: u64,
     ) -> Result<()> {
         self.authorize_review(actor)?;
-        lenso_app_authoring::identity::validate_plugin_id_v1(&format!("{namespace}.claim"))?;
+        lenso_plugin_catalog::identity::validate_plugin_id_v1(&format!("{namespace}.claim"))?;
         super::bounded_text(publisher, 128)?;
         super::bounded_text(publisher_actor, 128)?;
         let transaction = self

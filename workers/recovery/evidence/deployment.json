@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-09-14T17:00:59.786940+00:00",
+  "deployments": {
+    "deployments": [
+      {
+        "id": "20d0b63d-2eae-4863-9796-cc57bc3a7a94",
+        "source": "wrangler",
+        "strategy": "percentage",
+        "annotations": {
+          "workers/message": "Automatic deployment on upload.",
+          "workers/triggered_by": "upload"
+        },
+        "versions": [
+          {
+            "version_id": "7d6723d2-8b63-4b07-b225-2007ef369500",
+            "percentage": 100
+          }
+        ],
+        "created_on": "2026-09-14T17:00:30.758296Z"
+      }
+    ]
+  },
+  "subdomain": {
+    "enabled": true,
+    "previews_enabled": false
+  },
+  "artifact_sha256": "d4ff79a9c7b6d6c2b8543f4be52fc9e2780d1687454d0dd55d19c52d03220faa",
+  "module_sha256": {
+    "worker.mjs": "52d0af2e5bb01ce66a3577103db74f0503eedf2da65d077ae86838d5fb6d82ab",
+    "storage.mjs": "4cd719570fa0170fcc0de72460065c04b2da7996f0fb7d31bf58c5efec62ab7d",
+    "storage-scope.mjs": "9d7c6496eb8f6442acb7e11b11b55e698a5e588cdd31f5f0b39281b4bae73122",
+    "pkg/lenso_marketplace_workers_host_bg.wasm": "d4ff79a9c7b6d6c2b8543f4be52fc9e2780d1687454d0dd55d19c52d03220faa",
+    "pkg/lenso_marketplace_workers_host.d.ts": "779d4095df3c3a9ae4d80282569999a64958cf85ecbd917fdac0d13c18608e42",
+    "pkg/lenso_marketplace_workers_host_bg.wasm.d.ts": "5618c0a6e17034cfcc1c5da6379dbaa8cd6846811bd43892ec87e36fd901c4e2",
+    "pkg/lenso_marketplace_workers_host.js": "ef3aef60108e12ebbe248006e7c621774d06e09b80997e8456d6f76f1d90a51c",
+    "runtime/runner.mjs": "d0385b34167db30dc5aa59b0d59be1fe45b71670e2f6be5a19136add2b41d950",
+    "runtime/http.mjs": "eca681d7d9a8391bc07bd840f0dcdfab094151d7b4953f9be4e72cd6da1c7797",
+    "clock.mjs": "dec815eed2956948d7e0f85f80570fec5c8ce4877791bdedd95ad35aa155f103"
+  },
+  "config_sha256": "8405814a512393976493b6410c3dfd09e8066592feb231686f9ed19ad77d9fdc",
+  "cohort_manifest_sha256": "82d9981c18d72be78e3f525fbe874f80cdda4c676d54c9faad653fed6a98601d"
+}

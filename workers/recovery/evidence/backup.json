@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-09-14T16:57:48.326940+00:00",
+  "account_id": "05ac654d4a24ee5ef1d683440c8c0068",
+  "source_database_id": "2b913921-3f0a-43b4-ae8f-cb219c21db81",
+  "source_bucket": "lenso-marketplace-g3-proof",
+  "source_rows": {
+    "marketplace_publications": {
+      "results": [
+        {
+          "catalog_id": "workers-g3-proof",
+          "revision": 8,
+          "object_key": "proof/restored-8.json",
+          "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.7557
+        },
+        "duration": 0.7557,
+        "changes": 0,
+        "last_row_id": 0,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    },
+    "marketplace_accepted": {
+      "results": [
+        {
+          "catalog_id": "workers-g3-proof",
+          "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+          "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.6223
+        },
+        "duration": 0.6223,
+        "changes": 0,
+        "last_row_id": 0,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    }
+  },
+  "objects": [
+    {
+      "file": "publication-8.json",
+      "key": "proof/restored-8.json",
+      "bytes": 351,
+      "sha256": "4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+    },
+    {
+      "file": "accepted-8.json",
+      "key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json",
+      "bytes": 16469,
+      "sha256": "a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5"
+    }
+  ],
+  "checkpoint_revision": 8,
+  "history_size": 161,
+  "rollback_fixture_sha256": "3920c0deed35e77c254240a2a9987856986c54b4c6167a0b3f323482d3bf9235",
+  "rollback_fixture_expires_at": 1789407323,
+  "artifact_sha256": "d4ff79a9c7b6d6c2b8543f4be52fc9e2780d1687454d0dd55d19c52d03220faa",
+  "migration_sha256": "ef0fc18a86cf89cba1414de3dccfcdf08a323a67e2fcdc483a99eb939b47c2c6"
+}

@@ -1,0 +1,530 @@
+{
+  "timestamp": "2026-09-14T17:02:20.324441+00:00",
+  "base": "https://lenso-marketplace-recovery-proof.lenso.workers.dev",
+  "database_id": "256d0844-cff5-4ead-8770-ab62c7f181d1",
+  "bucket": "lenso-marketplace-recovery-proof",
+  "passed": true,
+  "checks": [
+    {
+      "label": "restored paired backup serves revision 8",
+      "timestamp": "2026-09-14T17:02:21.426943+00:00",
+      "expected_status": 200,
+      "status": 200,
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cf-ray": "a3b0f5727f3dd76d-HKG",
+        "content-encoding": "zstd",
+        "content-type": "application/json; charset=utf-8",
+        "date": "Mon, 14 Sep 2026 17:02:21 GMT",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=N%2ByRMoFwAZh1uvBSi6EV9oEYb1WyiHM6FDKgfi%2BocULvfxCTV1WkmJPYPbyTF6CScNVvuF%2FZ1BMZieKf27ghCSU%2Bx3%2BubEo0r55o8wyuYMaAzuh%2BQhhhyXvonVprVHnr8vXmKh1%2B%2FznjYV%2BySTj5owPOMBLdSIMHOvzTb6d2ZEs%2B3HjAxw%3D%3D\"}]}",
+        "server": "cloudflare",
+        "x-content-type-options": "nosniff",
+        "x-proof-boot": "44d81ff8-b930-41c1-97f5-bce7183ac30e",
+        "x-proof-generation": "1",
+        "x-proof-wasm-memory": "10420224",
+        "x-request-id": "lenso-0"
+      },
+      "body_sha256": "ea17ea39927235ec4b651143d66caba86de813de24d06bfcb98f13ad0bbe6b2b",
+      "body_bytes": 115,
+      "passed": true
+    },
+    {
+      "label": "restored signed envelope has exact frozen bytes",
+      "timestamp": "2026-09-14T17:02:22.340665+00:00",
+      "expected_status": 200,
+      "status": 200,
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cache-control": "no-cache",
+        "cf-ray": "a3b0f5798a350dc3-HKG",
+        "content-encoding": "zstd",
+        "content-security-policy": "default-src 'self'; img-src 'self' https:; script-src 'self'; style-src 'self'; style-src-elem 'self' 'sha256-kLmvWqfziFavKtqHqRsb90f006UAK2Dmd0It5Iz2KFA='; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        "content-type": "application/json",
+        "date": "Mon, 14 Sep 2026 17:02:22 GMT",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=dzxNydO%2Bq%2B6hvLbsTpaeNiYv1xZPLHVSEvIR%2Bgumk2%2BLddWCWIvSLCbGa8qaJNdkFrlXrKv%2B7N55ksTXL%2FF15ICfJhLFpSIvn%2FtFQpssaE15J48D9ssVbgoOEUndLqMGiqEfFp3wl6BXj7ThlstWB7CTOZVmKtWNshBSY%2F%2BvxdkfY8z46A%3D%3D\"}]}",
+        "server": "cloudflare",
+        "x-content-type-options": "nosniff",
+        "x-proof-boot": "d4214328-8fee-4d64-bf1e-22165b23eb65",
+        "x-proof-generation": "1",
+        "x-proof-wasm-memory": "10420224",
+        "x-request-id": "lenso-0"
+      },
+      "body_sha256": "4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+      "body_bytes": 351,
+      "passed": true,
+      "exact_frozen_bytes": true
+    },
+    {
+      "label": "valid older revision is rejected",
+      "timestamp": "2026-09-14T17:02:28.996385+00:00",
+      "expected_status": 503,
+      "status": 503,
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cf-ray": "a3b0f5a27c2b8e91-HKG",
+        "content-length": "147",
+        "content-type": "application/problem+json; charset=utf-8",
+        "date": "Mon, 14 Sep 2026 17:02:28 GMT",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=DLPVk75aHjqUgvM3aiUk3mEW3EqFl6WIfCThZst3fIXkHyPGjl97KYkitDtsZxrutfzPCRHkzxqAj2q%2BrE15u3m7swSOgzMEuKnvXAngpWnF1lIXKvREpESTYPRP%2FqNQeiIM2wF6TJyMSNP7W5opHPcAIiDdiwx9q2AAT3f55ww2sRI4xg%3D%3D\"}]}",
+        "server": "cloudflare",
+        "x-content-type-options": "nosniff",
+        "x-proof-boot": "5cb419ed-dbe4-469c-90f9-a5e2910eeb1c",
+        "x-proof-generation": "1",
+        "x-proof-wasm-memory": "10420224",
+        "x-request-id": "lenso-0"
+      },
+      "body_sha256": "25ec6556ed8d4e88957475a549a49b221da4183cb33195dba20970b17f2fe767",
+      "body_bytes": 147,
+      "passed": true,
+      "body": "{\"type\":\"about:blank\",\"title\":\"Service Unavailable\",\"status\":503,\"detail\":\"A current verified catalog is unavailable\",\"code\":\"catalog_unavailable\"}"
+    },
+    {
+      "label": "restore current revision 8 succeeds",
+      "timestamp": "2026-09-14T17:02:31.544295+00:00",
+      "expected_status": 200,
+      "status": 200,
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cache-control": "no-cache",
+        "cf-ray": "a3b0f5b5cb247d73-HKG",
+        "content-encoding": "zstd",
+        "content-security-policy": "default-src 'self'; img-src 'self' https:; script-src 'self'; style-src 'self'; style-src-elem 'self' 'sha256-kLmvWqfziFavKtqHqRsb90f006UAK2Dmd0It5Iz2KFA='; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        "content-type": "application/json",
+        "date": "Mon, 14 Sep 2026 17:02:31 GMT",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=DEWbW7fvM9vlm66PaZlPBSsnEXEsvwVjHuoD%2FqUaT8EUJkiXm8fX8N2x0xMqwgrC0o9hpxkrHPRuGPYJjjwBA0q26cWis5jFt5Si5AWo7ewKAZpzgqZxghTFvaJbLPflFtPTj4HdQ6mUXNW3qOGbEpR4WiKUxZtquJmBX3OIFqHAAEAbug%3D%3D\"}]}",
+        "server": "cloudflare",
+        "x-content-type-options": "nosniff",
+        "x-proof-boot": "44d81ff8-b930-41c1-97f5-bce7183ac30e",
+        "x-proof-generation": "1",
+        "x-proof-wasm-memory": "10420224",
+        "x-request-id": "lenso-0"
+      },
+      "body_sha256": "4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+      "body_bytes": 351,
+      "passed": true,
+      "exact_frozen_bytes": true
+    },
+    {
+      "label": "tampered copied historical checkpoint fails closed",
+      "timestamp": "2026-09-14T17:02:36.248775+00:00",
+      "expected_status": 503,
+      "status": 503,
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cf-ray": "a3b0f5d23ff8ddbe-HKG",
+        "content-length": "147",
+        "content-type": "application/problem+json; charset=utf-8",
+        "date": "Mon, 14 Sep 2026 17:02:36 GMT",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=oBTN66BYnb16YzQr87mFzeFf%2BNLPOfJKudswmLmSbfferqEU2egVSqQAEo2tZM9HYFAJxYdu58XSPCYvseaGDSQCTzdM7IRWARqjUgpYqwVI7a1ub1KeQV0kaxAuqkkWTvCjUsscde6jnUxsYQP4HuGacyZadO5v2Wz9Do485jgI4izd4Q%3D%3D\"}]}",
+        "server": "cloudflare",
+        "x-content-type-options": "nosniff",
+        "x-proof-boot": "cb59a65f-8570-443e-8ef9-aeedf4d3313b",
+        "x-proof-generation": "1",
+        "x-proof-wasm-memory": "10420224",
+        "x-request-id": "lenso-0"
+      },
+      "body_sha256": "25ec6556ed8d4e88957475a549a49b221da4183cb33195dba20970b17f2fe767",
+      "body_bytes": 147,
+      "passed": true,
+      "body": "{\"type\":\"about:blank\",\"title\":\"Service Unavailable\",\"status\":503,\"detail\":\"A current verified catalog is unavailable\",\"code\":\"catalog_unavailable\"}"
+    },
+    {
+      "label": "exact accepted object restoration succeeds",
+      "timestamp": "2026-09-14T17:02:43.007000+00:00",
+      "expected_status": 200,
+      "status": 200,
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cache-control": "no-cache",
+        "cf-ray": "a3b0f5f9b91a0982-HKG",
+        "content-encoding": "zstd",
+        "content-security-policy": "default-src 'self'; img-src 'self' https:; script-src 'self'; style-src 'self'; style-src-elem 'self' 'sha256-kLmvWqfziFavKtqHqRsb90f006UAK2Dmd0It5Iz2KFA='; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        "content-type": "application/json",
+        "date": "Mon, 14 Sep 2026 17:02:42 GMT",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=fJXHEmh9PEV5vmM%2F20O5mWXxOM7flP0xppt7z4JRh4wD7h7%2FCxCu04e9Kcr4XKJdUOonBuNpiOr%2FgQPpIh09rB3o6bYUV9URzdDv552pRhmNr7mJca9MP1XIjT%2BLABzLM88zb%2FVV7IFDhPpzzZQG2Caj1H8Ijz3%2FvJ45aEOWnmHHcGUVBg%3D%3D\"}]}",
+        "server": "cloudflare",
+        "x-content-type-options": "nosniff",
+        "x-proof-boot": "1915a4bb-f552-4f67-884e-9d5246f8f1ad",
+        "x-proof-generation": "1",
+        "x-proof-wasm-memory": "10420224",
+        "x-request-id": "lenso-0"
+      },
+      "body_sha256": "4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+      "body_bytes": 351,
+      "passed": true,
+      "exact_frozen_bytes": true
+    }
+  ],
+  "durable": [
+    {
+      "label": "restored paired backup",
+      "rows": {
+        "marketplace_publications": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "revision": 8,
+              "object_key": "proof/restored-8.json",
+              "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1981
+            },
+            "duration": 0.1981,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        "marketplace_accepted": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+              "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2189
+            },
+            "duration": 0.2189,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      },
+      "accepted_object_sha256": "a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5"
+    },
+    {
+      "label": "rollback rejection retains revision 8",
+      "rows": {
+        "marketplace_publications": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "revision": 1,
+              "object_key": "recovery-proof/rollback-1.json",
+              "digest": "sha256:3920c0deed35e77c254240a2a9987856986c54b4c6167a0b3f323482d3bf9235"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2174
+            },
+            "duration": 0.2174,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        "marketplace_accepted": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+              "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1785
+            },
+            "duration": 0.1785,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      },
+      "accepted_object_sha256": "a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5"
+    },
+    {
+      "label": "after rollback recovery",
+      "rows": {
+        "marketplace_publications": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "revision": 8,
+              "object_key": "proof/restored-8.json",
+              "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1857
+            },
+            "duration": 0.1857,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        "marketplace_accepted": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+              "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2151
+            },
+            "duration": 0.2151,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      },
+      "accepted_object_sha256": "a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5"
+    },
+    {
+      "label": "tamper rejected without pointer replacement",
+      "rows": {
+        "marketplace_publications": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "revision": 8,
+              "object_key": "proof/restored-8.json",
+              "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2012
+            },
+            "duration": 0.2012,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        "marketplace_accepted": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+              "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1609
+            },
+            "duration": 0.1609,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      },
+      "accepted_object_sha256": "1ab75cfc70c79b03604439d243c3671b86ff550fbe2fa9c677aec1583c708a97"
+    },
+    {
+      "label": "final recovery state",
+      "rows": {
+        "marketplace_publications": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "revision": 8,
+              "object_key": "proof/restored-8.json",
+              "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2012
+            },
+            "duration": 0.2012,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        "marketplace_accepted": {
+          "results": [
+            {
+              "catalog_id": "workers-g3-proof",
+              "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+              "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+            }
+          ],
+          "success": true,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "APAC",
+            "served_by_colo": "HKG",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2192
+            },
+            "duration": 0.2192,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 40960,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      },
+      "accepted_object_sha256": "a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5"
+    }
+  ],
+  "source_after": {
+    "marketplace_publications": {
+      "results": [
+        {
+          "catalog_id": "workers-g3-proof",
+          "revision": 8,
+          "object_key": "proof/restored-8.json",
+          "digest": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.1588
+        },
+        "duration": 0.1588,
+        "changes": 0,
+        "last_row_id": 0,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    },
+    "marketplace_accepted": {
+      "results": [
+        {
+          "catalog_id": "workers-g3-proof",
+          "token": "sha256:4c6f2a7010d3adf46ca0aa2a99958f2c4db3dd61c5494804e9ad65797b3f40c9",
+          "object_key": "accepted/workers-g3-proof/a1571e4313787e632a25ea86866b8ccfe74bee33a4d3a01f897186be74e0b2c5.json"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "APAC",
+        "served_by_colo": "HKG",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.1483
+        },
+        "duration": 0.1483,
+        "changes": 0,
+        "last_row_id": 0,
+        "changed_db": false,
+        "size_after": 40960,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    }
+  },
+  "source_unchanged": true,
+  "completed_at": "2026-09-14T17:02:47.704533+00:00"
+}

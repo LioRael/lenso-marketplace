@@ -9,27 +9,30 @@ description = "Signed release identity and verification for the Lenso Plugin mar
 
 [workspace]
 
+[features]
+default = ["native"]
+native = [
+  "dep:rusqlite",
+  "dep:lenso-plugin-bundle",
+  "lenso-plugin-catalog/bundle-verification",
+]
+
 [dependencies]
 anyhow = "1"
 base64 = "0.22"
 ed25519-dalek = "2.2"
 hex = "0.4"
-lenso-plugin-bundle = "0.4.1"
-lenso-app-authoring = { package = "lenso-cli", version = "0.5.2", default-features = false }
+lenso-plugin-bundle = { version = "0.4.2", optional = true }
+lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso-cli.git", rev = "798d58b9aae2f90ed29e17285b0693d10cb8eabd", default-features = false }
+futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 url = "2"
-rusqlite = { version = "0.40", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"
 
 [lints.rust]
 unsafe_code = "forbid"
-
-# Immutable development cohort; replace with published minimum versions before
-# registry publication. Marketplace consumes verification, not Agent authority.
-[patch.crates-io]
-lenso-cli = { git = "https://github.com/LioRael/lenso-cli.git", rev = "3b1c3948d65f716b480fb11b45a52835c8ae8c39" }
-lenso-plugin-bundle = { git = "https://github.com/LioRael/lenso-runtime-rust.git", rev = "a78f1f399825f152708ad091cf6196e5670383f5" }

@@ -1,0 +1,13 @@
+{
+  "name": "@lenso/marketplace-workers-proof",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash build.sh",
+    "check": "node --check storage.mjs && node --check worker.mjs",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "4.107.0"
+  }
+}

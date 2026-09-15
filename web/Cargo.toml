@@ -9,12 +9,17 @@ license = "MIT"
 plugin-id = "lenso.marketplace.web"
 root-slot = "web"
 [workspace]
+[features]
+default = ["native"]
+native = ["lenso-marketplace-catalog/native"]
+
 [dependencies]
 lenso = "0.5.17"
 lenso-kernel = "0.3.6"
 lenso-capability-http-endpoint = "0.3.1"
 lenso-capability-marketplace-directory = { path = "../directory/crates/lenso-capability-marketplace-directory" }
-lenso-marketplace-catalog = { path = "../catalog" }
+lenso-marketplace-catalog = { path = "../catalog", default-features = false }
+lenso-native-adapter = "0.3.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ed25519-dalek = "2.2"
@@ -22,9 +27,3 @@ hex = "0.4"
 
 [build-dependencies]
 sha2 = "0.10"
-
-# Immutable development cohort; replace with published minimum versions before
-# registry publication. Marketplace consumes verification, not Agent authority.
-[patch.crates-io]
-lenso-cli = { git = "https://github.com/LioRael/lenso-cli.git", rev = "3b1c3948d65f716b480fb11b45a52835c8ae8c39" }
-lenso-plugin-bundle = { git = "https://github.com/LioRael/lenso-runtime-rust.git", rev = "a78f1f399825f152708ad091cf6196e5670383f5" }

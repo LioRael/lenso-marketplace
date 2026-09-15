@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "coverage": [
+    "real native Host",
+    "packed Plugin fixture",
+    "persistent navigation and browser history",
+    "request race and recovery",
+    "save/undo and filters",
+    "narrow viewport and dark mode"
+  ],
+  "command": "CARGO=\"${LENSO_CARGO:-cargo}\" bash plugins/marketplace/verify-browser.sh"
+}

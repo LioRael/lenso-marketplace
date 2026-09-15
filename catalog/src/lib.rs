@@ -1,4 +1,7 @@
-//! Marketplace publishing and cache state; shared wire verification belongs to the installation library.
+//! Marketplace persistence; shared wire verification belongs to the catalog protocol.
+#[cfg(feature = "native")]
 pub mod cache;
+#[cfg(feature = "native")]
 pub mod directory;
-pub use lenso_app_authoring::signed_plugin_catalog::*;
+pub mod persistence;
+pub use lenso_plugin_catalog::*;

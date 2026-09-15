@@ -7,14 +7,18 @@ use lenso_capability_http_endpoint::{
 };
 use lenso_capability_marketplace_directory as directory;
 use lenso_kernel::{DeactivateContext, InvocationContext, PrepareContext, RuntimeFailure};
-use lenso_marketplace_catalog::{Trust, VerifiedSnapshot, cache::VerifiedCache};
-use std::{
-    cell::RefCell,
-    collections::BTreeMap,
-    path::PathBuf,
-    rc::Rc,
-    time::{SystemTime, UNIX_EPOCH},
+#[cfg(feature = "native")]
+use lenso_marketplace_catalog::cache::VerifiedCache;
+use lenso_marketplace_catalog::{
+    Trust, VerifiedSnapshot,
+    persistence::{EventCache, SnapshotStorage},
 };
+#[cfg(not(feature = "native"))]
+#[derive(Debug)]
+struct VerifiedCache;
+mod event;
+pub use event::{EventWebFactory, MarketplaceClock, MarketplaceDiagnostics};
+use std::{cell::RefCell, collections::BTreeMap, path::PathBuf, rc::Rc};
 
 #[derive(Clone, Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -22,7 +26,10 @@ struct Config {
     catalog_id: String,
     key_id: String,
     public_key_hex: String,
-    cache_database: PathBuf,
+    #[serde(default)]
+    cache_database: Option<PathBuf>,
+    #[serde(default)]
+    storage_binding: Option<String>,
 }
 
 #[lenso::plugin(lifecycle, configuration_schema = "config.schema.json")]
@@ -32,6 +39,10 @@ struct MarketplaceWeb {
     config: Config,
     directory: Port<directory::DirectoryClient>,
     cache: Rc<RefCell<Option<VerifiedCache>>>,
+    event_cache: Rc<RefCell<Option<EventCache>>>,
+    storage: Option<Rc<dyn SnapshotStorage>>,
+    clock: Option<Rc<dyn MarketplaceClock>>,
+    diagnostics: Option<Rc<dyn MarketplaceDiagnostics>>,
     #[tasks]
     tasks: lenso::ManagedTasks,
 }
@@ -48,13 +59,41 @@ impl lenso::Lifecycle for MarketplaceWeb {
                 ed25519_dalek::VerifyingKey::from_bytes(&bytes).map_err(failure)?,
             )]),
         };
-        self.cache.replace(Some(
-            VerifiedCache::open(&self.config.cache_database, trust).map_err(failure)?,
-        ));
+        if let Some(storage) = &self.storage {
+            if self.config.cache_database.is_some()
+                || self
+                    .config
+                    .storage_binding
+                    .as_deref()
+                    .is_none_or(str::is_empty)
+                || self.clock.is_none()
+            {
+                return Err(failure("event Web requires storage binding and clock"));
+            }
+            self.event_cache
+                .replace(Some(EventCache::new(storage.clone(), trust)));
+        } else {
+            #[cfg(feature = "native")]
+            {
+                if self.config.storage_binding.is_some() {
+                    return Err(failure("event storage binding not supplied"));
+                }
+                let path = self
+                    .config
+                    .cache_database
+                    .as_ref()
+                    .ok_or_else(|| failure("cache database missing"))?;
+                self.cache
+                    .replace(Some(VerifiedCache::open(path, trust).map_err(failure)?));
+            }
+            #[cfg(not(feature = "native"))]
+            return Err(failure("event storage binding not supplied"));
+        }
         Ok(())
     }
     async fn deactivate(&self, _context: DeactivateContext) -> Result<(), RuntimeFailure> {
         self.cache.take();
+        self.event_cache.take();
         Ok(())
     }
 }
@@ -95,30 +134,72 @@ impl MarketplaceWeb {
             .directory
             .read_snapshot_with_context(context, directory::ReadSnapshotRequest {})
             .await;
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(failure)?
-            .as_secs();
-        let mut state = self.cache.borrow_mut();
-        let cache = state
-            .as_mut()
-            .ok_or_else(|| failure("marketplace Web is unavailable"))?;
-        match result {
-            Ok(response) => Ok((
-                cache
-                    .accept(response.envelope_json.as_str().as_bytes(), now)
-                    .map_err(failure)?,
-                false,
-            )),
-            Err(directory::DirectoryInvocationError::Runtime(_)) => cache
-                .current(now)
-                .map_err(failure)?
-                .map(|snapshot| (snapshot, true))
-                .ok_or_else(|| {
-                    failure("directory unavailable and no current verified cache exists")
-                }),
-            Err(error) => Err(failure(format!("{error:?}"))),
+        let now = self.now()?;
+        let event_cache = self.event_cache.borrow().clone();
+        if let Some(cache) = event_cache {
+            let accepted = match result {
+                Ok(response) => Ok((
+                    cache
+                        .accept(response.envelope_json.as_str().as_bytes(), now)
+                        .await
+                        .map_err(failure)?,
+                    false,
+                )),
+                Err(directory::DirectoryInvocationError::Runtime(_)) => cache
+                    .current(now)
+                    .await
+                    .map_err(failure)?
+                    .map(|snapshot| (snapshot, true))
+                    .ok_or_else(|| {
+                        failure("directory unavailable and no current verified cache exists")
+                    }),
+                Err(error) => Err(failure(format!("{error:?}"))),
+            }?;
+            // Binding I/O may cross the signed expiry after initial verification.
+            if self.now()? >= accepted.0.snapshot().expires_at {
+                return Err(failure("catalog expired while reading storage"));
+            }
+            return Ok(accepted);
         }
+        #[cfg(feature = "native")]
+        {
+            let mut state = self.cache.borrow_mut();
+            let cache = state
+                .as_mut()
+                .ok_or_else(|| failure("marketplace Web is unavailable"))?;
+            match result {
+                Ok(response) => Ok((
+                    cache
+                        .accept(response.envelope_json.as_str().as_bytes(), now)
+                        .map_err(failure)?,
+                    false,
+                )),
+                Err(directory::DirectoryInvocationError::Runtime(_)) => cache
+                    .current(now)
+                    .map_err(failure)?
+                    .map(|snapshot| (snapshot, true))
+                    .ok_or_else(|| {
+                        failure("directory unavailable and no current verified cache exists")
+                    }),
+                Err(error) => Err(failure(format!("{error:?}"))),
+            }
+        }
+        #[cfg(not(feature = "native"))]
+        Err(failure("event cache unavailable"))
+    }
+    fn now(&self) -> Result<u64, RuntimeFailure> {
+        if let Some(clock) = &self.clock {
+            return clock.now();
+        }
+        #[cfg(feature = "native")]
+        {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|v| v.as_secs())
+                .map_err(failure)
+        }
+        #[cfg(not(feature = "native"))]
+        Err(failure("event clock unavailable"))
     }
 }
 
@@ -211,7 +292,10 @@ impl MarketplaceWeb {
         }
         let (catalog, cached) = match self.catalog(context).await {
             Ok(catalog) => catalog,
-            Err(_) => {
+            Err(error) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics.catalog_failure(&error);
+                }
                 return Ok(response::problem(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "catalog_unavailable",
@@ -277,7 +361,10 @@ impl MarketplaceWeb {
     ) -> Result<HandleResponse, EndpointHandleInvocationError> {
         let (catalog, cached) = match self.catalog(context).await {
             Ok(catalog) => catalog,
-            Err(_) => {
+            Err(error) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics.catalog_failure(&error);
+                }
                 return Ok(response::problem(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "catalog_unavailable",

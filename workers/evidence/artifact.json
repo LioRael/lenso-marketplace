@@ -1,0 +1,34 @@
+{
+  "source_commit": "0dbcbb0177ebb7a38905878e64a51ce72cf0d807",
+  "clean_build": true,
+  "worker_version": "60c5f58b-77af-41e1-bdea-0bd6837ec8ce",
+  "public_entry": "worker.mjs",
+  "proof_entry": "proof-worker.mjs",
+  "artifact": "marketplace-worker.tar.gz",
+  "artifact_sha256": "69983cb7c3c0bd6accdecbfcffc6d77ba5e38598c1e707af977db191dc93a46f",
+  "artifact_bytes": 9250078,
+  "files": {
+    "worker.mjs": "52d0af2e5bb01ce66a3577103db74f0503eedf2da65d077ae86838d5fb6d82ab",
+    "storage.mjs": "4cd719570fa0170fcc0de72460065c04b2da7996f0fb7d31bf58c5efec62ab7d",
+    "storage-scope.mjs": "9d7c6496eb8f6442acb7e11b11b55e698a5e588cdd31f5f0b39281b4bae73122",
+    "clock.mjs": "dec815eed2956948d7e0f85f80570fec5c8ce4877791bdedd95ad35aa155f103",
+    "pnpm-lock.yaml": "5b643e51d3131455e589753fd6a6e3dab2058afc14571bd398deab8c53b9bde8",
+    "pnpm-workspace.yaml": "4008087e58cb83656f12b784d93d7dab4ac7011efe4f413b31bd351728fa4068",
+    "proof/deployment-config.mjs": "241508b3a5c9870fd00f12b59c1c8b2454eedea8cdb186930d2fd140b98ff1ca",
+    "pkg/lenso_marketplace_workers_host.d.ts": "779d4095df3c3a9ae4d80282569999a64958cf85ecbd917fdac0d13c18608e42",
+    "pkg/lenso_marketplace_workers_host.js": "ef3aef60108e12ebbe248006e7c621774d06e09b80997e8456d6f76f1d90a51c",
+    "pkg/lenso_marketplace_workers_host_bg.wasm": "d4ff79a9c7b6d6c2b8543f4be52fc9e2780d1687454d0dd55d19c52d03220faa",
+    "pkg/lenso_marketplace_workers_host_bg.wasm.d.ts": "5618c0a6e17034cfcc1c5da6379dbaa8cd6846811bd43892ec87e36fd901c4e2",
+    "runtime/http.mjs": "eca681d7d9a8391bc07bd840f0dcdfab094151d7b4953f9be4e72cd6da1c7797",
+    "runtime/runner.mjs": "d0385b34167db30dc5aa59b0d59be1fe45b71670e2f6be5a19136add2b41d950",
+    "migrations/0001_public_reads.sql": "ef0fc18a86cf89cba1414de3dccfcdf08a323a67e2fcdc483a99eb939b47c2c6",
+    "package.json": "d7e607d47e7de5b5525ab481ab0d8a44e0352da22ba5a44348868eb29a49dbe9",
+    "README.txt": "2fe6f7462f332af9ab7484cabaaeb803a85a6c51f15d61669046f9205e03e402"
+  },
+  "note": "Public artifact excludes the proof entry, fixture signing source, configuration and secrets. Production trust/bindings must be supplied separately. Deployed qualification wraps this same public entry with a secret-guarded CAS probe.",
+  "archive_verification": {
+    "locked_install": true,
+    "wrangler_dry_run": true,
+    "proof_entry_excluded": true
+  }
+}

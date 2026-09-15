@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lenso-marketplace-g3-proof",
+  "main": "proof-worker.mjs",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": [
+    "global_fetch_strictly_public",
+    "enable_request_signal"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "limits": {
+    "cpu_ms": 1000
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "CATALOG_ID": "workers-g3-proof",
+    "CATALOG_KEY_ID": "test-key",
+    "CATALOG_PUBLIC_KEY": "d04ab232742bb4ab3a1368bd4615e4e6d0224ab71a016baf8520a332c9778737",
+    "PROOF_DIAGNOSTICS": "1",
+    "G3_PROOF_DATABASE_ID": "2b913921-3f0a-43b4-ae8f-cb219c21db81",
+    "G3_PROOF_BUCKET_NAME": "lenso-marketplace-g3-proof",
+    "G3_CAS_FIXTURE_SHA256": "9223678c65952bc8d5e85cddca62d68612964be174dad64a16d5e71d36279868"
+  },
+  "d1_databases": [
+    {
+      "binding": "MARKETPLACE_DB",
+      "database_name": "lenso-marketplace-g3-proof",
+      "database_id": "2b913921-3f0a-43b4-ae8f-cb219c21db81",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MARKETPLACE_OBJECTS",
+      "bucket_name": "lenso-marketplace-g3-proof"
+    }
+  ]
+}

@@ -1147,8 +1147,9 @@ dependencies = [
 
 [[package]]
 name = "lenso-cli"
-version = "0.5.2"
-source = "git+https://github.com/LioRael/lenso-cli.git?rev=3b1c3948d65f716b480fb11b45a52835c8ae8c39#3b1c3948d65f716b480fb11b45a52835c8ae8c39"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdae5d88401cc1f7725d3b8b524ed2df9f599ffeaff0f7ef3ddcd980498837b7"
 dependencies = [
  "anyhow",
  "base64",
@@ -1259,9 +1260,10 @@ dependencies = [
  "anyhow",
  "base64",
  "ed25519-dalek",
+ "futures",
  "hex",
- "lenso-cli",
  "lenso-plugin-bundle",
+ "lenso-plugin-catalog",
  "rusqlite",
  "serde",
  "serde_json",
@@ -1277,6 +1279,7 @@ dependencies = [
  "lenso-capability-marketplace-directory",
  "lenso-kernel",
  "lenso-marketplace-catalog",
+ "lenso-native-adapter",
  "serde",
 ]
 
@@ -1291,6 +1294,7 @@ dependencies = [
  "lenso-capability-marketplace-directory",
  "lenso-kernel",
  "lenso-marketplace-catalog",
+ "lenso-native-adapter",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1334,8 +1338,9 @@ checksum = "8f24f444677f5b9857d4aa6f2ca90002243eb756a7f153bb721206f88abe6b07"
 
 [[package]]
 name = "lenso-plugin-bundle"
-version = "0.4.1"
-source = "git+https://github.com/LioRael/lenso-runtime-rust.git?rev=a78f1f399825f152708ad091cf6196e5670383f5#a78f1f399825f152708ad091cf6196e5670383f5"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24d188a7be42e1ee73f44444cfb0042eb468877d36ee4ec55149502a526cc5b3"
 dependencies = [
  "hex",
  "lenso-app-plan",
@@ -1347,6 +1352,23 @@ dependencies = [
  "toml",
  "wasmparser",
  "wit-component",
+]
+
+[[package]]
+name = "lenso-plugin-catalog"
+version = "0.1.0"
+source = "git+https://github.com/LioRael/lenso-cli.git?rev=798d58b9aae2f90ed29e17285b0693d10cb8eabd#798d58b9aae2f90ed29e17285b0693d10cb8eabd"
+dependencies = [
+ "anyhow",
+ "base64",
+ "ed25519-dalek",
+ "hex",
+ "lenso-plugin-bundle",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "url",
 ]
 
 [[package]]
