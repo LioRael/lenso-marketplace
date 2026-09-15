@@ -36,3 +36,8 @@ tempfile = "3"
 
 [lints.rust]
 unsafe_code = "forbid"
+
+[[bin]]
+name = "lenso-marketplace-publisher"
+path = "src/bin/publisher.rs"
+required-features = ["native"]
