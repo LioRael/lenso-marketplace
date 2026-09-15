@@ -11,6 +11,7 @@
     "@lenso/workers-runtime": "0.1.1"
   },
   "devDependencies": {
+    "miniflare": "4.20260701.0",
     "wrangler": "4.107.0"
   }
 }

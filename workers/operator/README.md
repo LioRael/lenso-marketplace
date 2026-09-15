@@ -41,3 +41,10 @@ work. This module is not a publicly callable publishing service.
 Run `node --test operator/promote.test.mjs` from the Workers directory. These
 storage fault tests inject a verifier; the Catalog process tests independently
 exercise the real Rust `verify` command.
+
+`node --test operator/promote-runtime.test.mjs` additionally runs the operation
+in local workerd through Miniflare using real local D1 and R2 bindings. It
+checks create-only R2 conditions, exact bytes, D1 competing updates, stale
+pointers and preservation of consumer acceptance. The fixture verifier is a
+stub; this is storage integration evidence, not signature or deployed Cloudflare
+qualification. It creates no remote resources and disposes its isolated runtime.
