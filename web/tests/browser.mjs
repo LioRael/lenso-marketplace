@@ -635,6 +635,44 @@ try {
     )
   );
   await mediaPage.close();
+  // A catalog can expire after rendering; the notice must appear without
+  // replacing the release list or breaking exact-release navigation.
+  const stalePage = await browser.newPage({
+    viewport: { height: 844, width: 390 },
+  });
+  const expiry = Math.floor(Date.now() / 1000) + 3;
+  await stalePage.route("**/api/marketplace/v1/plugins**", async (route) => {
+    const isDetail =
+      new URL(route.request().url()).pathname !== "/api/marketplace/v1/plugins";
+    await route.fulfill({
+      json: {
+        ...live,
+        expires_at: expiry,
+        stale: false,
+        ...(isDetail ? { release: live.releases[0] } : {}),
+      },
+    });
+  });
+  await stalePage.goto(base);
+  await stalePage
+    .getByText("Catalog is out of date", { exact: true })
+    .waitFor({ timeout: 6000 });
+  await stalePage.getByRole("link", { name: /Echo.*0.1.0/u }).click();
+  await stalePage.getByRole("region", { name: "Release details" }).waitFor();
+  await stalePage
+    .getByRole("region", { name: "Release details" })
+    .getByText("Catalog is out of date", { exact: true })
+    .waitFor();
+  assert.ok(
+    await stalePage.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth
+    )
+  );
+  await stalePage.screenshot({
+    fullPage: true,
+    path: "/tmp/lenso-marketplace-stale-mobile.png",
+  });
+  await stalePage.close();
   assert.deepEqual(errors, []);
   console.log(
     "Real Host and explicit multi-release UI checks passed: persistent navigation, history, request race, save/undo, filters, narrow/dark and recovery"

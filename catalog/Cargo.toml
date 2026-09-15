@@ -23,7 +23,7 @@ base64 = "0.22"
 ed25519-dalek = "2.2"
 hex = "0.4"
 lenso-plugin-bundle = { version = "0.4.2", optional = true }
-lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso-cli.git", rev = "798d58b9aae2f90ed29e17285b0693d10cb8eabd", default-features = false }
+lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso-cli.git", rev = "78fc2b188eec19acd886c0c20457de7a2cccfc97", default-features = false }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

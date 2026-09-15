@@ -1357,7 +1357,7 @@ dependencies = [
 [[package]]
 name = "lenso-plugin-catalog"
 version = "0.1.0"
-source = "git+https://github.com/LioRael/lenso-cli.git?rev=798d58b9aae2f90ed29e17285b0693d10cb8eabd#798d58b9aae2f90ed29e17285b0693d10cb8eabd"
+source = "git+https://github.com/LioRael/lenso-cli.git?rev=78fc2b188eec19acd886c0c20457de7a2cccfc97#78fc2b188eec19acd886c0c20457de7a2cccfc97"
 dependencies = [
  "anyhow",
  "base64",

@@ -19,6 +19,8 @@ export interface Release {
 export interface Catalog {
   catalog_id: string;
   cached: boolean;
+  stale?: boolean;
+  expires_at?: number;
   total?: number;
   publishers?: string[];
   licenses?: string[];

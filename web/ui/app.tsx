@@ -1,14 +1,16 @@
 import { Button } from "@lenso/ui/button";
 import { IconButton } from "@lenso/ui/icon-button";
+import { InlineAlert } from "@lenso/ui/inline-alert";
 import { TextField } from "@lenso/ui/text-field";
 import * as stylex from "@stylexjs/stylex";
 import { Search, X, Sun, Moon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { useCatalog } from "./catalog";
+import { useCatalog, useCatalogStale } from "./catalog";
 import { styles as layout } from "./catalog-layout.stylex";
 import { Detail, Filters, Guide, ReleaseList, State } from "./components";
 import { controls } from "./controls";
+import type { Catalog } from "./model";
 import { identity } from "./model";
 import {
   browseUrl,
@@ -244,6 +246,25 @@ const CatalogFooter = ({ sample }: { sample: boolean }) => (
   </footer>
 );
 
+const CatalogFreshness = ({ data }: { data?: Catalog }) => {
+  const stale = useCatalogStale(data);
+  return stale ? (
+    <InlineAlert.Root
+      tone="warning"
+      aria-live="polite"
+      xstyle={controls.freshness}
+    >
+      <InlineAlert.Content>
+        <InlineAlert.Title>Catalog is out of date</InlineAlert.Title>
+        <InlineAlert.Description>
+          You can still browse and save plugins. New installations require a
+          current verified catalog in Console Agent.
+        </InlineAlert.Description>
+      </InlineAlert.Content>
+    </InlineAlert.Root>
+  ) : null;
+};
+
 export const App = () => {
   const {
     browse,
@@ -376,6 +397,9 @@ export const App = () => {
     }
     return <ReleaseList releases={releases} route={route} saved={saved} />;
   };
+  const freshnessNotice = (
+    <CatalogFreshness data={selected ? exact.data : catalog.data} />
+  );
   const renderDetail = () => {
     if (exact.loading && !release) {
       return <State title="Loading release">Loading release details…</State>;
@@ -396,7 +420,12 @@ export const App = () => {
         </State>
       );
     }
-    return release ? <Detail release={release} saved={saved} /> : null;
+    return release ? (
+      <>
+        {freshnessNotice}
+        <Detail release={release} saved={saved} />
+      </>
+    ) : null;
   };
   return (
     <div className="marketplace">
@@ -535,6 +564,7 @@ export const App = () => {
                   aria-label="Search results"
                   aria-busy={catalog.loading}
                 >
+                  {freshnessNotice}
                   {renderList()}
                 </section>
               </section>

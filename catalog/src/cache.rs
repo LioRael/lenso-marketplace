@@ -1,5 +1,5 @@
 //! A consumer-owned verified cache. Checkpoint and snapshot commit together.
-use crate::{Checkpoint, Trust, VerifiedSnapshot, verify};
+use crate::{BrowseSnapshot, Checkpoint, Trust, VerifiedSnapshot, verify, verify_for_browse};
 use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
 use std::path::Path;
@@ -17,6 +17,18 @@ impl VerifiedCache {
         Ok(Self { connection, trust })
     }
     pub fn accept(&mut self, envelope: &[u8], now: u64) -> Result<VerifiedSnapshot> {
+        self.accept_with(envelope, now, verify, VerifiedSnapshot::checkpoint)
+    }
+    pub fn accept_for_browse(&mut self, envelope: &[u8], now: u64) -> Result<BrowseSnapshot> {
+        self.accept_with(envelope, now, verify_for_browse, BrowseSnapshot::checkpoint)
+    }
+    fn accept_with<T>(
+        &mut self,
+        envelope: &[u8],
+        now: u64,
+        verify: impl Fn(&[u8], &Trust, Option<&Checkpoint>, u64) -> Result<T>,
+        checkpoint: impl Fn(&T) -> &Checkpoint,
+    ) -> Result<T> {
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
@@ -31,11 +43,21 @@ impl VerifiedCache {
             .map(|json| serde_json::from_str::<Checkpoint>(&json))
             .transpose()?;
         let snapshot = verify(envelope, &self.trust, previous.as_ref(), now)?;
-        transaction.execute("INSERT INTO accepted_catalog VALUES(?1,?2,?3) ON CONFLICT(catalog_id) DO UPDATE SET checkpoint=excluded.checkpoint,envelope=excluded.envelope",params![self.trust.catalog_id,serde_json::to_string(snapshot.checkpoint())?,envelope])?;
+        transaction.execute("INSERT INTO accepted_catalog VALUES(?1,?2,?3) ON CONFLICT(catalog_id) DO UPDATE SET checkpoint=excluded.checkpoint,envelope=excluded.envelope",params![self.trust.catalog_id,serde_json::to_string(checkpoint(&snapshot))?,envelope])?;
         transaction.commit()?;
         Ok(snapshot)
     }
     pub fn current(&self, now: u64) -> Result<Option<VerifiedSnapshot>> {
+        self.current_with(now, verify)
+    }
+    pub fn current_for_browse(&self, now: u64) -> Result<Option<BrowseSnapshot>> {
+        self.current_with(now, verify_for_browse)
+    }
+    fn current_with<T>(
+        &self,
+        now: u64,
+        verify: impl Fn(&[u8], &Trust, Option<&Checkpoint>, u64) -> Result<T>,
+    ) -> Result<Option<T>> {
         let stored: Option<(String, Vec<u8>)> = self
             .connection
             .query_row(

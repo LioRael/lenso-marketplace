@@ -90,8 +90,6 @@ select("equivocation");
 await check("same revision equivocation", 503);
 select("tampered");
 await check("invalid signature", 503);
-select("expired", 3);
-await check("expired snapshot", 503);
 select("second", 2);
 await check("new revision", 200);
 const [
@@ -162,6 +160,11 @@ select("second", 2);
 for (let i = 0; i < 100; i += 1) {
   await check(`recreation ${i}`, 200);
 }
+select("expired", 3);
+const stale = await check("expired snapshot remains browsable", 200);
+assert.equal(JSON.parse(stale.text).stale, true);
+select("second", 2);
+await check("expired browse retains rollback fence", 503);
 select("large", 4);
 await check("large signed catalog verification", 200);
 const large = await check(

@@ -10,7 +10,7 @@ use lenso_kernel::{DeactivateContext, InvocationContext, PrepareContext, Runtime
 #[cfg(feature = "native")]
 use lenso_marketplace_catalog::cache::VerifiedCache;
 use lenso_marketplace_catalog::{
-    Trust, VerifiedSnapshot,
+    BrowseSnapshot, Trust,
     persistence::{EventCache, SnapshotStorage},
 };
 #[cfg(not(feature = "native"))]
@@ -129,7 +129,7 @@ impl MarketplaceWeb {
     async fn catalog(
         &self,
         context: InvocationContext,
-    ) -> Result<(VerifiedSnapshot, bool), RuntimeFailure> {
+    ) -> Result<(BrowseSnapshot, bool), RuntimeFailure> {
         let result = self
             .directory
             .read_snapshot_with_context(context, directory::ReadSnapshotRequest {})
@@ -140,25 +140,19 @@ impl MarketplaceWeb {
             let accepted = match result {
                 Ok(response) => Ok((
                     cache
-                        .accept(response.envelope_json.as_str().as_bytes(), now)
+                        .accept_for_browse(response.envelope_json.as_str().as_bytes(), now)
                         .await
                         .map_err(failure)?,
                     false,
                 )),
                 Err(directory::DirectoryInvocationError::Runtime(_)) => cache
-                    .current(now)
+                    .current_for_browse(now)
                     .await
                     .map_err(failure)?
                     .map(|snapshot| (snapshot, true))
-                    .ok_or_else(|| {
-                        failure("directory unavailable and no current verified cache exists")
-                    }),
+                    .ok_or_else(|| failure("directory unavailable and no verified cache exists")),
                 Err(error) => Err(failure(format!("{error:?}"))),
             }?;
-            // Binding I/O may cross the signed expiry after initial verification.
-            if self.now()? >= accepted.0.snapshot().expires_at {
-                return Err(failure("catalog expired while reading storage"));
-            }
             return Ok(accepted);
         }
         #[cfg(feature = "native")]
@@ -170,17 +164,15 @@ impl MarketplaceWeb {
             match result {
                 Ok(response) => Ok((
                     cache
-                        .accept(response.envelope_json.as_str().as_bytes(), now)
+                        .accept_for_browse(response.envelope_json.as_str().as_bytes(), now)
                         .map_err(failure)?,
                     false,
                 )),
                 Err(directory::DirectoryInvocationError::Runtime(_)) => cache
-                    .current(now)
+                    .current_for_browse(now)
                     .map_err(failure)?
                     .map(|snapshot| (snapshot, true))
-                    .ok_or_else(|| {
-                        failure("directory unavailable and no current verified cache exists")
-                    }),
+                    .ok_or_else(|| failure("directory unavailable and no verified cache exists")),
                 Err(error) => Err(failure(format!("{error:?}"))),
             }
         }
@@ -347,7 +339,7 @@ impl MarketplaceWeb {
             .collect();
         Ok(response::json(
             StatusCode::OK,
-            &serde_json::json!({"catalog_id":catalog.snapshot().catalog_id,"revision":catalog.snapshot().revision,"cached":cached,"total":total,"publishers":publishers,"licenses":licenses,"releases":releases}),
+            &serde_json::json!({"catalog_id":catalog.snapshot().catalog_id,"revision":catalog.snapshot().revision,"cached":cached,"stale":catalog.is_stale(self.now().map_err(EndpointHandleInvocationError::Runtime)?),"expires_at":catalog.snapshot().expires_at,"total":total,"publishers":publishers,"licenses":licenses,"releases":releases}),
         )?)
     }
     #[get(
@@ -380,7 +372,7 @@ impl MarketplaceWeb {
         {
             Some(release) => Ok(response::json(
                 StatusCode::OK,
-                &serde_json::json!({"catalog_id":catalog.snapshot().catalog_id,"cached":cached,"release":release}),
+                &serde_json::json!({"catalog_id":catalog.snapshot().catalog_id,"cached":cached,"stale":catalog.is_stale(self.now().map_err(EndpointHandleInvocationError::Runtime)?),"expires_at":catalog.snapshot().expires_at,"release":release}),
             )?),
             None => Ok(response::problem(
                 StatusCode::NOT_FOUND,

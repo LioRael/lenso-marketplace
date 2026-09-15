@@ -120,3 +120,42 @@ fn storage_failure_never_falls_back_to_event_local_trust_state() {
         assert!(cache.current(150).await.is_err());
     });
 }
+
+#[test]
+fn expired_browse_acceptance_retains_fences_without_enabling_installation() {
+    block_on(async {
+        let (store, cache, trust, key) = setup();
+        let bytes = envelope(&key, 2, 100);
+        assert!(
+            cache
+                .accept_for_browse(&bytes, 200)
+                .await
+                .unwrap()
+                .is_stale(200)
+        );
+        let recreated = EventCache::new(store, trust);
+        assert!(
+            recreated
+                .current_for_browse(201)
+                .await
+                .unwrap()
+                .unwrap()
+                .is_stale(201)
+        );
+        assert!(recreated.current(201).await.is_err());
+        assert!(recreated.accept(&bytes, 201).await.is_err());
+        assert!(
+            recreated
+                .accept_for_browse(&envelope(&key, 1, 100), 201)
+                .await
+                .is_err()
+        );
+        assert!(
+            recreated
+                .accept_for_browse(&envelope(&key, 2, 101), 201)
+                .await
+                .is_err()
+        );
+        assert!(recreated.accept_for_browse(b"invalid", 201).await.is_err());
+    });
+}

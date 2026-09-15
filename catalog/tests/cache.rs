@@ -31,6 +31,31 @@ fn restart_preserves_checkpoint_and_failed_updates_preserve_current_snapshot() {
     assert!(cache.current(201).is_err());
     assert!(cache.accept(&envelope(3), 201).is_err());
     assert_eq!(cache.current(150).unwrap().unwrap().snapshot().revision, 2);
+    assert!(
+        cache
+            .current_for_browse(201)
+            .unwrap()
+            .unwrap()
+            .is_stale(201)
+    );
+    assert!(
+        cache
+            .accept_for_browse(&envelope(3), 201)
+            .unwrap()
+            .is_stale(201)
+    );
+    assert!(cache.current(201).is_err());
+    assert!(cache.accept_for_browse(&envelope(2), 201).is_err());
+    assert!(cache.accept_for_browse(b"invalid", 201).is_err());
+    assert_eq!(
+        cache
+            .current_for_browse(201)
+            .unwrap()
+            .unwrap()
+            .snapshot()
+            .revision,
+        3
+    );
     drop(cache);
     let changed_trust = Trust {
         catalog_id: "cache-test".into(),

@@ -1,6 +1,6 @@
 //! Private persistence seam shared by the Marketplace's native and event hosts.
 //! The storage adapter never decides trust or accepts an unverified checkpoint.
-use crate::{Checkpoint, Trust, VerifiedSnapshot, verify};
+use crate::{BrowseSnapshot, Checkpoint, Trust, VerifiedSnapshot, verify, verify_for_browse};
 use anyhow::{Result, bail};
 use futures::future::LocalBoxFuture;
 use std::{fmt::Debug, rc::Rc};
@@ -43,6 +43,20 @@ impl EventCache {
     }
 
     pub async fn accept(&self, envelope: &[u8], now: u64) -> Result<VerifiedSnapshot> {
+        self.accept_with(envelope, now, verify, VerifiedSnapshot::checkpoint)
+            .await
+    }
+    pub async fn accept_for_browse(&self, envelope: &[u8], now: u64) -> Result<BrowseSnapshot> {
+        self.accept_with(envelope, now, verify_for_browse, BrowseSnapshot::checkpoint)
+            .await
+    }
+    async fn accept_with<T>(
+        &self,
+        envelope: &[u8],
+        now: u64,
+        verify: impl Fn(&[u8], &Trust, Option<&Checkpoint>, u64) -> Result<T>,
+        checkpoint: impl Fn(&T) -> &Checkpoint,
+    ) -> Result<T> {
         // Reverify against the winner after a race, including rollback and
         // same-revision equivocation. Never overwrite a newer accepted state.
         for _ in 0..8 {
@@ -61,7 +75,7 @@ impl EventCache {
             }
             let value = AcceptedEnvelope {
                 token: crate::digest(envelope),
-                checkpoint: snapshot.checkpoint().clone(),
+                checkpoint: checkpoint(&snapshot).clone(),
                 envelope: envelope.to_vec(),
             };
             if self
@@ -80,6 +94,16 @@ impl EventCache {
     }
 
     pub async fn current(&self, now: u64) -> Result<Option<VerifiedSnapshot>> {
+        self.current_with(now, verify).await
+    }
+    pub async fn current_for_browse(&self, now: u64) -> Result<Option<BrowseSnapshot>> {
+        self.current_with(now, verify_for_browse).await
+    }
+    async fn current_with<T>(
+        &self,
+        now: u64,
+        verify: impl Fn(&[u8], &Trust, Option<&Checkpoint>, u64) -> Result<T>,
+    ) -> Result<Option<T>> {
         self.storage
             .accepted(&self.trust.catalog_id)
             .await?

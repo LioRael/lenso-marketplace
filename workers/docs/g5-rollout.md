@@ -153,9 +153,11 @@ catalog-service baseline, then monitor the agreed observation window.
 
 The shared protocol enforces `issued_at <= now < expires_at`, a maximum validity
 of seven days, monotonic revisions, same-revision payload consistency and immutable
-release identities. The Web event path checks expiry again after storage I/O.
-Do not cache a successful verification indefinitely, lengthen expiry in JSON, or
-serve expired content to hide a failed renewal.
+release identities for installation. Browse verification also checks signatures,
+identity and revision history, but permits expired metadata. Search and detail
+return `stale` and signed `expires_at`; the UI shows a stale notice and updates it
+when expiry passes while open. The browse result has no installation-selection
+API. Never alter signed expiry or use browsing as an installation grant.
 
 Choose and record a renewal interval and alert lead time before launch. A practical
 proposal is daily renewal with seven-day validity and escalation well before the
@@ -164,7 +166,10 @@ approved schedule. Each renewal uses the publisher's next revision even when
 releases are unchanged, passes the same upload/conditional-pointer procedure and
 produces an audit receipt. Keep the last successful expiry visible to the operator.
 If the key or publisher is unavailable, escalate while content is still valid;
-after expiry the service must fail closed until a valid forward publication exists.
+after expiry new installations fail closed until a valid forward publication
+exists. Browsing remains available with an explicit stale notice. Invalid
+signatures, future issuance, rollback and corrupted storage still fail closed;
+this is not a fallback for integrity failures.
 
 Monitor verified search/detail status as well as raw envelope delivery, remaining
 validity, published/accepted revision, signature/integrity rejection, storage

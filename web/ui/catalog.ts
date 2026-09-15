@@ -63,3 +63,25 @@ export const useCatalog = (endpoint: string | null) => {
     status: sample?.status ?? current?.status,
   };
 };
+
+// Expiry can pass while the page stays open. Recompute on visibility changes too.
+export const useCatalogStale = (data?: Catalog) => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const remaining = (data?.expires_at ?? 0) * 1000 - Date.now();
+    const timer =
+      remaining > 0
+        ? window.setTimeout(update, Math.min(remaining, 2_147_483_647))
+        : undefined;
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, [data?.expires_at]);
+  return Boolean(
+    data?.stale || (data?.expires_at && now >= data.expires_at * 1000)
+  );
+};

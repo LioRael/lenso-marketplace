@@ -148,6 +148,27 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
             let recovered: serde_json::Value = recovered.json().await.unwrap();
             assert_eq!(recovered["revision"], 3);
             assert_eq!(recovered["cached"], false);
+            // Expiry must not turn display metadata into an HTTP outage or an
+            // installation grant. Use an already-expired signed publication.
+            publisher
+                .publish("reviewer", 3, now - 100, now - 50, "test-key", &key)
+                .unwrap();
+            let expired = client.get(&base).send().await.unwrap();
+            assert_eq!(expired.status(), 200);
+            let expired: serde_json::Value = expired.json().await.unwrap();
+            assert_eq!(expired["stale"], true);
+            assert_eq!(expired["expires_at"], now - 50);
+            let envelope = client
+                .get(format!("http://{address}/api/marketplace/v1/snapshot"))
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
+            assert!(
+                lenso_marketplace_catalog::verify(envelope.as_bytes(), &trust, None, now).is_err()
+            );
             assert!(matches!(
                 app.shutdown(Duration::from_secs(5)).await,
                 lenso_kernel::ShutdownOutcome::Clean
