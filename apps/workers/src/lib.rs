@@ -10,7 +10,7 @@ use lenso_marketplace_web_plugin::{EventWebFactory, MarketplaceClock};
 use lenso_native_adapter::NativePluginRegistry;
 use lenso_web_ingress_plugin::{WebIngressConfig, WebIngressEventFactory};
 use lenso_workers_driver::WorkersDriver;
-use std::{rc::Rc, time::Duration};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 use wasm_bindgen::{JsCast, prelude::*};
 
 fn error(value: impl std::fmt::Debug) -> JsValue {
@@ -22,7 +22,20 @@ fn failure() -> RuntimeFailure {
     }
 }
 #[derive(Debug)]
-struct Storage(js_sys::Function);
+struct Storage {
+    callback: js_sys::Function,
+    // This owner serves one HTTP event. The Web hint is consumed by the next
+    // Plan-bound Directory call; the resulting prior state is consumed once.
+    // It is never reused across requests or after a losing compare_exchange.
+    pending_catalog: RefCell<Option<String>>,
+    prior: RefCell<Option<(String, Option<AcceptedEnvelope>)>>,
+}
+
+#[derive(serde::Deserialize)]
+struct CatalogRead {
+    envelope: Option<String>,
+    accepted: Option<AcceptedEnvelope>,
+}
 impl Storage {
     async fn invoke<T: serde::de::DeserializeOwned>(
         &self,
@@ -30,7 +43,7 @@ impl Storage {
         input: serde_json::Value,
     ) -> anyhow::Result<T> {
         let promise = self
-            .0
+            .callback
             .call2(
                 &JsValue::NULL,
                 &JsValue::from_str(operation),
@@ -53,15 +66,43 @@ impl lenso_marketplace_directory_plugin::storage::PublishedStorage for Storage {
         &'a self,
         catalog: &'a str,
     ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
-        Box::pin(self.invoke("published", serde_json::json!({"catalog":catalog})))
+        let coalesce = self.pending_catalog.borrow_mut().take().as_deref() == Some(catalog);
+        self.prior.borrow_mut().take();
+        Box::pin(async move {
+            if coalesce {
+                let read: CatalogRead = self
+                    .invoke("catalog", serde_json::json!({"catalog":catalog}))
+                    .await?;
+                self.prior
+                    .replace(Some((catalog.to_owned(), read.accepted)));
+                Ok(read.envelope)
+            } else {
+                self.invoke("published", serde_json::json!({"catalog":catalog}))
+                    .await
+            }
+        })
     }
 }
 impl CacheStorage for Storage {
+    fn prepare_catalog_read(&self, catalog: &str) {
+        self.prior.borrow_mut().take();
+        self.pending_catalog.replace(Some(catalog.to_owned()));
+    }
+
     fn accepted<'a>(
         &'a self,
         catalog: &'a str,
     ) -> LocalBoxFuture<'a, anyhow::Result<Option<AcceptedEnvelope>>> {
-        Box::pin(self.invoke("accepted", serde_json::json!({"catalog":catalog})))
+        let prior = self.prior.borrow_mut().take();
+        Box::pin(async move {
+            if let Some((owner, accepted)) = prior
+                && owner == catalog
+            {
+                return Ok(accepted);
+            }
+            self.invoke("accepted", serde_json::json!({"catalog":catalog}))
+                .await
+        })
     }
     fn compare_exchange<'a>(
         &'a self,
@@ -130,12 +171,14 @@ pub async fn handle_http(input: String, scope: JsValue) -> Result<String, JsValu
             .ok_or_else(|| error("configuration missing"))?,
     )
     .map_err(error)?;
-    let storage = Rc::new(Storage(
-        js_sys::Reflect::get(&scope, &"storage".into())
+    let storage = Rc::new(Storage {
+        callback: js_sys::Reflect::get(&scope, &"storage".into())
             .map_err(error)?
             .dyn_into()
             .map_err(error)?,
-    ));
+        pending_catalog: RefCell::default(),
+        prior: RefCell::default(),
+    });
     let ingress = WebIngressEventFactory::new();
     let releases = vec![
         HostPluginRelease::new(WebIngressEventFactory::plugin_descriptor()),

@@ -131,6 +131,9 @@ impl MarketplaceWeb {
         &self,
         context: InvocationContext,
     ) -> Result<(BrowseSnapshot, bool), RuntimeFailure> {
+        if let Some(storage) = &self.storage {
+            storage.prepare_catalog_read(&self.config.catalog_id);
+        }
         let result = self
             .directory
             .read_snapshot_with_context(context, directory::ReadSnapshotRequest {})

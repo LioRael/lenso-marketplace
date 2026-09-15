@@ -5,29 +5,31 @@ import test from "node:test";
 import { createStorageScope } from "./storage-scope.mjs";
 
 for (const kind of ["resolve", "reject"]) {
-  test(`invalidated event fences late native ${kind}`, async () => {
-    let complete;
-    const scope = createStorageScope(
-      () => () =>
-        new Promise((resolve, reject) => {
-          complete = kind === "resolve" ? resolve : reject;
-        }),
-      "{}"
-    );
-    let forwarded = false;
-    void scope.storage("accepted", "{}").then(
-      () => {
-        forwarded = true;
-      },
-      () => {
-        forwarded = true;
-      }
-    );
-    scope.invalidate();
-    complete(kind === "resolve" ? "null" : new Error("native failure"));
-    assert.equal(await scope.settled(), true);
-    assert.equal(forwarded, false);
-  });
+  for (const operation of ["accepted", "catalog"]) {
+    test(`invalidated ${operation} fences late native ${kind}`, async () => {
+      let complete;
+      const scope = createStorageScope(
+        () => () =>
+          new Promise((resolve, reject) => {
+            complete = kind === "resolve" ? resolve : reject;
+          }),
+        "{}"
+      );
+      let forwarded = false;
+      void scope.storage(operation, "{}").then(
+        () => {
+          forwarded = true;
+        },
+        () => {
+          forwarded = true;
+        }
+      );
+      scope.invalidate();
+      complete(kind === "resolve" ? "null" : new Error("native failure"));
+      assert.equal(await scope.settled(), true);
+      assert.equal(forwarded, false);
+    });
+  }
 }
 
 test("unabortable storage has bounded, stable uncertain settlement", async () => {
