@@ -65,6 +65,114 @@ const digest = async (bytes) =>
     (b) => b.toString(16).padStart(2, "0")
   ).join("")}`;
 
+const publicationStatement = (database, catalog) =>
+  database
+    .prepare(
+      "SELECT object_key,digest FROM marketplace_publications WHERE catalog_id=?"
+    )
+    .bind(catalog);
+
+const acceptedStatement = (database, catalog) =>
+  database
+    .prepare(
+      "SELECT token,object_key FROM marketplace_accepted WHERE catalog_id=?"
+    )
+    .bind(catalog);
+
+const validatePublicationPointer = (row) => {
+  if (
+    row &&
+    (typeof row.object_key !== "string" ||
+      row.object_key.length === 0 ||
+      typeof row.digest !== "string" ||
+      !/^sha256:[a-f0-9]{64}$/u.test(row.digest))
+  ) {
+    throw new Error("invalid publication pointer");
+  }
+};
+
+const readPublished = async (bucket, row, signal, track) => {
+  validatePublicationPointer(row);
+  if (!row) {
+    return null;
+  }
+  const envelope = await readObject(
+    bucket,
+    row.object_key,
+    MAX_ENVELOPE,
+    signal,
+    undefined,
+    track
+  );
+  if ((await digest(encoder.encode(envelope))) !== row.digest) {
+    throw new Error("published object integrity failure");
+  }
+  return envelope;
+};
+
+const readAccepted = async (bucket, row, catalog, signal, track) => {
+  if (!row) {
+    return null;
+  }
+  const raw = await readObject(
+    bucket,
+    row.object_key,
+    MAX_STATE,
+    signal,
+    undefined,
+    track
+  );
+  const rawDigest = await digest(encoder.encode(raw));
+  const expectedKey = `accepted/${encodeURIComponent(catalog)}/${rawDigest.slice(7)}.json`;
+  if (row.object_key !== expectedKey) {
+    throw new Error("accepted checkpoint integrity failure");
+  }
+  const stored = JSON.parse(raw);
+  if (
+    typeof stored?.envelope !== "string" ||
+    encoder.encode(stored.envelope).byteLength > MAX_ENVELOPE ||
+    stored.token !== row.token ||
+    (await digest(encoder.encode(stored.envelope))) !== row.token
+  ) {
+    throw new Error("accepted pointer mismatch");
+  }
+  return stored;
+};
+
+const readCatalog = async (database, bucket, catalog, signal, track) => {
+  // One primary D1 batch observes both pointers in the same transaction.
+  const rows = await database.batch([
+    publicationStatement(database, catalog),
+    acceptedStatement(database, catalog),
+  ]);
+  signal.throwIfAborted();
+  if (
+    rows.length !== 2 ||
+    rows.some(
+      (row) =>
+        !row.success || !Array.isArray(row.results) || row.results.length > 1
+    )
+  ) {
+    throw new Error("catalog pointer read failed");
+  }
+  const [publication] = rows[0].results;
+  validatePublicationPointer(publication);
+  const accepted = await readAccepted(
+    bucket,
+    rows[1].results[0],
+    catalog,
+    signal,
+    track
+  );
+  // Only storage integrity is established here. Even reused bytes must pass
+  // Rust signature/trust/checkpoint validation on every invocation.
+  const envelope =
+    publication && accepted && publication.digest === accepted.token
+      ? accepted.envelope
+      : await readPublished(bucket, publication, signal, track);
+  return { accepted, envelope };
+};
+
 const compareExchange = async (
   database,
   bucket,
@@ -165,59 +273,14 @@ export const createStorage = (database, bucket, signal, scope) => {
       throw new Error("invalid catalog binding");
     }
     let result;
-    if (operation === "published") {
-      const row = await database
-        .prepare(
-          "SELECT object_key,digest FROM marketplace_publications WHERE catalog_id=?"
-        )
-        .bind(catalog)
-        .first();
-      if (!row) {
-        return "null";
-      }
-      const envelope = await readObject(
-        bucket,
-        row.object_key,
-        MAX_ENVELOPE,
-        signal,
-        undefined,
-        track
-      );
-      if ((await digest(encoder.encode(envelope))) !== row.digest) {
-        throw new Error("published object integrity failure");
-      }
-      result = envelope;
+    if (operation === "catalog") {
+      result = await readCatalog(database, bucket, catalog, signal, track);
+    } else if (operation === "published") {
+      const row = await publicationStatement(database, catalog).first();
+      result = await readPublished(bucket, row, signal, track);
     } else if (operation === "accepted") {
-      const row = await database
-        .prepare(
-          "SELECT token,object_key FROM marketplace_accepted WHERE catalog_id=?"
-        )
-        .bind(catalog)
-        .first();
-      if (!row) {
-        return "null";
-      }
-      const raw = await readObject(
-        bucket,
-        row.object_key,
-        MAX_STATE,
-        signal,
-        undefined,
-        track
-      );
-      const rawDigest = await digest(encoder.encode(raw));
-      const expectedKey = `accepted/${encodeURIComponent(catalog)}/${rawDigest.slice(7)}.json`;
-      if (row.object_key !== expectedKey) {
-        throw new Error("accepted checkpoint integrity failure");
-      }
-      const stored = JSON.parse(raw);
-      if (
-        stored.token !== row.token ||
-        (await digest(encoder.encode(stored.envelope))) !== row.token
-      ) {
-        throw new Error("accepted pointer mismatch");
-      }
-      result = stored;
+      const row = await acceptedStatement(database, catalog).first();
+      result = await readAccepted(bucket, row, catalog, signal, track);
     } else if (operation === "compare_exchange") {
       result = await compareExchange(
         database,
