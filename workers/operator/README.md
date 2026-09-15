@@ -48,3 +48,54 @@ checks create-only R2 conditions, exact bytes, D1 competing updates, stale
 pointers and preservation of consumer acceptance. The fixture verifier is a
 stub; this is storage integration evidence, not signature or deployed Cloudflare
 qualification. It creates no remote resources and disposes its isolated runtime.
+
+## Protected host to Cloudflare
+
+`node operator/promote-cloudflare.mjs CONFIG.json` exports the latest committed
+publication from the configured Rust publisher database, verifies it using the
+same binary and configured trust, then invokes conditional promotion against D1
+REST and R2 S3. Run this command on the protected operator host, outside the
+public Worker. It never initializes a database, signs a new revision or accepts
+an arbitrary envelope file. First use the existing Rust `publish` operation to
+commit an authorized publication; after a network failure, reconcile before
+repeating promotion. Do not publish another revision just to retry transport.
+
+The public configuration has this shape (replace every placeholder):
+
+```json
+{
+  "accountId": "<32 hexadecimal account ID>",
+  "databaseId": "<D1 UUID>",
+  "bucketName": "<private R2 bucket>",
+  "catalogId": "<approved catalog identity>",
+  "publisherBinary": "/absolute/path/to/lenso-marketplace-publisher",
+  "publisherConfig": "/absolute/path/to/publisher.json",
+  "expected": null
+}
+```
+
+Use `expected: null` only for an explicitly reviewed empty remote publication
+slot. Otherwise provide the full observed revision, object_key and digest.
+`MARKETPLACE_D1_TOKEN`, `MARKETPLACE_R2_ACCESS_KEY_ID` and
+`MARKETPLACE_R2_SECRET_ACCESS_KEY` are injected environment credentials. Restrict
+them to the selected account/database and bucket using available provider scopes;
+they are distinct from the Ed25519 signing key and from a Wrangler OAuth login.
+Never place them in this configuration or commit them. The command does not
+create credentials, migrations, buckets or environments.
+
+The adapter signs R2 requests with aws4fetch `sign()` and performs one fetch;
+it does not use the SDK retrying fetch helper. Requests have a 30-second timeout,
+reject redirects, bound D1 response bodies and suppress provider response bodies
+in errors. Transport failures remain uncertain until the promotion operation
+reconciles durable state. Exact successful pointer receipts are printed to stdout;
+a broken stdout does not roll back committed storage.
+
+The intended production custody environment is `marketplace-production`, with
+an additive `marketplace.lenso.dev` service and a reviewed empty first directory.
+A durable publisher database and backup/restore ownership must be wired before
+unattended renewal. An ephemeral Actions checkout is not the publisher database;
+this command alone does not configure or qualify an unattended workflow.
+Cloudflare account execution and consumer endpoint acceptance remain pending.
+
+Protocol references: [D1 query API](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/query/)
+and [R2 aws4fetch](https://developers.cloudflare.com/r2/examples/aws/aws4fetch/).
