@@ -1,0 +1,1220 @@
+{
+  "baseCommit": "20070a2d3d4c1e04082cfd4701cf12ba808492b6",
+  "cells": [
+    {
+      "cold-process-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 36.954125000000204,
+          "p95": 37.20170799999687,
+          "p99": 37.20170799999687,
+          "samples": 3
+        },
+        "samples": 3,
+        "startupMs": {
+          "p50": 75.1437079999996,
+          "p95": 86.85870799999975,
+          "p99": 86.85870799999975,
+          "samples": 3
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 9699328,
+          "p95": 9699328,
+          "p99": 9699328,
+          "samples": 3
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          },
+          "d1RunRowsWritten": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2PutBytes": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          },
+          "r2PutCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          }
+        }
+      },
+      "path": "unchanged",
+      "size": "small",
+      "warm-isolate-new-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 4.927707999999257,
+          "p95": 5.0135840000002645,
+          "p99": 5.0135840000002645,
+          "samples": 2
+        },
+        "samples": 2,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 9699328,
+          "p95": 9699328,
+          "p99": 9699328,
+          "samples": 2
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          },
+          "d1RunRowsWritten": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2PutBytes": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          },
+          "r2PutCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          }
+        }
+      },
+      "warm-isolate-warm-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 4.59008299999914,
+          "p95": 6.0584579999995185,
+          "p99": 6.78729100000055,
+          "samples": 30
+        },
+        "samples": 30,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 9830400,
+          "p95": 9895936,
+          "p99": 9895936,
+          "samples": 30
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          },
+          "d1RunRowsWritten": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2PutBytes": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          },
+          "r2PutCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          }
+        }
+      }
+    },
+    {
+      "cold-process-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 2476,
+            "p95": 2476,
+            "p99": 2476,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 39.81683300000077,
+          "p95": 40.11441600000035,
+          "p99": 40.11441600000035,
+          "samples": 3
+        },
+        "samples": 3,
+        "startupMs": {
+          "p50": 64.22866599999907,
+          "p95": 74.40762499999983,
+          "p99": 74.40762499999983,
+          "samples": 3
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 9699328,
+          "p95": 9699328,
+          "p99": 9699328,
+          "samples": 3
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "d1RunRowsWritten": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 2476,
+            "p95": 2476,
+            "p99": 2476,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 3,
+            "p95": 3,
+            "p99": 3,
+            "samples": 3
+          },
+          "r2PutBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 3
+          },
+          "r2PutCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          }
+        }
+      },
+      "path": "changed",
+      "size": "small",
+      "warm-isolate-new-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 2476,
+            "p95": 2476,
+            "p99": 2476,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 5.816208000000188,
+          "p95": 6.812457999996695,
+          "p99": 6.812457999996695,
+          "samples": 2
+        },
+        "samples": 2,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 9699328,
+          "p95": 9699328,
+          "p99": 9699328,
+          "samples": 2
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "d1RunRowsWritten": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 2476,
+            "p95": 2476,
+            "p99": 2476,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 3,
+            "p95": 3,
+            "p99": 3,
+            "samples": 2
+          },
+          "r2PutBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 2
+          },
+          "r2PutCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          }
+        }
+      },
+      "warm-isolate-warm-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 2476,
+            "p95": 2476,
+            "p99": 2476,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 6.561750000000757,
+          "p95": 7.353250000000116,
+          "p99": 7.420083000000886,
+          "samples": 30
+        },
+        "samples": 30,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 9830400,
+          "p95": 9895936,
+          "p99": 9895936,
+          "samples": 30
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "d1RunRowsWritten": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 2476,
+            "p95": 2476,
+            "p99": 2476,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 3,
+            "p95": 3,
+            "p99": 3,
+            "samples": 30
+          },
+          "r2PutBytes": {
+            "p50": 1431,
+            "p95": 1431,
+            "p99": 1431,
+            "samples": 30
+          },
+          "r2PutCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          }
+        }
+      }
+    },
+    {
+      "cold-process-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 162.5670420000024,
+          "p95": 166.07129200000054,
+          "p99": 166.07129200000054,
+          "samples": 3
+        },
+        "samples": 3,
+        "startupMs": {
+          "p50": 68.35458300000028,
+          "p95": 72.45708299999387,
+          "p99": 72.45708299999387,
+          "samples": 3
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 35258368,
+          "p95": 35258368,
+          "p99": 35258368,
+          "samples": 3
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          },
+          "d1RunRowsWritten": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2PutBytes": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          },
+          "r2PutCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 3
+          }
+        }
+      },
+      "path": "unchanged",
+      "size": "large",
+      "warm-isolate-new-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 53.45479200000045,
+          "p95": 54.254582999994454,
+          "p99": 54.254582999994454,
+          "samples": 2
+        },
+        "samples": 2,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 35258368,
+          "p95": 35258368,
+          "p99": 35258368,
+          "samples": 2
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          },
+          "d1RunRowsWritten": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2PutBytes": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          },
+          "r2PutCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 2
+          }
+        }
+      },
+      "warm-isolate-warm-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 51.99187499999971,
+          "p95": 57.78612499999872,
+          "p99": 62.09241699999984,
+          "samples": 30
+        },
+        "samples": 30,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 35258368,
+          "p95": 35258368,
+          "p99": 35258368,
+          "samples": 30
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          },
+          "d1RunRowsWritten": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2PutBytes": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          },
+          "r2PutCalls": {
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "samples": 30
+          }
+        }
+      }
+    },
+    {
+      "cold-process-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 7239332,
+            "p95": 7239332,
+            "p99": 7239332,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 3
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 226.20966600000247,
+          "p95": 226.80554200000188,
+          "p99": 226.80554200000188,
+          "samples": 3
+        },
+        "samples": 3,
+        "startupMs": {
+          "p50": 68.13866699999926,
+          "p95": 75.15774999999849,
+          "p99": 75.15774999999849,
+          "samples": 3
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 42532864,
+          "p95": 42532864,
+          "p99": 42532864,
+          "samples": 3
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "d1RunRowsWritten": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          },
+          "r2GetBytes": {
+            "p50": 7239332,
+            "p95": 7239332,
+            "p99": 7239332,
+            "samples": 3
+          },
+          "r2GetCalls": {
+            "p50": 3,
+            "p95": 3,
+            "p99": 3,
+            "samples": 3
+          },
+          "r2PutBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 3
+          },
+          "r2PutCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 3
+          }
+        }
+      },
+      "path": "changed",
+      "size": "large",
+      "warm-isolate-new-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 7239332,
+            "p95": 7239332,
+            "p99": 7239332,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 2
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 109.6996250000011,
+          "p95": 114.52900000000227,
+          "p99": 114.52900000000227,
+          "samples": 2
+        },
+        "samples": 2,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 42532864,
+          "p95": 42532864,
+          "p99": 42532864,
+          "samples": 2
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "d1RunRowsWritten": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          },
+          "r2GetBytes": {
+            "p50": 7239332,
+            "p95": 7239332,
+            "p99": 7239332,
+            "samples": 2
+          },
+          "r2GetCalls": {
+            "p50": 3,
+            "p95": 3,
+            "p99": 3,
+            "samples": 2
+          },
+          "r2PutBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 2
+          },
+          "r2PutCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 2
+          }
+        }
+      },
+      "warm-isolate-warm-generation-fresh-app": {
+        "catalogRead": {
+          "d1BatchRowsRead": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1BatchStatements": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          },
+          "d1Batches": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 7239332,
+            "p95": 7239332,
+            "p99": 7239332,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 2,
+            "p95": 2,
+            "p99": 2,
+            "samples": 30
+          }
+        },
+        "externalLatencyMs": {
+          "p50": 112.78670899999997,
+          "p95": 118.94362499999988,
+          "p99": 119.68279199999961,
+          "samples": 30
+        },
+        "samples": 30,
+        "startupMs": {
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "samples": 0
+        },
+        "wasmLinearMemoryBytes": {
+          "p50": 42532864,
+          "p95": 42532864,
+          "p99": 42532864,
+          "samples": 30
+        },
+        "wholeEvent": {
+          "d1RunCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "d1RunRowsWritten": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          },
+          "r2GetBytes": {
+            "p50": 7239332,
+            "p95": 7239332,
+            "p99": 7239332,
+            "samples": 30
+          },
+          "r2GetCalls": {
+            "p50": 3,
+            "p95": 3,
+            "p99": 3,
+            "samples": 30
+          },
+          "r2PutBytes": {
+            "p50": 3627619,
+            "p95": 3627619,
+            "p99": 3627619,
+            "samples": 30
+          },
+          "r2PutCalls": {
+            "p50": 1,
+            "p95": 1,
+            "p99": 1,
+            "samples": 30
+          }
+        }
+      }
+    }
+  ],
+  "claim": "Local Miniflare/workerd wall-time characterization only; no deployed latency, CPU, total isolate memory, fleet capacity, or cost claim.",
+  "completedSamples": 140,
+  "failureCount": 0,
+  "finishedAt": "2026-09-15T15:51:50.194Z",
+  "fixtures": {
+    "large-equivocation": {
+      "bytes": 3611713,
+      "revision": 2,
+      "sha256": "b3b482591fcc6da27d7ec9e9d7bed2524ec419b62fdf599348150eda20cab9e9"
+    },
+    "large-newer": {
+      "bytes": 3611713,
+      "revision": 3,
+      "sha256": "a1799e02d4804fe05cb4373596a61699fe82d9a27bd45236c61eb230bb86ed89"
+    },
+    "large-prior": {
+      "bytes": 3611713,
+      "revision": 1,
+      "sha256": "18def27ee46c9e31c4272ab7c04c5b215d9bca6dc00a922cfe56aabb8e3b63fd"
+    },
+    "large-target": {
+      "bytes": 3611713,
+      "revision": 2,
+      "sha256": "ca4e939e8b22a7760ba7824c84ccae4cb83456d5b4a0a9b3f50e86cdfc36be15"
+    },
+    "small-equivocation": {
+      "bytes": 1045,
+      "revision": 2,
+      "sha256": "b5d4fce67eef304d605c72da95d57a0bc8fd160d4d2b8bc62bb563266032742f"
+    },
+    "small-newer": {
+      "bytes": 1045,
+      "revision": 3,
+      "sha256": "70127ab818bd2380c5536fdf6c85608660a99bec5ded105c86cd844ae08cc12a"
+    },
+    "small-prior": {
+      "bytes": 1045,
+      "revision": 1,
+      "sha256": "9423953e3027ec92c6f3dabf5f11c12daca6b80b901c1baf8712306a311a242c"
+    },
+    "small-target": {
+      "bytes": 1045,
+      "revision": 2,
+      "sha256": "94ac83ed1f0c164451997b16ec28242c9fcfc68c49e11e573640ad7b21644eae"
+    }
+  },
+  "limits": {
+    "cold": "New Miniflare/workerd process and loaded artifact; OS file/JIT caches are not flushed",
+    "counters": "Read prefix and full event reported separately; fixture management is excluded",
+    "d1Rows": "Local D1 meta rows_read/rows_written for batch/run; first() exposes only returned rows",
+    "deploymentClaim": false,
+    "eventLimitMs": 5000,
+    "fixtureSetup": "Unmeasured local pointer restoration before each sample; changed candidate object absent",
+    "freshApp": "Every HTTP event starts and cleanly shuts down a new Rust Kernel App",
+    "instrumentation": "Local binding wrappers and diagnostic headers add overhead to every cell",
+    "latency": "Node performance.now around loopback HTTP fetch through full response body; not CPU",
+    "localOnly": true,
+    "maxConcurrent": 1,
+    "maxRequestBodyBytes": 65536,
+    "maxResponseBodyBytes": 4194304,
+    "memory": "Wasm linear memory at event receipt; not total isolate memory or sampled peak",
+    "percentiles": "Nearest rank; p99 of small samples is descriptive, not a production tail estimate",
+    "r2Bytes": "Returned R2 object sizes, including acceptance reads; not network framing or billed bytes",
+    "remoteResources": false,
+    "retirementAdmissionLimit": 16,
+    "signatures": "Pinned public synthetic bytes; expired display catalogs, full Rust browse verification",
+    "startup": "Miniflare construction through ready; excludes fixture seeding and first HTTP event",
+    "warm": "Same process/isolate; generation changes after the existing 16-admission retirement"
+  },
+  "machine": {
+    "arch": "arm64",
+    "cpuModel": "Apple M2 Pro",
+    "logicalCpus": 10,
+    "platform": "darwin",
+    "release": "27.0.0",
+    "totalMemoryBytes": 17179869184
+  },
+  "passed": true,
+  "rawReceipt": "local.raw.json.gz",
+  "rawReceiptFormat": "gzip JSON; command and worktree paths normalized",
+  "schema": "lenso.marketplace.workers.d01.summary.v1",
+  "startedAt": "2026-09-15T15:51:01.754Z",
+  "toolVersions": {
+    "@lenso/workers-runtime": {
+      "packageJsonSha256": "0cd45d5b77683d8693545640a9f46ef5104968e8b2fac4753c8b9bd914190cf2",
+      "version": "0.1.2"
+    },
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)",
+    "miniflare": {
+      "packageJsonSha256": "601f6c809b7f3789c778b38247dd68ee885d7f7ade2b86ec4c0700e8e5d0f067",
+      "version": "4.20260701.0"
+    },
+    "node": "v26.8.2",
+    "pnpm": "11.5.0",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)\nbinary: rustc\ncommit-hash: 4a4ef493e3a1488c6e321570238084b38948f6db\ncommit-date: 2026-03-02\nhost: aarch64-apple-darwin\nrelease: 1.94.0\nLLVM version: 21.1.8",
+    "wasmBindgen": "wasm-bindgen 0.2.127",
+    "workerd": {
+      "binarySha256": "edd9ecf3b9ca100cbfba5e2960874443dc6937b0bc94ba9d47b73a43e8dc1410",
+      "bytes": 114276648,
+      "version": "workerd 2026-07-01"
+    },
+    "wrangler": {
+      "packageJsonSha256": "57738fbc60d5257ce8645b3e62f458fc476baff2efcaca0bcdc1a2b1de0dd941",
+      "version": "4.107.0"
+    }
+  },
+  "trustAndCasAssertions": 26
+}

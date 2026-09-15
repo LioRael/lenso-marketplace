@@ -1,0 +1,11 @@
+{
+  "name": "lenso-d01-local-only",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": [
+    "global_fetch_strictly_public",
+    "enable_request_signal",
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+}
