@@ -13,7 +13,8 @@ cleanup() {
 trap cleanup EXIT
 cd "$workspace_root"
 pnpm build
-"$CARGO" metadata --locked --no-deps --format-version 1 --manifest-path "$marketplace_root/tests/fixtures/echo/Cargo.toml" > /dev/null
+# CLI lock synchronization runs offline; fetch the isolated fixture graph first.
+"$CARGO" fetch --locked --manifest-path "$marketplace_root/tests/fixtures/echo/Cargo.toml"
 lenso plugin pack --repo-root "$marketplace_root/tests/fixtures/echo" --output "$proof_root/echo.lenso-plugin" --json
 # Only the locally built test fixture is extracted here. Production archive
 # ingestion remains gated on the released bounded archive API.

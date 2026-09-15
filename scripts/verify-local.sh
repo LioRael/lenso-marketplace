@@ -8,6 +8,8 @@ fixture_root="$marketplace_root/tests/fixtures/echo"
 manifest="$marketplace_root/tests/support/Cargo.toml"
 "$CARGO" test --locked --manifest-path "$manifest"
 node "$marketplace_root/tests/support/tests/cross-language.mjs"
+# CLI lock synchronization runs offline; fetch the isolated fixture graph first.
+"$CARGO" fetch --locked --manifest-path "$fixture_root/Cargo.toml"
 lenso plugin check --repo-root "$fixture_root"
 lenso plugin dev --repo-root "$fixture_root" --operation execute \
   --request-json '{"name":"lenso.marketplace.echo","arguments_json":"{\"text\":\"marketplace proof\"}"}'
