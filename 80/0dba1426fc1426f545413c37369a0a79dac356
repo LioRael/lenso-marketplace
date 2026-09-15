@@ -1,0 +1,143 @@
+.github/workflows/marketplace-workers.yml
+  s_3724267b9ee00e::t_cb9e4e882a78b2 23-29
+.github/workflows/marketplace.yml
+  s_3724267b9ee00e::t_fa6755c77559d1 28,31-32
+AGENTS.md
+  s_3724267b9ee00e::t_bdb9027803109d 5
+Cargo.lock
+  s_21258fca71be0b::t_8f36806c7ed841 208-218,705,1020,1022,1160-1174,1274,1284,1290-1293,1298,1302,1305-1310,1312-1313,1320,1322,1329-1330,1334-1360,1465,1467,1469,1480,1486,1488-1500,1547-1562,1797-1807,1817-1822,2155-2176,2221,2404-2415,2560-2575,2704,2706,2717,2719,2727,2729,2737,2739,2744,2750,2752,2794,2796
+Cargo.toml
+  s_3724267b9ee00e::t_cccae4c19e7394 3-20,23
+README.md
+  s_3724267b9ee00e::t_c90c056efad7aa 3-21,25-27,38-40,42,44-45,48-49,52-54,56-60,62-63
+apps/native/Cargo.toml
+  s_3724267b9ee00e::t_00fddd826416c6 8,10-12,26
+apps/native/tests/http.rs
+  s_3724267b9ee00e::t_bc7416754ffd52 1,106,111,169
+apps/workers/Cargo.toml
+  s_3724267b9ee00e::t_e3e81c280d71b6 23-26
+apps/workers/build.sh
+  s_3724267b9ee00e::t_dc3c4c37efdb7f 3-4
+apps/workers/http-host.mjs
+  s_3724267b9ee00e::t_83233355c71038 14-50,52-59,61-74,76-80
+apps/workers/src/lib.rs
+  s_3724267b9ee00e::t_64090afcb71848 8,51,58-59
+apps/workers/worker.mjs
+  s_3724267b9ee00e::t_ef3ba96a919416 1-3
+apps/workers/wrangler.jsonc
+  s_3724267b9ee00e::t_0794a5822187cf 1-12
+docs/architecture.md
+  s_3724267b9ee00e::t_a09fdef8125178 1-54
+docs/operations.md
+  s_3724267b9ee00e::t_c2517a5bf1c27a 1-44
+oxfmt.config.ts
+  s_3724267b9ee00e::t_bd9dc6ec23f36f 11-15
+oxlint.config.ts
+  s_3724267b9ee00e::t_8f610ec5ad6293 7-12
+package.json
+  s_3724267b9ee00e::t_11a1f60e04e10a 7-8,11,13-16,21,23,34,41-42
+plugins/directory/Cargo.toml
+  s_3724267b9ee00e::t_48c56c6727cac2 16,19-24,27,29-31
+plugins/directory/src/event.rs
+  s_3724267b9ee00e::t_81172adf4a3012 11,14
+plugins/directory/src/lib.rs
+  s_3724267b9ee00e::t_37fe860fe5e5ca 1-4,6-8,40,160,162
+plugins/directory/src/publishing.rs
+  s_3724267b9ee00e::t_b6aaa80fd8a63b 5,72,84,127-128,208,230,353,408,413,433,440
+plugins/directory/src/storage.rs
+  s_3724267b9ee00e::t_79ab956582faa2 1-8
+plugins/web/Cargo.toml
+  s_3724267b9ee00e::t_02a9539b6a0364 11,14,17-19,23-24,33-35
+plugins/web/build.rs
+  s_3724267b9ee00e::t_a36c559d28449a 19
+plugins/web/src/cache.rs
+  s_3724267b9ee00e::t_33308713fd1cc8 3-5
+plugins/web/src/cache_storage.rs
+  s_3724267b9ee00e::t_3207db3d5b06ce 5-7,20,37,42,78
+plugins/web/src/event.rs
+  s_3724267b9ee00e::t_7f2f7bfc343c46 19,26
+plugins/web/src/lib.rs
+  s_3724267b9ee00e::t_8d3a652e0ae053 1-3,12,17,19-21,44,303
+plugins/web/tests/cache.rs
+  s_3724267b9ee00e::t_df97490f07cc3d 2-3
+plugins/web/tests/event_cache.rs
+  s_3724267b9ee00e::t_d9206bb8f9f373 4-5,18,96,98
+plugins/web/ui/vite.config.ts
+  s_3724267b9ee00e::t_f2be6b205e03a7 43
+pnpm-lock.yaml
+  s_21258fca71be0b::t_df998b43799fae 17-19,23-25,50-53,74-77,209-255,259-417,433-585,602-604,622-626,874-882,976-982,1146-1148,1158-1160,1183-1186,1217-1224,1287-1290,1386-1390,1450-1452,1504-1512,1531-1534,1547-1549,1570-1576,1643-1669,1678-1683,1843-1869,1872-1954,1972-2067,2087-2091,2112-2113,2230-2241,2286-2289,2396,2399,2403-2404,2409-2410,2431-2432,2453-2483,2528-2529,2597-2608,2680-2681,2737-2769,2782-2783,2793-2795,2836-2841,2859,2868,2878-2903,2908-2920
+pnpm-workspace.yaml
+  s_3724267b9ee00e::t_e9d1b3b9969861 6-7,10,28-29
+scripts/check-native.sh
+  s_3724267b9ee00e::t_76e34d8648df82 7-10
+scripts/verify-archive-handoff.sh
+  s_3724267b9ee00e::t_734fa5d2c4dcfe 6,21,24-25
+scripts/verify-browser.sh
+  s_3724267b9ee00e::t_d9a99df3ba85cd 5,16-17,28-29,52
+scripts/verify-local.sh
+  s_3724267b9ee00e::t_c4e84461391788 4,7-8,10
+tests/integration/archive_handoff.rs
+  s_3724267b9ee00e::t_d5d8caa86745d3 8-10,67,71
+tests/support/Cargo.toml
+  s_3724267b9ee00e::t_ca607e005aff30 1-16
+tests/support/examples/conformance.rs
+  s_3724267b9ee00e::t_94b44858a42e71 3
+tests/support/examples/seed_fixture.rs
+  s_3724267b9ee00e::t_1a3346d9a084c2 1-3
+tests/support/examples/workers_fixtures.rs
+  s_3724267b9ee00e::t_c03bdd5841ae30 2
+tests/support/examples/workers_native_replay.rs
+  s_3724267b9ee00e::t_daf993143e9d92 2-3
+tests/support/examples/workers_race_fixtures.rs
+  s_3724267b9ee00e::t_72bb30ce5fc056 3-4
+tests/support/src/lib.rs
+  s_3724267b9ee00e::t_3968eaaad1479a 1
+tests/support/tests/catalog.rs
+  s_3724267b9ee00e::t_a65e169ae1e19c 3
+tests/support/tests/real_bundle.rs
+  s_3724267b9ee00e::t_362530584d09f0 1-3
+tests/workers/proof-worker.mjs
+  s_3724267b9ee00e::t_432bb20e409e81 2-18
+tests/workers/wrangler.jsonc
+  s_3724267b9ee00e::t_15e31953cde4ae 2,8,13,16,25,32-33,38-40
+tools/cloudflare/README.md
+  s_3724267b9ee00e::t_0997cede64c008 41,45,54
+tools/cloudflare/deployment-config.mjs
+  s_21258fca71be0b::t_f254615f4002e7 5,10,78-80,84-86,105
+tools/cloudflare/promote-cloudflare.mjs
+  s_3724267b9ee00e::t_0190cb2e8df80b 15
+tools/cloudflare/promote-runtime.test.mjs
+  s_3724267b9ee00e::t_e3c764993a42f6 46-49
+tools/publisher/Cargo.toml
+  s_21258fca71be0b::t_5c47a17a461103 2,7-8,15
+tools/publisher/docs/operator.md
+  s_3724267b9ee00e::t_1951adef2f687c 21
+tools/publisher/src/main.rs
+  s_3724267b9ee00e::t_9b885870ebfcde 5-6,49,52,55,63
+tools/publisher/tests/publisher.rs
+  s_3724267b9ee00e::t_2d2e6595524f3e 72,83,167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "800dba1426fc1426f545413c37369a0a79dac356",
+  "prompts": {},
+  "sessions": {
+    "s_21258fca71be0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a45b-2d5b-75d1-bc5a-2923a5486851",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    },
+    "s_3724267b9ee00e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09863-bdc5-7501-9f17-8276e89fcd6d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
