@@ -26,7 +26,7 @@ with ZipFile(root / 'echo.lenso-plugin') as archive:
     archive.extractall(root / 'bundle')
 PY
 public_key="$(MARKETPLACE_BUNDLE_DIRECTORY="$proof_root/bundle" MARKETPLACE_BUNDLE_ARCHIVE="$proof_root/echo.lenso-plugin" "$CARGO" run --locked --manifest-path "$marketplace_root/catalog/Cargo.toml" --example seed_fixture -- "$proof_root/directory.sqlite3")"
-"$CARGO" build --locked --manifest-path "$marketplace_root/app/Cargo.toml" --message-format=json > "$proof_root/build.jsonl"
+"$CARGO" build --locked --manifest-path "$marketplace_root/app/Cargo.toml" --message-format=json-render-diagnostics > "$proof_root/build.jsonl"
 server_binary="$(python3 - "$proof_root/build.jsonl" <<'PY'
 import json,sys
 for line in open(sys.argv[1]):

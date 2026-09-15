@@ -13,7 +13,7 @@ lenso-capability-marketplace-directory = { path = "../directory/crates/lenso-cap
 lenso-app-authoring = { package = "lenso-cli", version = "0.5.3", default-features = false }
 lenso-app-plan = "0.4.1"
 lenso-capability-http-endpoint = "0.3.1"
-lenso-native-adapter = "0.3.13"
+lenso-native-adapter = "0.3.14"
 lenso-kernel = "0.3.6"
 lenso-runner = "0.2.13"
 lenso-web-ingress-plugin = "0.4.2"

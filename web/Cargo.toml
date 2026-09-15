@@ -19,7 +19,7 @@ lenso-kernel = "0.3.6"
 lenso-capability-http-endpoint = "0.3.1"
 lenso-capability-marketplace-directory = { path = "../directory/crates/lenso-capability-marketplace-directory" }
 lenso-marketplace-catalog = { path = "../catalog", default-features = false }
-lenso-native-adapter = "0.3.13"
+lenso-native-adapter = "0.3.14"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ed25519-dalek = "2.2"
@@ -27,8 +27,3 @@ hex = "0.4"
 
 [build-dependencies]
 sha2 = "0.10"
-
-[patch.crates-io]
-lenso-native-adapter = { git = "https://github.com/LioRael/lenso-runtime-rust", rev = "905a59141ca0e349b734fb7de99d010f2b0dc0df" }
-lenso-native-adapter-macros = { git = "https://github.com/LioRael/lenso-runtime-rust", rev = "905a59141ca0e349b734fb7de99d010f2b0dc0df" }
-lenso-runtime-codec = { git = "https://github.com/LioRael/lenso-runtime-rust", rev = "905a59141ca0e349b734fb7de99d010f2b0dc0df" }
