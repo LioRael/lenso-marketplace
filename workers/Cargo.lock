@@ -575,6 +575,7 @@ dependencies = [
 [[package]]
 name = "lenso-capability-http-endpoint"
 version = "0.3.1"
+source = "git+https://github.com/LioRael/lenso-web?rev=0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f#0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f"
 dependencies = [
  "futures",
  "http",
@@ -591,6 +592,7 @@ dependencies = [
 [[package]]
 name = "lenso-capability-http-endpoint-macros"
 version = "0.1.4"
+source = "git+https://github.com/LioRael/lenso-web?rev=0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f#0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -601,6 +603,7 @@ dependencies = [
 [[package]]
 name = "lenso-capability-http-stream-endpoint"
 version = "0.1.1"
+source = "git+https://github.com/LioRael/lenso-web?rev=0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f#0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f"
 dependencies = [
  "futures",
  "lenso-contract-codegen",
@@ -614,6 +617,20 @@ dependencies = [
 [[package]]
 name = "lenso-capability-marketplace-directory"
 version = "0.1.0"
+dependencies = [
+ "futures",
+ "lenso-contract-codegen",
+ "lenso-contract-runtime",
+ "lenso-kernel",
+ "lenso-plugin-authoring",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lenso-capability-websocket-endpoint"
+version = "0.1.0"
+source = "git+https://github.com/LioRael/lenso-web?rev=0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f#0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f"
 dependencies = [
  "futures",
  "lenso-contract-codegen",
@@ -745,6 +762,7 @@ dependencies = [
  "lenso-marketplace-web-plugin",
  "lenso-native-adapter",
  "lenso-web-ingress-plugin",
+ "lenso-workers-driver",
  "serde",
  "serde_json",
  "wasm-bindgen",
@@ -754,8 +772,7 @@ dependencies = [
 [[package]]
 name = "lenso-native-adapter"
 version = "0.3.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e86e544821007fe7cc687126e7088600bf5e1f7fe8ca627a9c6f56da4bfcdac"
+source = "git+https://github.com/LioRael/lenso-runtime-rust?rev=905a59141ca0e349b734fb7de99d010f2b0dc0df#905a59141ca0e349b734fb7de99d010f2b0dc0df"
 dependencies = [
  "futures",
  "inventory",
@@ -770,8 +787,7 @@ dependencies = [
 [[package]]
 name = "lenso-native-adapter-macros"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "556c77b2384c98892bad05f70170b629f25914825807a853d0c803d35d7f0330"
+source = "git+https://github.com/LioRael/lenso-runtime-rust?rev=905a59141ca0e349b734fb7de99d010f2b0dc0df#905a59141ca0e349b734fb7de99d010f2b0dc0df"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -806,8 +822,7 @@ dependencies = [
 [[package]]
 name = "lenso-runtime-codec"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1890cbb0b2cd544d4d412fc1330ad6a0760bb2b16b6ac46e26a50f6a98c910b7"
+source = "git+https://github.com/LioRael/lenso-runtime-rust?rev=905a59141ca0e349b734fb7de99d010f2b0dc0df#905a59141ca0e349b734fb7de99d010f2b0dc0df"
 dependencies = [
  "futures",
  "hex",
@@ -822,7 +837,9 @@ dependencies = [
 [[package]]
 name = "lenso-web-ingress-plugin"
 version = "0.4.2"
+source = "git+https://github.com/LioRael/lenso-web?rev=0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f#0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f"
 dependencies = [
+ "base64",
  "bytes",
  "futures",
  "http",
@@ -830,12 +847,25 @@ dependencies = [
  "lenso-app-plan",
  "lenso-capability-http-endpoint",
  "lenso-capability-http-stream-endpoint",
+ "lenso-capability-websocket-endpoint",
  "lenso-kernel",
  "lenso-native-adapter",
  "matchit",
  "serde",
  "serde_json",
+ "sha1",
  "tokio",
+]
+
+[[package]]
+name = "lenso-workers-driver"
+version = "0.1.0"
+source = "git+https://github.com/LioRael/lenso-runtime-rust?rev=905a59141ca0e349b734fb7de99d010f2b0dc0df#905a59141ca0e349b734fb7de99d010f2b0dc0df"
+dependencies = [
+ "futures",
+ "lenso-kernel",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -1135,6 +1165,17 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "sha1"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -1560,3 +1601,8 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+
+[[patch.unused]]
+name = "lenso-capability-http-client"
+version = "0.3.0"
+source = "git+https://github.com/LioRael/lenso-web?rev=0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f#0425bd1cecd7ccd3df7bf698f148bf7a915e1f1f"

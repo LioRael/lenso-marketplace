@@ -1,7 +1,3 @@
-#[path = "../../../../../../../lenso-runtime-rust/design-workers-compatibility/experiments/workers-g1/host/src/driver.rs"]
-#[allow(dead_code)]
-mod driver;
-use driver::WorkersDriver;
 use futures::future::LocalBoxFuture;
 use lenso_app_plan::authoring::{
     HostBinding, HostCatalog, HostDefaultPlugin, HostPluginRelease, HostSlot, PluginInstanceId,
@@ -13,6 +9,7 @@ use lenso_marketplace_directory_plugin::EventDirectoryFactory;
 use lenso_marketplace_web_plugin::{EventWebFactory, MarketplaceClock};
 use lenso_native_adapter::NativePluginRegistry;
 use lenso_web_ingress_plugin::{WebIngressConfig, WebIngressEventFactory};
+use lenso_workers_driver::WorkersDriver;
 use std::{rc::Rc, time::Duration};
 use wasm_bindgen::{JsCast, prelude::*};
 
@@ -111,7 +108,7 @@ struct Config {
     diagnostics: bool,
 }
 
-#[wasm_bindgen(raw_module = "../runtime/http.mjs")]
+#[wasm_bindgen(raw_module = "@lenso/workers-runtime/http")]
 extern "C" {
     #[wasm_bindgen(js_name = cancellation)]
     fn attach_cancellation(scope: &JsValue, callback: &JsValue);
@@ -176,16 +173,21 @@ pub async fn handle_http(input: String, scope: JsValue) -> Result<String, JsValu
         ),
     ]);
     let plan = resolve_plugin_root(&host, &PluginRootSnapshot::default()).map_err(error)?;
+    lenso_marketplace_directory_plugin::link_plugin();
+    lenso_marketplace_web_plugin::link_plugin();
     let registry = NativePluginRegistry::new()
         .with_factory(ingress.clone())
-        .with_factory(EventDirectoryFactory::new(
+        .with_factory_override(EventDirectoryFactory::new(
             "MARKETPLACE".into(),
             storage.clone(),
         ))
-        .with_factory(
+        .map_err(error)?
+        .with_factory_override(
             EventWebFactory::new("MARKETPLACE".into(), storage, Rc::new(Clock))
                 .with_diagnostics(Rc::new(Diagnostics(config.diagnostics))),
-        );
+        )
+        .map_err(error)?
+        .with_linked_factories();
     let driver = WorkersDriver::new();
     let _guard = Guard(driver.clone());
     let app = Kernel::start_native(plan.plan().clone(), driver, registry)

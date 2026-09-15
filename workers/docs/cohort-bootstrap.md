@@ -1,7 +1,7 @@
-# Experimental pinned cohort bootstrap
+# Workers package bootstrap and historical cohort
 
-[`proof/cohort.py`](../proof/cohort.py) recreates the sibling layout currently
-required by the Workers experiments. It fetches exact committed Git objects and
+[`proof/cohort.py`](../proof/cohort.py) recreates the historical sibling layout used
+by the initial Workers experiments. It fetches exact committed Git objects and
 checks out detached HEADs; it never copies a developer's working tree, builds,
 deploys, publishes, creates keys, or reads credentials. Git may use the caller's
 existing credential helper when fetching private repositories; credentials are
@@ -9,10 +9,35 @@ not placed in the manifest, receipt or error output.
 
 This is a reproducible experimental bootstrap, not a production dependency
 package, release workflow or qualification receipt. The relative paths and
-experimental generated-factory linkage remain part of the pinned source cohort.
+experimental generated-factory linkage apply only to that historical pinned cohort.
 The tool does not replace published contracts or make uncommitted changes usable.
 
-## Manifest and review boundary
+## Current package integration
+
+The Host now imports `@lenso/workers-runtime` and the `lenso-workers-driver` crate.
+Its factory wiring uses public package `link_plugin()` and explicit
+`with_factory_override`. Current builds do not import experimental Runtime source
+or depend on sibling worktree names.
+
+Before the new packages are published, install reviewed npm archives explicitly:
+
+```sh
+npm install --no-save --package-lock=false /absolute/path/to/lenso-workers-runtime-0.1.0.tgz
+CARGO=/absolute/path/to/lenso-cargo bash build.sh --config /absolute/path/to/cohort.toml
+```
+
+The Cargo config supplies `[patch.crates-io]` entries for the reviewed unpublished
+Runtime and Web crates. Paths are supplied by the caller and may point to extracted
+archives; the build entry does not infer a checkout layout. Once the cohort is
+released, consume published versions and regenerate registry-backed lockfiles.
+Do not commit a lockfile pointing to temporary local archives.
+
+The shared event scope owns R2/D1 cancellation settlement and Wasm fencing. The
+Marketplace still owns its business storage operations; six storage/cleanup tests
+and the package-based Wasm build pass. These are build and integration results,
+not a production deployment or registry publication.
+
+## Historical manifest and review boundary
 
 [`proof/cohort.json`](../proof/cohort.json) has one versioned repository list.
 Each entry has `name`, credential-free HTTPS `.git` `url`, a two-component relative

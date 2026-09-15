@@ -6,6 +6,7 @@ publish = false
 [lib]
 crate-type = ["cdylib"]
 [dependencies]
+lenso-workers-driver = "0.1.0"
 lenso-kernel.workspace = true
 lenso-app-plan.workspace = true
 lenso-native-adapter.workspace = true
@@ -24,4 +25,4 @@ lenso-marketplace-directory-plugin = { path = "../../directory", default-feature
 lenso-marketplace-web-plugin = { path = "../../web", default-features = false }
 lenso-capability-marketplace-directory = { path = "../../directory/crates/lenso-capability-marketplace-directory" }
 lenso-capability-http-endpoint = "=0.3.1"
-lenso-web-ingress-plugin = { path = "../../../../../../lenso-web/feat-workers-http-parity/crates/lenso-web-ingress-plugin", default-features = false }
+lenso-web-ingress-plugin = { version = "0.4.2", default-features = false }

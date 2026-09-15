@@ -4,7 +4,7 @@ const MAX_STATE = 12 * 1024 * 1024;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
-const readObject = async (bucket, key, limit, signal, existing) => {
+const readObject = async (bucket, key, limit, signal, existing, track) => {
   if (!existing) {
     signal.throwIfAborted();
   }
@@ -15,7 +15,7 @@ const readObject = async (bucket, key, limit, signal, existing) => {
   const reader = object.body.getReader();
   const abort = async () => {
     try {
-      await reader.cancel();
+      await track(reader.cancel());
     } catch {
       /* Cancellation failure must not escape the signal listener. */
     }
@@ -51,7 +51,7 @@ const readObject = async (bucket, key, limit, signal, existing) => {
   } finally {
     signal.removeEventListener("abort", abort);
     try {
-      await reader.cancel();
+      await track(reader.cancel());
     } catch {
       /* Release the reader even if its cancellation rejects. */
     }
@@ -65,7 +65,14 @@ const digest = async (bytes) =>
     (b) => b.toString(16).padStart(2, "0")
   ).join("")}`;
 
-const compareExchange = async (database, bucket, signal, catalog, input) => {
+const compareExchange = async (
+  database,
+  bucket,
+  signal,
+  catalog,
+  input,
+  track
+) => {
   const { expected, value } = input;
   const bytes = encoder.encode(value.envelope);
   if (
@@ -86,7 +93,8 @@ const compareExchange = async (database, bucket, signal, catalog, input) => {
   const existing = await bucket.get(key);
   if (existing) {
     if (
-      (await readObject(bucket, key, MAX_STATE, signal, existing)) !== stored
+      (await readObject(bucket, key, MAX_STATE, signal, existing, track)) !==
+      stored
     ) {
       throw new Error("immutable accepted object conflict");
     }
@@ -104,7 +112,8 @@ const compareExchange = async (database, bucket, signal, catalog, input) => {
     }
     if (
       !written &&
-      (await readObject(bucket, key, MAX_STATE, signal)) !== stored
+      (await readObject(bucket, key, MAX_STATE, signal, undefined, track)) !==
+        stored
     ) {
       throw new Error("immutable accepted object conflict");
     }
@@ -139,7 +148,8 @@ const compareExchange = async (database, bucket, signal, catalog, input) => {
 // D1 calls always use the primary binding, never replica sessions. Each closure
 // belongs to one fetch. Reset fences callbacks; bounded owner cleanup may report
 // unconfirmed settlement because D1/R2 operations cannot be forcibly rolled back.
-export const createStorage = (database, bucket, signal) => {
+export const createStorage = (database, bucket, signal, scope) => {
+  const track = (promise) => (scope ? scope.trackNative(promise) : promise);
   if (!database?.prepare || !bucket?.get || !bucket?.put) {
     throw new Error("Marketplace bindings missing");
   }
@@ -169,7 +179,9 @@ export const createStorage = (database, bucket, signal) => {
         bucket,
         row.object_key,
         MAX_ENVELOPE,
-        signal
+        signal,
+        undefined,
+        track
       );
       if ((await digest(encoder.encode(envelope))) !== row.digest) {
         throw new Error("published object integrity failure");
@@ -185,7 +197,14 @@ export const createStorage = (database, bucket, signal) => {
       if (!row) {
         return "null";
       }
-      const raw = await readObject(bucket, row.object_key, MAX_STATE, signal);
+      const raw = await readObject(
+        bucket,
+        row.object_key,
+        MAX_STATE,
+        signal,
+        undefined,
+        track
+      );
       const rawDigest = await digest(encoder.encode(raw));
       const expectedKey = `accepted/${encodeURIComponent(catalog)}/${rawDigest.slice(7)}.json`;
       if (row.object_key !== expectedKey) {
@@ -200,7 +219,14 @@ export const createStorage = (database, bucket, signal) => {
       }
       result = stored;
     } else if (operation === "compare_exchange") {
-      result = await compareExchange(database, bucket, signal, catalog, input);
+      result = await compareExchange(
+        database,
+        bucket,
+        signal,
+        catalog,
+        input,
+        track
+      );
     } else {
       throw new Error("unknown Marketplace storage operation");
     }

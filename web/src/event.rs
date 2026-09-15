@@ -1,6 +1,8 @@
 //! Explicit event-owned storage and wall clock for the shared Web Plugin.
 use super::*;
-use lenso_native_adapter::{NativePluginFactory, NativePluginFactoryContext, NativePluginInstance};
+use lenso_native_adapter::{
+    ConfiguredPluginFactory, NativePluginFactory, NativePluginFactoryContext, NativePluginInstance,
+};
 
 pub trait MarketplaceClock: std::fmt::Debug {
     fn now(&self) -> Result<u64, RuntimeFailure>;
@@ -47,19 +49,16 @@ impl NativePluginFactory for EventWebFactory {
         &self,
         context: NativePluginFactoryContext<'_>,
     ) -> Result<NativePluginInstance, RuntimeFailure> {
-        let mut plugin = MarketplaceWeb::__lenso_construct(context)?;
-        if plugin.config.storage_binding.as_deref() != Some(self.binding.as_str()) {
-            return Err(failure("Web storage binding mismatch"));
-        }
-        plugin.storage = Some(self.storage.clone());
-        plugin.clock = Some(self.clock.clone());
-        plugin.diagnostics = self.diagnostics.clone();
-        let endpoint = http_endpoint_contract::EndpointEndpoint::new(plugin.clone());
-        Ok(NativePluginInstance::with_lifecycle(
-            vec![Rc::new(endpoint)],
-            __LensoLifecycleMarketplaceWeb {
-                plugin: Rc::new(plugin),
-            },
-        ))
+        let owner = self.clone();
+        ConfiguredPluginFactory::<MarketplaceWeb, _>::new(move |plugin| {
+            if plugin.config.storage_binding.as_deref() != Some(owner.binding.as_str()) {
+                return Err(failure("web storage binding mismatch"));
+            }
+            plugin.storage = Some(owner.storage.clone());
+            plugin.clock = Some(owner.clock.clone());
+            plugin.diagnostics = owner.diagnostics.clone();
+            Ok(())
+        })
+        .instantiate(context)
     }
 }

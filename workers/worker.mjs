@@ -1,3 +1,6 @@
+import { createHttpHandler } from "@lenso/workers-runtime/http";
+import { createEventRunner } from "@lenso/workers-runtime/runner";
+
 import { clearTimers } from "./clock.mjs";
 import {
   initSync,
@@ -5,8 +8,6 @@ import {
   handle_http,
 } from "./pkg/lenso_marketplace_workers_host.js";
 import module from "./pkg/lenso_marketplace_workers_host_bg.wasm";
-import { createHttpHandler } from "./runtime/http.mjs";
-import { createEventRunner } from "./runtime/runner.mjs";
 import { createStorageScope } from "./storage-scope.mjs";
 import { createStorage } from "./storage.mjs";
 
@@ -25,11 +26,12 @@ export default {
       bodyReadTimeoutMs: 5000,
       createScope() {
         return createStorageScope(
-          (signal) => {
+          (signal, scope) => {
             const storage = createStorage(
               env.MARKETPLACE_DB,
               env.MARKETPLACE_OBJECTS,
-              signal
+              signal,
+              scope
             );
             return async (...args) => {
               try {
