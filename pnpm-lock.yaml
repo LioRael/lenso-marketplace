@@ -15,8 +15,8 @@ importers:
         specifier: 0.5.0
         version: 0.5.0(@base-ui/react@1.7.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@lenso/workers-runtime':
-        specifier: 0.1.1
-        version: 0.1.1
+        specifier: 0.1.2
+        version: 0.1.2
       '@stylexjs/stylex':
         specifier: 0.19.0
         version: 0.19.0
@@ -626,8 +626,8 @@ packages:
       react: '>=19.2.0 <20.0.0'
       react-dom: '>=19.2.0 <20.0.0'
 
-  '@lenso/workers-runtime@0.1.1':
-    resolution: {integrity: sha512-Rq6HLVcwLAi1Szh6mt2Mi4ONbghIG0LO6Av+Fh5OBLhqtvNTcOBe3sttBcgRhvy2ON2RGxWH0+/+3KZe55dekg==}
+  '@lenso/workers-runtime@0.1.2':
+    resolution: {integrity: sha512-DIoji7/x4FPpBkygWt4KXHip5gfedofmPiTPyTCpnGWuaM2BiMARzH0N0bSDshyXDLXQkvsHPmlQ/ZoHZ0jBHg==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -2118,7 +2118,7 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@lenso/workers-runtime@0.1.1': {}
+  '@lenso/workers-runtime@0.1.2': {}
 
   '@oxc-project/types@0.143.0': {}
 

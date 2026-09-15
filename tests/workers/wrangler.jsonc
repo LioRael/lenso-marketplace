@@ -29,7 +29,7 @@
       "binding": "MARKETPLACE_DB",
       "database_name": "lenso-marketplace-g3-proof",
       "database_id": "2b913921-3f0a-43b4-ae8f-cb219c21db81",
-      "migrations_dir": "../../apps/workers/migrations",
+      "migrations_dir": "../../apps/workers/migrations/d1",
     },
   ],
   "r2_buckets": [
