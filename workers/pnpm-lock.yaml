@@ -7,12 +7,21 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@lenso/workers-runtime':
+        specifier: 0.1.1
+        version: 0.1.1
     devDependencies:
       wrangler:
         specifier: 4.107.0
         version: 4.107.0
 
 packages:
+
+  '@lenso/workers-runtime@0.1.1':
+    resolution: {integrity: sha512-Rq6HLVcwLAi1Szh6mt2Mi4ONbghIG0LO6Av+Fh5OBLhqtvNTcOBe3sttBcgRhvy2ON2RGxWH0+/+3KZe55dekg==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   '@cloudflare/kv-asset-handler@0.5.0':
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
@@ -495,6 +504,8 @@ packages:
     resolution: {integrity: sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ==}
 
 snapshots:
+
+  '@lenso/workers-runtime@0.1.1': {}
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 

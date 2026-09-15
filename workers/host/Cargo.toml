@@ -25,4 +25,4 @@ lenso-marketplace-directory-plugin = { path = "../../directory", default-feature
 lenso-marketplace-web-plugin = { path = "../../web", default-features = false }
 lenso-capability-marketplace-directory = { path = "../../directory/crates/lenso-capability-marketplace-directory" }
 lenso-capability-http-endpoint = "=0.3.1"
-lenso-web-ingress-plugin = { version = "0.4.2", default-features = false }
+lenso-web-ingress-plugin = { version = "0.4.3", default-features = false }
