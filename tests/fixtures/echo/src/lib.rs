@@ -15,7 +15,7 @@ struct Plugin {}
 #[lenso_agent_tool_sdk::tool_provider]
 impl Plugin {
     #[tool(
-        name = "lenso.marketplace.echo",
+        name = "echo",
         description = "Process one UTF-8 string.",
         execution = "parallel_safe"
     )]
@@ -25,6 +25,7 @@ impl Plugin {
         }
         Ok(ExecuteResponse {
             content: arguments.text,
+            content_blocks: None,
             content_type: ContentType::Text,
             metadata_json: "{}"
                 .try_into()
