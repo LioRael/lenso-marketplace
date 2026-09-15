@@ -29,7 +29,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|export|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|export|verify|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -43,6 +43,30 @@ fn run() -> Result<()> {
     let public_key = hex::decode(&config.public_key_hex).context("invalid public key hex")?;
     ensure!(public_key.len() == 32, "public key must contain 32 bytes");
     match args[1].as_str() {
+        "verify" => {
+            ensure!(args.len() == 2, "verify accepts no extra arguments");
+            let mut envelope = Vec::new();
+            io::stdin()
+                .lock()
+                .take((lenso_marketplace_catalog::MAX_ENVELOPE_BYTES + 1) as u64)
+                .read_to_end(&mut envelope)?;
+            ensure!(
+                envelope.len() <= lenso_marketplace_catalog::MAX_ENVELOPE_BYTES,
+                "envelope exceeds limit"
+            );
+            let trust = lenso_marketplace_catalog::Trust {
+                catalog_id: config.catalog_id,
+                keys: std::collections::BTreeMap::from([(
+                    config.key_id,
+                    ed25519_dalek::VerifyingKey::from_bytes(&public_key.as_slice().try_into()?)?,
+                )]),
+            };
+            let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let verified = lenso_marketplace_catalog::verify(&envelope, &trust, None, now)?;
+            let snapshot = verified.snapshot();
+            let receipt = serde_json::json!({"catalog_id": snapshot.catalog_id, "revision": snapshot.revision, "expires_at": snapshot.expires_at});
+            serde_json::to_writer(io::stdout().lock(), &receipt)?;
+        }
         "initialize" => {
             ensure!(args.len() == 2, "initialize accepts no extra arguments");
             // create_new prevents accidental reuse; failed initialization leaves

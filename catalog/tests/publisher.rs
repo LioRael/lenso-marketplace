@@ -89,6 +89,17 @@ fn operator_preserves_committed_bytes_and_rejects_stale_publication() {
     )
     .unwrap();
     assert_eq!(verified.snapshot().revision, 2);
+    let checked = invoke(
+        &config,
+        &["verify"],
+        Some(receipt["envelope"].as_str().unwrap().as_bytes()),
+    );
+    assert!(checked.status.success());
+    let checked: serde_json::Value = serde_json::from_slice(&checked.stdout).unwrap();
+    assert_eq!(checked["revision"], 2);
+    assert_eq!(checked["catalog_id"], "operator-test");
+    assert!(!invoke(&config, &["verify"], Some(b"{}")).status.success());
+
     let mut interrupted = Command::new(env!("CARGO_BIN_EXE_lenso-marketplace-publisher"))
         .arg(&config)
         .args(["publish", "reviewer", "2", "3600"])

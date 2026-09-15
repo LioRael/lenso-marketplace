@@ -57,3 +57,8 @@ configure renewal scheduling, or deploy Workers. Those operations must preserve
 create-only object identity and compare-and-swap publication, and verify the
 public consumer receipt before declaring an end-to-end publication complete.
 The production key custodian and initial reviewed catalog remain launch inputs.
+
+`verify` reads a bounded raw envelope from stdin and emits verified catalog ID,
+revision and expiry using configured public trust and the current clock. It does
+not require a publisher database to exist. This is a cryptographic admission
+operation, not an upload, historical checkpoint check or publication authority.
