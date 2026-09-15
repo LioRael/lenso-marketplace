@@ -1,0 +1,16 @@
+[package]
+name = "marketplace-test-support"
+version = "0.0.0"
+edition = "2024"
+publish = false
+[dependencies]
+lenso-plugin-catalog = { workspace = true, features = ["bundle-verification"] }
+lenso-marketplace-directory-plugin = { path = "../../plugins/directory" }
+lenso-marketplace-web-plugin = { path = "../../plugins/web" }
+anyhow = "1"
+lenso-plugin-bundle = "0.4.2"
+base64 = "0.22"
+ed25519-dalek = "2.2"
+hex = "0.4"
+serde_json = "1"
+tempfile = "3"

@@ -4,7 +4,12 @@ import react from "ultracite/oxlint/react";
 
 export default defineConfig({
   extends: [core, react],
-  ignorePatterns: ["**/generated/**", "**/pkg/**", "**/evidence/**"],
+  ignorePatterns: [
+    "**/generated/**",
+    "**/pkg/**",
+    "**/evidence/**",
+    "docs/archive/**",
+  ],
   // Ultracite 7.10/Oxlint 1.77 introduced stricter React Compiler and
   // migration rules. Keep the existing Console code contract stable while
   // the dedicated lint-migration work is staged separately.

@@ -20,19 +20,10 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: "24"
-      - name: Install released Runtime package
-        run: pnpm --dir workers install --frozen-lockfile
-      - name: Build Marketplace assets
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
-      - name: Check composed Wasm host
-        run: cargo clippy --locked --manifest-path workers/Cargo.toml --target wasm32-unknown-unknown --workspace -- -D warnings
-      - name: Check request-owned storage boundaries
-        run: node --test workers/storage.test.mjs workers/storage-scope.test.mjs workers/operator/promote.test.mjs workers/operator/promote-runtime.test.mjs workers/operator/cloudflare.test.mjs
-      - name: Build deployable Wasm artifact
-        run: |
-          cargo install wasm-bindgen-cli --version 0.2.127 --locked
-          bash workers/build.sh
-          test -s workers/pkg/lenso_marketplace_workers_host_bg.wasm
-          pnpm --dir workers exec wrangler deploy --dry-run
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: cargo clippy --locked -p lenso-marketplace-workers-host --target wasm32-unknown-unknown -- -D warnings
+      - run: pnpm test:workers
+      - run: cargo install wasm-bindgen-cli --version 0.2.127 --locked
+      - run: CARGO=cargo pnpm build:workers
+      - run: pnpm exec wrangler deploy --dry-run --config apps/workers/wrangler.jsonc
