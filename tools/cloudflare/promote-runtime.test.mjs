@@ -44,7 +44,7 @@ export default { async fetch(request, env) {
     const bucket = await runtime.getR2Bucket("BUCKET");
     const migration = await readFile(
       new URL(
-        "../../apps/workers/migrations/0001_public_reads.sql",
+        "../../apps/workers/migrations/d1/0001_public_reads.sql",
         import.meta.url
       ),
       "utf-8"

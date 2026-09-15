@@ -76,7 +76,7 @@ const config = {
       database_id: input.database_id,
       database_name: input.database_name,
       migrations_dir: fileURLToPath(
-        new URL("../../apps/workers/migrations", import.meta.url)
+        new URL("../../apps/workers/migrations/d1", import.meta.url)
       ),
     },
   ],
