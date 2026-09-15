@@ -1,0 +1,21 @@
+package.json
+  s_3724267b9ee00e::t_56c6db4ac05148 29
+pnpm-lock.yaml
+  s_3724267b9ee00e::t_35c8ae75f58252 36-38,608-611,2099-2100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54cc64b7e4b99a599e9480f5985378addfcf6587",
+  "prompts": {},
+  "sessions": {
+    "s_3724267b9ee00e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09863-bdc5-7501-9f17-8276e89fcd6d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
