@@ -1,0 +1,73 @@
+.github/workflows/marketplace-workers.yml
+  s_3724267b9ee00e::t_aa9c69e1995a3a 1-38
+.github/workflows/marketplace.yml
+  s_3724267b9ee00e::t_f51e0dd5917868 1-51
+.github/workflows/quality.yml
+  s_3724267b9ee00e::t_d46ee2b1a3aa02 1-19
+.gitignore
+  s_3724267b9ee00e::t_842045efbc0612 1-9
+AGENTS.md
+  s_3724267b9ee00e::t_6cc176fa8fa4a8 1-9
+LICENSE
+  s_3724267b9ee00e::t_acad082456e6df 1-21
+README.md
+  s_3724267b9ee00e::t_caf5136e07fb76 1,3-33,72-74,131-133,145,162-163,193-194,207,214
+catalog/Cargo.toml
+  s_3724267b9ee00e::t_8f417ff1d524fe 32-35
+catalog/docs/operator.md
+  s_3724267b9ee00e::t_68f67b38b0e6ce 21,65-98
+catalog/src/bin/publisher.rs
+  s_3724267b9ee00e::t_19bbaa9cf38b43 32,81-98
+catalog/src/directory.rs
+  s_3724267b9ee00e::t_447696e893bdd9 39-68
+catalog/tests/publisher.rs
+  s_3724267b9ee00e::t_2cf5b83b9e1154 103-149
+docs/design-qa.md
+  s_3724267b9ee00e::t_9004c8c3517fc5 1-34
+docs/migration.md
+  s_3724267b9ee00e::t_ed60f64821751f 1-22
+docs/plugin-marketplace-presentation.md
+  s_3724267b9ee00e::t_b7a45c7de84314 1-36
+docs/plugin-marketplace-v1.md
+  s_3724267b9ee00e::t_75f33303a24131 1-284
+docs/plugin-marketplace.md
+  s_3724267b9ee00e::t_455e2f71e64fe2 1-179
+oxfmt.config.ts
+  s_3724267b9ee00e::t_30afb40394df13 1-24
+oxlint.config.ts
+  s_3724267b9ee00e::t_10ab84cd23362a 1-26
+package.json
+  s_3724267b9ee00e::t_65327fd503cad2 1-42
+pnpm-lock.yaml
+  s_3724267b9ee00e::t_02c331875224fd 1-2074
+pnpm-workspace.yaml
+  s_3724267b9ee00e::t_c3fed08ceb6efe 1-24
+scripts/check-native.sh
+  s_3724267b9ee00e::t_5aa3e91f93c48a 1-12
+verify-browser.sh
+  s_3724267b9ee00e::t_a11121bc6e4420 6,15
+web/build.rs
+  s_3724267b9ee00e::t_adc9d59d362d9d 19,33
+web/ui/vite.config.ts
+  s_3724267b9ee00e::t_537621c1a2f5ad 10-20,43,56,59
+workers/docs/cohort-bootstrap.md
+  s_3724267b9ee00e::t_de4d617baeb39c 1-3
+workers/docs/g3-cas.md
+  s_3724267b9ee00e::t_40c4a4650dff10 22,76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2b04847ae57f039dae312b8dcc5622105e60ef87",
+  "prompts": {},
+  "sessions": {
+    "s_3724267b9ee00e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09863-bdc5-7501-9f17-8276e89fcd6d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
