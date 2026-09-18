@@ -1,5 +1,6 @@
 import { createWorkersHttpHost } from "@lenso/workers-runtime/host";
 
+import { artifactResponse } from "./artifacts.mjs";
 import * as bindings from "./pkg/lenso_marketplace_workers_host.js";
 import wasmModule from "./pkg/lenso_marketplace_workers_host_bg.wasm";
 import { createStorageScope } from "./storage-scope.mjs";
@@ -8,8 +9,8 @@ import { createStorage } from "./storage.mjs";
 export const createMarketplaceWorker = ({
   diagnostics = false,
   onReceipt,
-} = {}) =>
-  createWorkersHttpHost({
+} = {}) => {
+  const host = createWorkersHttpHost({
     bindings,
     createScope(_request, env) {
       return createStorageScope(
@@ -51,3 +52,10 @@ export const createMarketplaceWorker = ({
     onReceipt,
     wasmModule,
   });
+  return Object.freeze({
+    async fetch(request, env, ctx) {
+      const artifact = await artifactResponse(request, env);
+      return artifact ?? host.fetch(request, env, ctx);
+    },
+  });
+};
