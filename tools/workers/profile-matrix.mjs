@@ -82,7 +82,7 @@ const evidence = {
     latency:
       "Node performance.now around loopback HTTP fetch through full response body; not CPU",
     localOnly: true,
-    maxConcurrent: 1,
+    maxConcurrent: 8,
     maxRequestBodyBytes: 65536,
     maxResponseBodyBytes: 4194304,
     memory:

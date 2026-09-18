@@ -72,8 +72,11 @@ first HTTP sample per process. The first process also receives 32 further serial
 samples. Normal retirement splits those into 30 samples in a warm Wasm generation
 and two first samples after generation retirement. The harness checks that each
 generation retires after exactly 16 admissions. Every HTTP request starts and
-shuts down a fresh Rust Kernel App. The production one-event admission and
-five-second event boundary are unchanged.
+shuts down a fresh Rust Kernel App. The production eight-event admission window
+and five-second event boundary are unchanged. The window is intentional: a
+browser navigation requests the HTML, module, stylesheet, sample artwork and
+catalog data concurrently. A value of one turns ordinary asset loading into
+`503 host_unavailable` responses.
 
 `artifactProcessStartupMs` measures externally from Miniflare construction to
 readiness. `externalLatencyMs` measures Node's loopback HTTP fetch through full
