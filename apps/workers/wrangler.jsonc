@@ -1,4 +1,5 @@
 {
+  "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "lenso-marketplace",
   "main": "worker.mjs",
   "compatibility_date": "2026-07-08",
@@ -6,6 +7,12 @@
     "global_fetch_strictly_public",
     "enable_request_signal",
   ],
+  "assets": {
+    "directory": "../../plugins/web/ui/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "run_worker_first": ["/api/*", "/artifacts/*"],
+  },
   "workers_dev": false,
   "preview_urls": false,
   "observability": { "enabled": true },

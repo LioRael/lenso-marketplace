@@ -6,9 +6,8 @@ import wasmModule from "./pkg/lenso_marketplace_workers_host_bg.wasm";
 import { createStorageScope } from "./storage-scope.mjs";
 import { createStorage } from "./storage.mjs";
 
-// A browser navigation loads the document, module, stylesheet, images and
-// catalog data concurrently. Keep a bounded Wasm admission window large
-// enough for one navigation while retaining the runtime's hard upper bound.
+// Dynamic catalog requests share the Wasm admission window. Keep a bounded
+// limit for API bursts while static UI assets are served by Cloudflare Assets.
 const MAX_CONCURRENT_EVENTS = 8;
 
 export const createMarketplaceWorker = ({
@@ -60,7 +59,21 @@ export const createMarketplaceWorker = ({
   return Object.freeze({
     async fetch(request, env, ctx) {
       const artifact = await artifactResponse(request, env);
-      return artifact ?? host.fetch(request, env, ctx);
+      if (artifact) {
+        return artifact;
+      }
+      const { url } = request;
+      const { pathname } = new URL(url);
+      if (!pathname.startsWith("/api/")) {
+        const assets = env?.ASSETS;
+        // Assets are served before the Worker when they exist. This fallback
+        // keeps missing static paths as 404s instead of sending them through
+        // the Wasm host as if they were Marketplace API requests.
+        return assets?.fetch
+          ? assets.fetch(request)
+          : new Response("Not Found", { status: 404 });
+      }
+      return host.fetch(request, env, ctx);
     },
   });
 };
