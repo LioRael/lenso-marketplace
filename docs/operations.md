@@ -9,8 +9,46 @@ R2 bindings, catalog ID, trusted key ID and public key. Never supply signing key
 to the public Worker. The default config contains no test identity or resources.
 
 Generate a configuration with `node tools/cloudflare/deployment-config.mjs
-INPUT.json OUTPUT.json`. Review its absolute entrypoint, migrations path, resource
-IDs and public trust before using `pnpm exec wrangler deploy --config OUTPUT.json`.
+INPUT.json OUTPUT.json`. The input must explicitly include `environment:
+"production"`, the 32-character Cloudflare `account_id`, a custom hostname, the
+separate D1/R2 resource identifiers, the approved catalog/key identities and the
+public verification key. The renderer rejects `proof`, `test`, `recovery`, a
+`workers.dev` value in the canonical hostname, the legacy catalog hostname and
+both known proof public keys. Set the optional `workers_dev` input to `true`
+only when the deployed Worker must expose its stable Cloudflare `workers.dev`
+origin as a direct Agent origin; the custom hostname remains the canonical
+browser/catalog address. Review its absolute entrypoint, migrations path,
+resource IDs, public trust and direct-origin choice before using `pnpm exec
+wrangler deploy --config OUTPUT.json`.
+
+The smallest reviewable input has this shape (replace every value with an
+approved production value; this example is not deployable):
+
+```json
+{
+  "account_id": "<32 hex Cloudflare account ID>",
+  "environment": "production",
+  "worker": "lenso-marketplace",
+  "hostname": "marketplace.lenso.dev",
+  "database_name": "lenso-marketplace-production",
+  "database_id": "<D1 UUID>",
+  "bucket_name": "lenso-marketplace-production",
+  "catalog_id": "lenso-official",
+  "key_id": "lenso-marketplace-2026",
+  "public_key_hex": "<64 hex Ed25519 public key>",
+  "cpu_ms": 1000,
+  "workers_dev": true
+}
+```
+
+The production Agent release uses the additive direct origin
+`https://lenso-marketplace.lenso.workers.dev` for signed snapshot and immutable
+artifact downloads. This avoids redirect-based acquisition; the custom domain
+continues serving the same catalog and remains the human-facing address.
+
+Run `node --test tools/cloudflare/deployment-config.test.mjs` to exercise the
+boundary without contacting Cloudflare. Configuration generation never creates
+resources, handles private signing keys or deploys.
 A build or dry run is not a deployment receipt. Observe the deployed version and
 verify search/detail and exact signed snapshot responses after deployment.
 
