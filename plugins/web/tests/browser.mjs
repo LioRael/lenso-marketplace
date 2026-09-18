@@ -25,7 +25,7 @@ try {
   });
   const catalog = page.getByRole("region", { name: "Plugin catalog" });
   const detail = page.getByRole("region", { name: "Release details" });
-  const echo = catalog.getByRole("link", { name: /Echo.*0\.1\.1/u });
+  const echo = catalog.getByRole("link", { name: /Echo.*0\.1\.3/u });
   await page.addInitScript(() => {
     if (!sessionStorage.getItem("lenso-marketplace-theme")) {
       sessionStorage.setItem("lenso-marketplace-theme", "light");
@@ -131,7 +131,7 @@ try {
   await detail
     .getByRole("heading", { exact: true, level: 1, name: "Echo" })
     .waitFor();
-  assert.equal(await page.title(), "Echo 0.1.1 · Lenso Marketplace");
+  assert.equal(await page.title(), "Echo 0.1.3 · Lenso Marketplace");
   const integrity = detail.getByRole("button", { name: "Release integrity" });
   await integrity.focus();
   await integrity.press("Enter");
@@ -657,7 +657,7 @@ try {
   await stalePage
     .getByText("Catalog is out of date", { exact: true })
     .waitFor({ timeout: 6000 });
-  await stalePage.getByRole("link", { name: /Echo.*0\.1\.1/u }).click();
+  await stalePage.getByRole("link", { name: /Echo.*0\.1\.3/u }).click();
   await stalePage.getByRole("region", { name: "Release details" }).waitFor();
   await stalePage
     .getByRole("region", { name: "Release details" })
