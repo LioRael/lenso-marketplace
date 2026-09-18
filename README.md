@@ -59,5 +59,12 @@ Provide a reviewed environment config with D1/R2 bindings and public trust, then
 use `wrangler dev --config ENV.json` or the explicit deployment procedure in
 [operations](docs/operations.md). It never exposes proof mutation routes.
 
+Production configuration is rendered from explicit inputs rather than copied
+from the proof Worker. The renderer binds the target account, requires the
+`production` environment, and rejects proof/test/recovery identities and public
+proof trust. Keep the generated JSON outside version control and review its
+catalog ID, public-key fingerprint, migrations path, D1/R2 bindings and custom
+domain before deployment.
+
 `pnpm dev:proof` explicitly starts the disposable test host in `tests/workers`.
 Its resource IDs, test key and diagnostics are not production defaults.
