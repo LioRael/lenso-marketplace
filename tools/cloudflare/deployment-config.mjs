@@ -105,6 +105,14 @@ assert.ok(
 );
 const config = {
   account_id: input.account_id,
+  assets: {
+    binding: "ASSETS",
+    directory: fileURLToPath(
+      new URL("../../plugins/web/ui/dist", import.meta.url)
+    ),
+    not_found_handling: "none",
+    run_worker_first: ["/api/*", "/artifacts/*"],
+  },
   compatibility_date: "2026-07-08",
   compatibility_flags: [
     "global_fetch_strictly_public",

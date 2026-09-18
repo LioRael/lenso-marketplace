@@ -41,6 +41,14 @@ Directory requires an explicit binding; no fallback to another directory is
 introduced. Cloudflare storage adapters are host mechanics, not new business
 Plugins. Native-only SQLite publishing is feature-gated out of the Workers graph.
 
+Workers serve the built Web UI through Cloudflare Static Assets. The Wrangler
+asset directory is `plugins/web/ui/dist`; `/api/*` and `/artifacts/*` are the
+only Marketplace paths routed to the Worker first. Missing asset paths return
+404 rather than the application shell, so a missing stylesheet or image cannot
+be mistaken for valid HTML. Static requests therefore do not consume the Wasm
+event-admission window, while Native keeps the same Web Plugin endpoints for its
+local HTTP host.
+
 ## Build boundary
 
 The root workspace pins common host dependencies and selects native packages by
