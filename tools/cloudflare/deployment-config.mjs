@@ -10,6 +10,13 @@ assert.ok(
   "usage: node tools/cloudflare/deployment-config.mjs inputs.json output.json"
 );
 const input = JSON.parse(readFileSync(inputPath, "utf-8"));
+if ("workers_dev" in input) {
+  assert.equal(
+    typeof input.workers_dev,
+    "boolean",
+    "workers_dev must be a boolean when provided"
+  );
+}
 for (const key of [
   "account_id",
   "environment",
@@ -129,7 +136,7 @@ const config = {
     CATALOG_KEY_ID: input.key_id,
     CATALOG_PUBLIC_KEY: input.public_key_hex,
   },
-  workers_dev: false,
+  workers_dev: input.workers_dev === true,
 };
 writeFileSync(outputPath, `${JSON.stringify(config, null, 2)}\n`, {
   flag: "wx",

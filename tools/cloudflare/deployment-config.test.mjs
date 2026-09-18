@@ -54,6 +54,13 @@ test("renders an account-bound production Worker config", () => {
     CATALOG_KEY_ID: valid.key_id,
     CATALOG_PUBLIC_KEY: valid.public_key_hex,
   });
+  assert.equal(config.workers_dev, false);
+});
+
+test("can explicitly retain the public Agent workers.dev origin", () => {
+  const { outputPath, result } = run({ ...valid, workers_dev: true });
+  assert.match(result(), /Configuration written for review/u);
+  assert.equal(JSON.parse(readFileSync(outputPath, "utf-8")).workers_dev, true);
 });
 
 for (const [label, mutate] of [

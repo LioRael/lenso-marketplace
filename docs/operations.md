@@ -12,10 +12,14 @@ Generate a configuration with `node tools/cloudflare/deployment-config.mjs
 INPUT.json OUTPUT.json`. The input must explicitly include `environment:
 "production"`, the 32-character Cloudflare `account_id`, a custom hostname, the
 separate D1/R2 resource identifiers, the approved catalog/key identities and the
-public verification key. The renderer rejects `proof`, `test`, `recovery`,
-`workers.dev`, the legacy catalog hostname and both known proof public keys.
-Review its absolute entrypoint, migrations path, resource IDs and public trust
-before using `pnpm exec wrangler deploy --config OUTPUT.json`.
+public verification key. The renderer rejects `proof`, `test`, `recovery`, a
+`workers.dev` value in the canonical hostname, the legacy catalog hostname and
+both known proof public keys. Set the optional `workers_dev` input to `true`
+only when the deployed Worker must expose its stable Cloudflare `workers.dev`
+origin as a direct Agent origin; the custom hostname remains the canonical
+browser/catalog address. Review its absolute entrypoint, migrations path,
+resource IDs, public trust and direct-origin choice before using `pnpm exec
+wrangler deploy --config OUTPUT.json`.
 
 The smallest reviewable input has this shape (replace every value with an
 approved production value; this example is not deployable):
@@ -32,9 +36,15 @@ approved production value; this example is not deployable):
   "catalog_id": "lenso-official",
   "key_id": "lenso-marketplace-2026",
   "public_key_hex": "<64 hex Ed25519 public key>",
-  "cpu_ms": 1000
+  "cpu_ms": 1000,
+  "workers_dev": true
 }
 ```
+
+The production Agent release uses the additive direct origin
+`https://lenso-marketplace.lenso.workers.dev` for signed snapshot and immutable
+artifact downloads. This avoids redirect-based acquisition; the custom domain
+continues serving the same catalog and remains the human-facing address.
 
 Run `node --test tools/cloudflare/deployment-config.test.mjs` to exercise the
 boundary without contacting Cloudflare. Configuration generation never creates
