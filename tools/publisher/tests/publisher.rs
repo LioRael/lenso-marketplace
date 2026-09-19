@@ -279,6 +279,17 @@ fn author_submission_review_and_update() {
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
+        let link = Command::new(env!("CARGO_BIN_EXE_lenso-marketplace-author"))
+            .args(["submission-url", candidate.to_str().unwrap()])
+            .output()
+            .unwrap();
+        assert!(link.status.success());
+        let url = url::Url::parse(String::from_utf8(link.stdout).unwrap().trim()).unwrap();
+        assert_eq!(url.host_str(), Some("github.com"));
+        let fields: std::collections::BTreeMap<_, _> = url.query_pairs().into_owned().collect();
+        assert_eq!(fields["template"], "plugin-submission.yml");
+        assert_eq!(fields["plugin_id"], "lenso.marketplace.echo");
+        assert!(fields["digest"].starts_with("sha256:"));
         let (release, _) = lenso_marketplace_publisher::check(&candidate).unwrap();
         assert!(lenso_marketplace_publisher::prepare(&archive, &metadata, &candidate).is_err());
         assert!(

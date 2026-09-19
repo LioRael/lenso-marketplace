@@ -1,0 +1,68 @@
+name: Submit a plugin release
+description: Request namespace review and publication of a prepared plugin release.
+title: "[Plugin] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prepare and check your submission with lenso-marketplace-author first.
+        This is a public review request, not an automatic upload or publication.
+        Never attach credentials, signing keys or private publisher databases.
+  - type: input
+    id: plugin_id
+    attributes:
+      label: Plugin ID
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Exact version
+    validations:
+      required: true
+  - type: input
+    id: publisher
+    attributes:
+      label: Publisher ID
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source repository
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Source commit
+    validations:
+      required: true
+  - type: input
+    id: artifact
+    attributes:
+      label: Immutable plugin archive URL
+      description: Public HTTPS link to the exact plugin.lenso-plugin archive.
+    validations:
+      required: true
+  - type: input
+    id: digest
+    attributes:
+      label: Archive SHA-256
+      description: Copy artifact_digest from the preparation receipt.
+    validations:
+      required: true
+  - type: input
+    id: metadata
+    attributes:
+      label: Release metadata URL
+      description: Public immutable link to the prepared release.json; do not edit generated identities.
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: Namespace ownership and changes
+      description: Link ownership evidence or a previous approved submission. Describe permissions and changes in this version.
+    validations:
+      required: true

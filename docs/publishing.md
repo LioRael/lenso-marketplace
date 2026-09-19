@@ -3,18 +3,40 @@
 Authors prepare a verified submission without a Marketplace private key, operator
 configuration or database. A maintainer verifies namespace ownership and reviews
 the exact release before publishing it. Submission transport is currently a
-maintainer handoff, not a public upload API or self-service account system.
+GitHub Issue review, not a public upload API or self-service Marketplace account system.
 
 ## Install the preparation tool
 
-From a checkout of this repository (Rust 1.94):
+Prebuilt downloads are produced by the `author-v*` release workflow for macOS
+Apple Silicon and Linux x64 (Ubuntu 24.04 or newer). The first distribution tag is
+`author-v0.1.0`; the commands below require that release to be published. Check the
+[release page](https://github.com/LioRael/lenso-marketplace/releases) for availability.
+
+With GitHub CLI installed:
+
+```sh
+version=author-v0.1.0
+archive="lenso-marketplace-author-$(uname -s)-$(uname -m).tar.gz"
+download_dir="$(mktemp -d)"
+gh release download "$version" --repo LioRael/lenso-marketplace \
+  --pattern "$archive" --pattern "$archive.sha256" --dir "$download_dir"
+(cd "$download_dir" && shasum -a 256 -c "$archive.sha256" && tar -xzf "$archive")
+mkdir -p "$HOME/.local/bin"
+install -m 755 "$download_dir/lenso-marketplace-author" "$HOME/.local/bin/lenso-marketplace-author"
+"$HOME/.local/bin/lenso-marketplace-author" --version
+```
+
+Run the install only after download and checksum verification succeed. On Linux,
+`sha256sum -c` can replace `shasum -a 256 -c`. Ensure `$HOME/.local/bin` is on PATH.
+Checksums detect changed downloads; they are not a separate code-signing system.
+macOS builds are not notarized; do not disable Gatekeeper globally to install one.
+Intel macOS and other platforms currently require a source build (Rust 1.94):
 
 ```sh
 cargo install --locked --path tools/publisher --bin lenso-marketplace-author
 ```
 
-This tool is not yet published to a package registry. Use the released `lenso` CLI
-for checking and packaging your Plugin repository.
+Use the released `lenso` CLI for checking and packaging your Plugin repository.
 
 ## Check and package
 
@@ -59,10 +81,28 @@ and manifest digest. Existing output directories are refused. `check` detects
 changes to the archive or mismatched release identity. Neither command executes
 the plugin, publishes it or establishes publisher ownership.
 
-Give both files to the catalog maintainer through your agreed contribution channel,
-along with source and namespace ownership evidence. No private signing key is
-needed from the author. The maintainer returns a submission ID and review state;
-`awaiting_review` and `approved` do not mean the release is publicly available.
+## Submit and track review
+
+Host both prepared files at public immutable HTTPS URLs, for example assets of a
+versioned GitHub Release in your plugin repository. The archive URL must match the
+one in `release-metadata.json`; prepare again into a new directory if it changes.
+
+```sh
+lenso-marketplace-author submission-url ./submission-1.0.0
+```
+
+Open the printed URL to the [plugin submission form](https://github.com/LioRael/lenso-marketplace/issues/new?template=plugin-submission.yml).
+Identity, source and archive digest are prefilled from the verified submission.
+Add the immutable `release.json` URL and namespace ownership evidence, then submit.
+The command does not open a browser or send an issue. A GitHub account is required
+to file and follow the issue; no separate Marketplace account or private key is needed.
+
+The issue is the public tracking record. A maintainer replies with the internal
+submission ID and review state: received, needs changes, approved, then published
+with an exact release URL and catalog revision. Approval is not publication. A
+closed issue can also mean declined or withdrawn; consult its recorded outcome.
+Ownership evidence is reviewed independently; a GitHub display name is not a
+publisher identity. Existing namespace authorization is still checked on import.
 
 ## Update a plugin
 

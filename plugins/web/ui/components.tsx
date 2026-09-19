@@ -590,8 +590,17 @@ export const Guide = () => (
     >
       Author setup and publishing guide
     </a>
+    <p>
+      <a
+        href="https://github.com/LioRael/lenso-marketplace/issues/new?template=plugin-submission.yml"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Submit a plugin release
+      </a>
+    </p>
     <p className="muted">
-      Submissions currently use a maintainer handoff; public uploads are not
+      Submissions are tracked through GitHub Issues; public uploads are not
       available.
     </p>
   </article>

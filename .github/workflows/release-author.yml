@@ -1,0 +1,64 @@
+name: Author tool distribution
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-author.yml"
+      - "tools/distribution/**"
+      - "tools/publisher/**"
+      - "Cargo.lock"
+  push:
+    tags: ["author-v*"]
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.94.0"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          shared-key: author-distribution
+      - name: Package and smoke test
+        shell: bash
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="lenso-marketplace-publisher"))')"
+          if [[ "$RELEASE_REF" == refs/tags/* ]]; then
+            test "$RELEASE_REF" = "refs/tags/author-v$version"
+            git fetch --unshallow origin main
+            git merge-base --is-ancestor "$RELEASE_SHA" FETCH_HEAD
+          fi
+          AUTHOR_VERSION="$version" bash tools/distribution/package-author.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: author-${{ matrix.os }}
+          path: dist/author/*
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/author-v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" artifacts/* --draft --verify-tag --title "Marketplace Author $RELEASE_TAG" --notes 'Prebuilt Marketplace author tools for macOS Apple Silicon and Linux x64. Verify the matching SHA-256 file before installation. See docs/publishing.md for preparation and submission instructions.'
+          gh release edit "$RELEASE_TAG" --draft=false
