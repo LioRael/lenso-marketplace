@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "apps/native",
   "apps/workers",
+  "apps/workers-sdk-prototype",
   "plugins/directory",
   "plugins/web",
   "contracts/directory",

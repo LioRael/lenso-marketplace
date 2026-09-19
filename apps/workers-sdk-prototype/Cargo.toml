@@ -1,0 +1,37 @@
+[package]
+name = "lenso-marketplace-workers-sdk-prototype"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+# The prototype is a wasm-only package. Keeping its dependencies target-scoped
+# lets the native workspace checks continue to compile the product graph without
+# selecting a second host on the native target.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+anyhow = "1"
+bytes = "1"
+futures = "0.3"
+http = "1"
+js-sys = "=0.3.104"
+lenso-app-plan.workspace = true
+lenso-capability-http-endpoint = "=0.3.1"
+lenso-capability-marketplace-directory = { path = "../../contracts/directory" }
+lenso-kernel.workspace = true
+lenso-marketplace-directory-plugin = { path = "../../plugins/directory", default-features = false }
+lenso-marketplace-web-plugin = { path = "../../plugins/web", default-features = false }
+lenso-native-adapter.workspace = true
+lenso-plugin-catalog.workspace = true
+lenso-web-ingress-plugin = { version = "=0.4.3", default-features = false }
+lenso-workers-driver = "=0.1.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wasm-bindgen = "=0.2.127"
+worker = { version = "=0.8.5", features = ["d1"] }
+
+[lints.rust]
+unsafe_code = "forbid"

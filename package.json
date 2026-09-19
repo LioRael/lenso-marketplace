@@ -10,10 +10,13 @@
     "format:check": "oxfmt --check .",
     "test:browser": "bash scripts/verify-browser.sh",
     "test:native": "bash scripts/check-native.sh",
-    "test:workers": "node --test apps/workers/*.test.mjs tools/cloudflare/*.test.mjs",
+    "test:workers": "node --test apps/workers/*.test.mjs tests/workers/sdk-flow.test.mjs tools/cloudflare/*.test.mjs",
     "build:workers": "bash apps/workers/build.sh",
+    "build:workers:sdk": "bash apps/workers-sdk-prototype/build.sh",
     "dev:workers": "wrangler dev --config apps/workers/wrangler.jsonc",
-    "dev:proof": "wrangler dev --config tests/workers/wrangler.jsonc"
+    "dev:proof": "wrangler dev --config tests/workers/wrangler.jsonc",
+    "seed:workers:sdk": "node scripts/seed-workers-sdk.mjs",
+    "test:workers:sdk": "bash scripts/test-workers-sdk.sh"
   },
   "dependencies": {
     "@lenso/tokens": "0.5.0",
