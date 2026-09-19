@@ -128,3 +128,13 @@ Verify the public exact release, signed snapshot and Agent installation before
 reporting publication complete. The same sequence handles each new version;
 namespace claims are not repeated. Preserve the submitted files until publication
 and backup are confirmed; the publisher database stores metadata, not archive bytes.
+
+### Public submission tracking
+
+The GitHub plugin submission issue is the review conversation. Record the internal
+submission ID and proposal digest there after import, request missing evidence,
+and report the exact public release URL and catalog revision after verification.
+Do not treat opening/closing an issue, repository membership or form fields as
+Directory approval. Never run author commands, source builds or plugins from an
+issue inside a privileged publication job. Downloaded candidate bytes still pass
+the bounded archive verifier and namespace authorization before review.
