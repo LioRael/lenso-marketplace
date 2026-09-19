@@ -77,11 +77,12 @@ wait_for_rebuild() {
     current_restart="$(grep -c "restarting build" "$log" || true)"
     current_done="$(grep -c "Done in" "$log" || true)"
     if ((current_restart > before_restart && current_done > before_done)); then
+      local completed_restart_count="$current_restart"
       sleep 2
       current_restart="$(grep -c "restarting build" "$log" || true)"
-      if ((current_restart != before_restart + 1)); then
+      if ((current_restart != completed_restart_count)); then
         cat "$log"
-        echo "Wrangler restarted more than once for one watched source change" >&2
+        echo "Wrangler continued rebuilding after the watched source settled" >&2
         return 1
       fi
       return 0
