@@ -76,7 +76,15 @@ export const sampleResponse = (
         item.version === decodeURIComponent(path[4])
     );
     return release
-      ? { data: { ...data, release } }
+      ? {
+          data: {
+            ...data,
+            release,
+            versions: [
+              { availability: release.availability, version: release.version },
+            ],
+          },
+        }
       : { error: "This sample release does not exist.", status: 404 };
   }
   const query = (params.get("q") ?? "").toLowerCase();

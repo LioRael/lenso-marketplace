@@ -51,3 +51,4 @@ else:
 PY
 )"
 MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/browser.mjs"
+MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/version-navigation.mjs"

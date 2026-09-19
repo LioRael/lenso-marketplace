@@ -26,3 +26,4 @@ clap = { version = "4", features = ["derive"] }
 lenso-plugin-catalog.workspace = true
 ed25519-dalek = "2.2"
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
+rusqlite = { version = "0.40", features = ["bundled"] }

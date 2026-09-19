@@ -22,6 +22,11 @@ import {
 } from "./navigation";
 import { useSaved } from "./saved";
 
+const resultUnit = (view: string, count: number) => {
+  const unit = view === "saved" ? "saved release" : "plugin";
+  return count === 1 ? unit : `${unit}s`;
+};
+
 const initialTheme = () => {
   try {
     const stored = sessionStorage.getItem("lenso-marketplace-theme");
@@ -423,7 +428,11 @@ export const App = () => {
     return release ? (
       <>
         {freshnessNotice}
-        <Detail release={release} saved={saved} />
+        <Detail
+          release={release}
+          saved={saved}
+          versions={exact.data?.versions}
+        />
       </>
     ) : null;
   };
@@ -494,7 +503,7 @@ export const App = () => {
                     <output>
                       {catalog.loading
                         ? "Loading…"
-                        : `${total} ${total === 1 ? "release" : "releases"}`}
+                        : `${total} ${resultUnit(route.view, total)}`}
                     </output>
                   </div>
                   <form

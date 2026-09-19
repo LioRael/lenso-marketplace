@@ -26,6 +26,7 @@ export interface Catalog {
   licenses?: string[];
   releases?: Release[];
   release?: Release;
+  versions?: { version: string; availability: string }[];
 }
 export const identity = (release: Release) =>
   `${release.plugin_id}@${release.version}`;

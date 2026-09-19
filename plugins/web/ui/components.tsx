@@ -318,9 +318,11 @@ const availabilityCaption = (availability: string) => {
 export const Detail = ({
   release,
   saved,
+  versions,
 }: {
   release: Release;
   saved: Saved;
+  versions?: NonNullable<Catalog["versions"]>;
 }) => (
   <article {...stylex.props(layout.root)} data-slot="detail-layout">
     <header {...stylex.props(layout.detailHeader)} data-slot="detail-header">
@@ -350,7 +352,38 @@ export const Detail = ({
           <a href={publisherUrl(release.publisher_id)}>
             {release.publisher_id}
           </a>
-          <span>Version {release.version}</span>
+          <Select.Root
+            value={release.version}
+            onValueChange={(version) => {
+              if (version) {
+                navigate(releaseUrl({ ...release, version }));
+              }
+            }}
+          >
+            <Select.Trigger aria-label="Version" xstyle={controls.action}>
+              <Select.Value>Version {release.version}</Select.Value>
+              <Select.Icon>⌄</Select.Icon>
+            </Select.Trigger>
+            <Select.Portal>
+              <Select.Positioner>
+                <Select.Popup>
+                  <Select.List>
+                    {(versions ?? [release]).map((item) => (
+                      <Select.Item key={item.version} value={item.version}>
+                        <Select.ItemText>
+                          {item.version}
+                          {item.availability !== "listed" &&
+                          item.availability !== "sample"
+                            ? ` · ${item.availability}`
+                            : ""}
+                        </Select.ItemText>
+                      </Select.Item>
+                    ))}
+                  </Select.List>
+                </Select.Popup>
+              </Select.Positioner>
+            </Select.Portal>
+          </Select.Root>
         </div>
       </div>
       <div {...stylex.props(layout.detailActions)} data-slot="detail-actions">
