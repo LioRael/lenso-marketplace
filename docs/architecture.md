@@ -60,3 +60,15 @@ they exercise external Plugin packaging rather than application composition.
 Historical G-stage receipts and recovery experiments live under `docs/archive`.
 They retain original paths/digests as evidence. Current commands live in README,
 operations and package scripts; archive procedures are not production defaults.
+
+### Plugin browsing and release history
+
+The browser catalog selects one listed release per plugin before search, facets,
+counts and pagination. Stable versions are preferred; plugins with only prereleases
+use their highest SemVer precedence. Withdrawn and revoked versions never become
+browse defaults. Build metadata ties use a deterministic lexical tie-break.
+
+Exact release responses include descending SemVer `versions` with availability.
+The detail version selector retains exact URLs and installation references. Saved
+release queries (`ids`) preserve their exact versions rather than silently upgrading
+bookmarks. Signed snapshots and Agent installation policy are unchanged.

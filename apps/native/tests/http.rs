@@ -193,3 +193,100 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
         })
         .await;
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn plugin_pagination_and_exact_history_use_the_same_verified_catalog() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let root = tempfile::tempdir().unwrap();
+            let database = root.path().join("directory.sqlite3");
+            let _directory =
+                Directory::open(&database, "test", BTreeSet::from(["reviewer".into()])).unwrap();
+            let key = ed25519_dalek::SigningKey::from_bytes(&[17; 32]);
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let mut releases = Vec::new();
+            for (id, version, availability, summary) in [
+                ("example.echo", "1.9.0", "listed", "Old description"),
+                ("example.echo", "1.10.0", "listed", "Current description"),
+                ("example.echo", "2.0.0", "yanked", "Withdrawn"),
+                ("example.other", "1.0.0", "listed", "Other plugin"),
+            ] {
+                releases.push(
+                    serde_json::from_value(serde_json::json!({
+                        "plugin_id":id, "version":version, "publisher_id":"example", "title":id,
+                        "summary":summary, "license":"MIT", "availability":availability,
+                        "source_url":"https://example.com/source", "source_revision":"a".repeat(40),
+                        "artifact":{"url":"https://example.com/plugin", "size":1,
+                            "digest":lenso_plugin_catalog::digest(b"archive"),
+                            "manifest_digest":lenso_plugin_catalog::digest(b"manifest")}
+                    }))
+                    .unwrap(),
+                );
+            }
+            let envelope = lenso_plugin_catalog::sign(
+                &lenso_plugin_catalog::Snapshot::new("test".into(), 1, now, now + 3600, releases),
+                "test-key",
+                &key,
+            )
+            .unwrap();
+            // Isolated signed fixture, never a publication to an operator database.
+            rusqlite::Connection::open(&database)
+                .unwrap()
+                .execute("INSERT INTO snapshots VALUES(1, ?1)", [&envelope])
+                .unwrap();
+            let config = lenso_marketplace_app::Config {
+                app_root: root.path().join("app"),
+                directory_database: database,
+                catalog_id: "test".into(),
+                key_id: "test-key".into(),
+                public_key_hex: key
+                    .verifying_key()
+                    .to_bytes()
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect(),
+                address: "127.0.0.1:0".parse().unwrap(),
+            };
+            let (app, address) = lenso_marketplace_app::start(&config).await.unwrap();
+            let client = reqwest::Client::new();
+            let base = format!("http://{address}/api/marketplace/v1/plugins");
+            for (query, total, version) in [
+                ("?limit=1", 2, Some("1.10.0")),
+                ("?limit=1&offset=1", 2, Some("1.0.0")),
+                ("?q=Old", 0, None),
+                ("?q=Current", 1, Some("1.10.0")),
+                ("?ids=example.echo@1.9.0", 1, Some("1.9.0")),
+            ] {
+                let response = client.get(format!("{base}{query}")).send().await.unwrap();
+                assert_eq!(response.status(), 200);
+                let body: serde_json::Value = response.json().await.unwrap();
+                assert_eq!(body["total"], total, "{query}: {body}");
+                assert_eq!(body["releases"][0]["version"].as_str(), version, "{query}");
+            }
+            let body: serde_json::Value = client
+                .get(format!("{base}/example.echo/1.9.0"))
+                .send()
+                .await
+                .unwrap()
+                .json()
+                .await
+                .unwrap();
+            assert_eq!(body["release"]["version"], "1.9.0");
+            assert_eq!(
+                body["versions"],
+                serde_json::json!([
+                    {"version":"2.0.0","availability":"yanked"},
+                    {"version":"1.10.0","availability":"listed"},
+                    {"version":"1.9.0","availability":"listed"}
+                ])
+            );
+            assert!(matches!(
+                app.shutdown(Duration::from_secs(5)).await,
+                lenso_kernel::ShutdownOutcome::Clean
+            ));
+        })
+        .await;
+}

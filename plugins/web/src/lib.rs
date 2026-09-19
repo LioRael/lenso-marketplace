@@ -305,6 +305,11 @@ impl MarketplaceWeb {
             .iter()
             .filter(|release| release.availability == lenso_plugin_catalog::Availability::Listed)
             .collect();
+        let listed = if search.ids.is_some() {
+            listed
+        } else {
+            latest_plugins(listed)
+        };
         let publishers: std::collections::BTreeSet<_> =
             listed.iter().map(|r| r.publisher_id.clone()).collect();
         let licenses: std::collections::BTreeSet<_> =
@@ -366,6 +371,16 @@ impl MarketplaceWeb {
                 ));
             }
         };
+        let mut history: Vec<_> = catalog
+            .snapshot()
+            .releases
+            .iter()
+            .filter(|release| release.plugin_id == path.plugin_id)
+            .collect();
+        history.sort_by(|a, b| version_order(&b.version, &a.version));
+        let versions: Vec<_> = history.into_iter()
+            .map(|release| serde_json::json!({"version": release.version, "availability": release.availability}))
+            .collect();
         match catalog
             .snapshot()
             .releases
@@ -374,7 +389,7 @@ impl MarketplaceWeb {
         {
             Some(release) => Ok(response::json(
                 StatusCode::OK,
-                &serde_json::json!({"catalog_id":catalog.snapshot().catalog_id,"cached":cached,"stale":catalog.is_stale(self.now().map_err(EndpointHandleInvocationError::Runtime)?),"expires_at":catalog.snapshot().expires_at,"release":release}),
+                &serde_json::json!({"catalog_id":catalog.snapshot().catalog_id,"cached":cached,"stale":catalog.is_stale(self.now().map_err(EndpointHandleInvocationError::Runtime)?),"expires_at":catalog.snapshot().expires_at,"release":release,"versions":versions}),
             )?),
             None => Ok(response::problem(
                 StatusCode::NOT_FOUND,
@@ -411,5 +426,78 @@ fn asset(content_type: &str, bytes: &[u8]) -> HandleResponse {
         status: 200,
         body: bytes.to_vec().into(),
         headers,
+    }
+}
+
+// Snapshot validation guarantees valid SemVer; compare precedence, not strings.
+fn version_order(a: &str, b: &str) -> std::cmp::Ordering {
+    let a_version = semver::Version::parse(a).expect("verified release version");
+    let b_version = semver::Version::parse(b).expect("verified release version");
+    a_version.cmp_precedence(&b_version).then_with(|| a.cmp(b))
+}
+
+fn latest_plugins(
+    releases: Vec<&lenso_plugin_catalog::Release>,
+) -> Vec<&lenso_plugin_catalog::Release> {
+    let mut plugins = std::collections::BTreeMap::new();
+    for release in releases {
+        let current = plugins.entry(&release.plugin_id).or_insert(release);
+        // Prefer stable releases; use the newest prerelease when no stable exists.
+        let stable = semver::Version::parse(&release.version)
+            .expect("verified release version")
+            .pre
+            .is_empty();
+        let current_stable = semver::Version::parse(&current.version)
+            .expect("verified release version")
+            .pre
+            .is_empty();
+        if stable
+            .cmp(&current_stable)
+            .then_with(|| version_order(&release.version, &current.version))
+            .is_gt()
+        {
+            *current = release;
+        }
+    }
+    plugins.into_values().collect()
+}
+
+#[cfg(test)]
+mod release_selection_tests {
+    use super::*;
+    fn release(id: &str, version: &str) -> lenso_plugin_catalog::Release {
+        serde_json::from_value(serde_json::json!({
+            "plugin_id": id, "version": version, "publisher_id": "test", "title": id,
+            "summary": "Test", "source_url": "https://example.com", "source_revision": "test",
+            "license": "MIT", "availability": "listed",
+            "artifact": { "url": "https://example.com/plugin", "digest": "test", "manifest_digest": "test", "size": 1 }
+        })).unwrap()
+    }
+    #[test]
+    fn chooses_one_stable_release_per_plugin_with_numeric_precedence() {
+        let releases = [
+            release("a", "1.9.0"),
+            release("a", "1.10.0"),
+            release("a", "2.0.0-beta.1"),
+            release("b", "0.1.0"),
+        ];
+        let chosen = latest_plugins(releases.iter().collect());
+        assert_eq!(
+            chosen
+                .iter()
+                .map(|r| (&*r.plugin_id, &*r.version))
+                .collect::<Vec<_>>(),
+            vec![("a", "1.10.0"), ("b", "0.1.0")]
+        );
+        let reversed = latest_plugins(releases.iter().rev().collect());
+        assert_eq!(chosen, reversed);
+    }
+    #[test]
+    fn prerelease_only_plugin_uses_semver_order() {
+        let releases = [release("a", "1.0.0-rc.9"), release("a", "1.0.0-rc.10")];
+        assert_eq!(
+            latest_plugins(releases.iter().collect())[0].version,
+            "1.0.0-rc.10"
+        );
     }
 }
