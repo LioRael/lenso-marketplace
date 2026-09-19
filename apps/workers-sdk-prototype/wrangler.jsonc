@@ -1,0 +1,40 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "lenso-marketplace-workers-sdk-prototype",
+  "main": "build/worker/index.js",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": [
+    "global_fetch_strictly_public",
+    "enable_request_signal",
+  ],
+  "build": {
+    "command": "bash apps/workers-sdk-prototype/build.sh",
+    "watch_dir": [
+      "src",
+      "../../plugins/directory/src",
+      "../../plugins/web/src",
+      "../../contracts/directory/src",
+    ],
+  },
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "CATALOG_ID": "workers-d01-local-only",
+    "CATALOG_KEY_ID": "d01-public-fixture",
+    "CATALOG_PUBLIC_KEY": "12f86131c80753d639456bfe90c2115a14d67b081e48f80a1c6880e13fd82425",
+  },
+  "d1_databases": [
+    {
+      "binding": "MARKETPLACE_DB",
+      "database_name": "lenso-marketplace-sdk-prototype-local",
+      "database_id": "d3a4b7c1-3d34-4e92-9c0a-0f7f9b4f7c0a",
+      "migrations_dir": "../../apps/workers/migrations/d1",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MARKETPLACE_OBJECTS",
+      "bucket_name": "lenso-marketplace-sdk-prototype-local",
+    },
+  ],
+}
