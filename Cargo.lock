@@ -1306,6 +1306,7 @@ dependencies = [
  "anyhow",
  "ed25519-dalek",
  "hex",
+ "lenso-cli",
  "lenso-marketplace-directory-plugin",
  "lenso-plugin-catalog",
  "rusqlite",

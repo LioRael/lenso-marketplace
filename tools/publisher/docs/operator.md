@@ -96,3 +96,35 @@ snapshot history, rejection of stale publication, and forward publication from a
 isolated restored image without changing the original database. This qualifies the
 local backup primitive; remote backup retention, storage protection, transfer and
 unattended Actions restore remain deployment work.
+
+## Receive and review author submissions
+
+Use the author's [preparation workflow](../../../docs/publishing.md). Authenticate
+the contributor through the agreed handoff channel and verify namespace ownership
+before assigning an actor. Actor strings below are local audit identities, never
+credentials provided by a public caller.
+
+```sh
+lenso-marketplace-publisher operator.json claim REVIEWER example PUBLISHER AUTHOR
+lenso-marketplace-publisher operator.json submit AUTHOR /absolute/submission-1.0.0
+lenso-marketplace-publisher operator.json inspect REVIEWER SUBMISSION_ID
+lenso-marketplace-publisher operator.json approve REVIEWER SUBMISSION_ID EXPECTED_DIGEST REVIEW_POLICY
+```
+
+`claim` is a one-time reviewer action. `submit` reads `release.json` and
+`plugin.lenso-plugin`, verifies the exact archive into a private temporary extraction
+using the shared CLI archive verifier, and calls Directory admission. It does not
+execute the plugin. It returns `submission_id`, `proposal_digest` and `state`;
+identical retries return the existing submission, while changed immutable releases
+fail. `inspect` is restricted to the publisher actor or configured reviewers.
+Review source and permissions independently of format verification. `approve`
+requires the digest from that inspection and changes only review state.
+
+These commands require an existing catalog database. They never sign, upload or
+silently publish a candidate. After approval, make the exact archive available at
+its immutable artifact URL, verify downloaded bytes against its release digest,
+then use the existing `publish` and conditional Cloudflare promotion workflow.
+Verify the public exact release, signed snapshot and Agent installation before
+reporting publication complete. The same sequence handles each new version;
+namespace claims are not repeated. Preserve the submitted files until publication
+and backup are confirmed; the publisher database stores metadata, not archive bytes.

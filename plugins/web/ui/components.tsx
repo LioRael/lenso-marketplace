@@ -569,9 +569,30 @@ export const Guide = () => (
     </code>
     <h2>Prepare for review</h2>
     <p>
-      Include the publisher, license, source revision and bundle identity.
-      Publication requires namespace ownership and reviewer approval.
+      Prepare release metadata with the publisher, license, source revision and
+      immutable artifact URL. The preparation tool derives identity and hashes
+      from the verified bundle.
     </p>
-    <p className="muted">Online submissions are not open in this preview.</p>
+    <code>
+      lenso-marketplace-author prepare ./plugin.lenso-plugin
+      ./release-metadata.json ./submission
+    </code>
+    <h2>Submit and update</h2>
+    <p>
+      Send the prepared release and archive to the catalog maintainer for
+      namespace review. For an update, increment the plugin version and prepare
+      a new submission. Authors do not need a Marketplace signing key.
+    </p>
+    <a
+      href="https://github.com/LioRael/lenso-marketplace/blob/main/docs/publishing.md"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Author setup and publishing guide
+    </a>
+    <p className="muted">
+      Submissions currently use a maintainer handoff; public uploads are not
+      available.
+    </p>
   </article>
 );
