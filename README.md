@@ -20,6 +20,12 @@ Plugins. Console Agent owns installation and consumes the signed catalog API.
 
 Read [architecture](docs/architecture.md) for dependency direction and data flows.
 
+## Publish a plugin
+
+Follow the [author workflow](docs/publishing.md) to check, package and prepare a
+submission without Marketplace credentials. Maintainers receive and review it with
+the [operator commands](tools/publisher/docs/operator.md).
+
 ## Build and verify
 
 Use Node 24+, pnpm and Rust 1.94.0. The application has one Cargo workspace and

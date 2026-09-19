@@ -27,7 +27,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|export|verify|backup|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|export|verify|backup|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -41,6 +41,54 @@ fn run() -> Result<()> {
     let public_key = hex::decode(&config.public_key_hex).context("invalid public key hex")?;
     ensure!(public_key.len() == 32, "public key must contain 32 bytes");
     match args[1].as_str() {
+        "claim" | "submit" | "inspect" | "approve" => {
+            // These are protected local operator commands, never public actor authentication.
+            PublishedDirectory::open(&config.database, &config.catalog_id)?;
+            let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let mut directory =
+                Directory::open(&config.database, &config.catalog_id, config.reviewers)?;
+            let receipt = match args[1].as_str() {
+                "claim" => {
+                    ensure!(
+                        args.len() == 6,
+                        "claim requires REVIEWER NAMESPACE PUBLISHER AUTHOR"
+                    );
+                    directory.claim_namespace(&args[2], &args[3], &args[4], &args[5], now)?;
+                    serde_json::json!({"status":"claimed", "namespace":args[3]})
+                }
+                "submit" => {
+                    ensure!(
+                        args.len() == 4,
+                        "submit requires AUTHOR SUBMISSION_DIRECTORY"
+                    );
+                    let (release, verified) =
+                        lenso_marketplace_publisher::check(std::path::Path::new(&args[3]))?;
+                    let mut bytes = Vec::new();
+                    verified.open_archive()?.read_to_end(&mut bytes)?;
+                    let id =
+                        directory.submit(&args[2], &release, &bytes, &verified.directory(), now)?;
+                    let (_, proposal_digest, state) = directory.inspect_submission(&args[2], id)?;
+                    serde_json::json!({"submission_id":id, "proposal_digest":proposal_digest, "state":state})
+                }
+                "inspect" => {
+                    ensure!(args.len() == 4, "inspect requires ACTOR SUBMISSION_ID");
+                    let (release, proposal_digest, state) =
+                        directory.inspect_submission(&args[2], args[3].parse()?)?;
+                    serde_json::json!({"release":release,"proposal_digest":proposal_digest,"state":state})
+                }
+                "approve" => {
+                    ensure!(
+                        args.len() == 6,
+                        "approve requires REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY"
+                    );
+                    directory.approve(&args[2], args[3].parse()?, &args[4], &args[5], now)?;
+                    serde_json::json!({"status":"approved","submission_id":args[3]})
+                }
+                _ => unreachable!(),
+            };
+            serde_json::to_writer(io::stdout().lock(), &receipt)?;
+            writeln!(io::stdout().lock())?;
+        }
         "verify" => {
             ensure!(args.len() == 2, "verify accepts no extra arguments");
             let mut envelope = Vec::new();
