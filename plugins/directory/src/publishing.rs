@@ -2,7 +2,10 @@
 //! invocation context, never publisher JSON. HTTP/Auth integration is a separate seam.
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
-use lenso_plugin_catalog::{Availability, Release, Snapshot, digest, sign};
+use lenso_plugin_catalog::{
+    Availability, Release, ReleaseDetails, ReleaseDetailsSnapshot, Snapshot, digest, sign,
+    sign_release_details,
+};
 use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
 use std::{collections::BTreeSet, path::Path};
 
@@ -77,6 +80,18 @@ impl PublishedDirectory {
             Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
         }
     }
+
+    pub fn latest_details(&self) -> Result<Option<String>> {
+        let value: Option<Option<Vec<u8>>> = self.connection.query_row(
+            "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM details_snapshots ORDER BY revision DESC LIMIT 1",
+            [i64::try_from(lenso_plugin_catalog::MAX_ENVELOPE_BYTES)?], |row| row.get(0)
+        ).optional()?;
+        match value {
+            None => Ok(None),
+            Some(None) => anyhow::bail!("published release details exceed size limit"),
+            Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+        }
+    }
 }
 
 impl Directory {
@@ -90,6 +105,8 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS namespaces (namespace TEXT PRIMARY KEY, publisher TEXT NOT NULL, actor TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS details_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS details_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, subject TEXT NOT NULL, at INTEGER NOT NULL);
         ")?;
         connection.execute("INSERT OR IGNORE INTO metadata VALUES(1, ?1)", [catalog_id])?;
@@ -264,6 +281,115 @@ impl Directory {
         Ok((serde_json::from_str(&body)?, digest, state))
     }
 
+    pub fn submit_details(
+        &mut self,
+        actor: &str,
+        details: &ReleaseDetails,
+        now: u64,
+    ) -> Result<i64> {
+        details.validate()?;
+        let identity = format!("{}@{}", details.plugin_id, details.version);
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let (base_body, publisher, base_state): (String, String, String) = transaction.query_row(
+            "SELECT body,publisher,state FROM submissions WHERE identity=?1",
+            [&identity],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?;
+        ensure!(
+            base_state == "published",
+            "release details require an already published base release"
+        );
+        let base: Release = serde_json::from_str(&base_body)?;
+        details.validate_against(&base)?;
+        let owns_namespace: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
+            params![publisher, actor],
+            |row| row.get(0),
+        )?;
+        ensure!(owns_namespace, "publisher does not own this namespace");
+        let body = serde_json::to_string(details)?;
+        let body_digest = digest(body.as_bytes());
+        let existing: Option<(i64, String)> = transaction
+            .query_row(
+                "SELECT id,digest FROM details_submissions WHERE identity=?1",
+                [&identity],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        if let Some((id, previous)) = existing {
+            ensure!(
+                previous == body_digest,
+                "release details identity already submitted with different content"
+            );
+            return Ok(id);
+        }
+        transaction.execute(
+            "INSERT INTO details_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'awaiting_review')",
+            params![identity, publisher, body, body_digest],
+        )?;
+        let id = transaction.last_insert_rowid();
+        transaction.execute(
+            "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'submit_details',?2,?3)",
+            params![actor, identity, i64::try_from(now)?],
+        )?;
+        transaction.commit()?;
+        Ok(id)
+    }
+
+    pub fn inspect_details_submission(
+        &self,
+        actor: &str,
+        submission: i64,
+    ) -> Result<(ReleaseDetails, String, String)> {
+        let (body, digest, state, publisher): (String, String, String, String) =
+            self.connection.query_row(
+                "SELECT body,digest,state,publisher FROM details_submissions WHERE id=?1",
+                [submission],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )?;
+        let owner: bool = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
+            params![publisher, actor],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            owner || self.reviewers.contains(actor),
+            "release details access denied"
+        );
+        Ok((serde_json::from_str(&body)?, digest, state))
+    }
+
+    pub fn approve_details(
+        &mut self,
+        actor: &str,
+        submission: i64,
+        expected_digest: &str,
+        policy: &str,
+        now: u64,
+    ) -> Result<()> {
+        self.authorize_review(actor)?;
+        lenso_plugin_catalog::bounded_text(policy, 128)?;
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let changed = transaction.execute(
+            "UPDATE details_submissions SET state='approved',reviewer=?1,policy=?2 WHERE id=?3 AND digest=?4 AND state='awaiting_review'",
+            params![actor, policy, submission, expected_digest],
+        )?;
+        ensure!(
+            changed == 1,
+            "release details changed or are not awaiting review"
+        );
+        transaction.execute(
+            "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'approve_details',?2,?3)",
+            params![actor, submission.to_string(), i64::try_from(now)?],
+        )?;
+        transaction.commit()?;
+        Ok(())
+    }
+
     /// Publication and signed snapshot are one durable transaction. Expected revision
     /// fences competing publishers. After an uncertain response, read `latest`.
     pub fn publish(
@@ -333,11 +459,83 @@ impl Directory {
             )
             .optional()?)
     }
+
+    pub fn publish_details(
+        &mut self,
+        actor: &str,
+        expected_revision: u64,
+        now: u64,
+        expires_at: u64,
+        key_id: &str,
+        key: &SigningKey,
+    ) -> Result<Vec<u8>> {
+        self.authorize_review(actor)?;
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let current: i64 = transaction.query_row(
+            "SELECT COALESCE(MAX(revision),0) FROM details_snapshots",
+            [],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            current == i64::try_from(expected_revision)?,
+            "release details revision changed; read publication result"
+        );
+        let bodies: Vec<String> = transaction
+            .prepare("SELECT body FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
+            .query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        let releases = bodies
+            .iter()
+            .map(|body| serde_json::from_str(body))
+            .collect::<serde_json::Result<Vec<ReleaseDetails>>>()?;
+        let revision = current
+            .checked_add(1)
+            .context("release details revision overflow")?;
+        let envelope = sign_release_details(
+            &ReleaseDetailsSnapshot::new(
+                self.catalog_id.clone(),
+                u64::try_from(revision)?,
+                now,
+                expires_at,
+                releases,
+            ),
+            key_id,
+            key,
+        )?;
+        transaction.execute(
+            "INSERT INTO details_snapshots VALUES(?1,?2)",
+            params![revision, envelope],
+        )?;
+        transaction.execute(
+            "UPDATE details_submissions SET state='published' WHERE state='approved'",
+            [],
+        )?;
+        transaction.execute(
+            "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'publish_details',?2,?3)",
+            params![actor, revision.to_string(), i64::try_from(now)?],
+        )?;
+        transaction.commit()?;
+        Ok(envelope)
+    }
+
+    pub fn latest_details(&self) -> Result<Option<Vec<u8>>> {
+        Ok(self
+            .connection
+            .query_row(
+                "SELECT envelope FROM details_snapshots ORDER BY revision DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lenso_plugin_catalog::{Distribution, DistributionKind};
     fn release() -> Release {
         Release {
             plugin_id: "example.echo".into(),
@@ -357,6 +555,36 @@ mod tests {
                 manifest_digest: digest(b"manifest"),
             },
             availability: Availability::Listed,
+        }
+    }
+    fn details(base: &Release) -> ReleaseDetails {
+        ReleaseDetails {
+            plugin_id: base.plugin_id.clone(),
+            version: base.version.clone(),
+            base_release_identity: base.immutable_identity().unwrap(),
+            distributions: vec![
+                Distribution {
+                    id: "portable".into(),
+                    kind: DistributionKind::PortableBundle,
+                    package: base.plugin_id.clone(),
+                    version: base.version.clone(),
+                    integrity: None,
+                    registry_url: None,
+                    artifact: Some(base.artifact.clone()),
+                    targets: vec![],
+                },
+                Distribution {
+                    id: "linked-rust".into(),
+                    kind: DistributionKind::CargoPackage,
+                    package: "lenso-example-echo-plugin".into(),
+                    version: base.version.clone(),
+                    integrity: Some(digest(b"crate archive")),
+                    registry_url: Some("https://crates.io".into()),
+                    artifact: None,
+                    targets: vec!["aarch64-apple-darwin".into()],
+                },
+            ],
+            documentation: vec![],
         }
     }
     #[test]
@@ -432,6 +660,31 @@ mod tests {
         assert_eq!(reopened.latest().unwrap().unwrap(), published);
         let verified = lenso_plugin_catalog::verify(&published, &trust, None, 150).unwrap();
         assert_eq!(verified.snapshot().releases.len(), 1);
+        let release_details = details(&release());
+        let details_id = reopened
+            .submit_details("author", &release_details, 106)
+            .unwrap();
+        let (_, details_digest, details_state) = reopened
+            .inspect_details_submission("author", details_id)
+            .unwrap();
+        assert_eq!(details_state, "awaiting_review");
+        reopened
+            .approve_details("reviewer", details_id, &details_digest, "v1", 107)
+            .unwrap();
+        let details_envelope = reopened
+            .publish_details("reviewer", 0, 108, 200, "test-key", &key)
+            .unwrap();
+        let verified_details =
+            lenso_plugin_catalog::verify_release_details(&details_envelope, &trust, None, 150)
+                .unwrap();
+        let joined = verified
+            .select_details(&verified_details, "example.echo", "0.1.0", 150)
+            .unwrap();
+        assert_eq!(joined.distributions.len(), 2);
+        assert_eq!(
+            reopened.latest_details().unwrap().unwrap(),
+            details_envelope
+        );
         assert_eq!(
             reopened.inspect_submission("author", id).unwrap().2,
             "published"

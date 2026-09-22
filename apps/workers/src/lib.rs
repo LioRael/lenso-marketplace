@@ -82,6 +82,13 @@ impl lenso_marketplace_directory_plugin::storage::PublishedStorage for Storage {
             }
         })
     }
+
+    fn published_details<'a>(
+        &'a self,
+        catalog: &'a str,
+    ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
+        Box::pin(self.invoke("published_details", serde_json::json!({"catalog":catalog})))
+    }
 }
 impl CacheStorage for Storage {
     fn prepare_catalog_read(&self, catalog: &str) {

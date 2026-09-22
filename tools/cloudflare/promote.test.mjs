@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { promotePublication } from "./promote.mjs";
+import { promotePublication, promoteReleaseDetails } from "./promote.mjs";
 
-const storage = () => {
+const storage = (table = "marketplace_publications") => {
   const state = {
     afterPut: null,
     fault: null,
@@ -38,7 +38,7 @@ const storage = () => {
             first: () => state.pointer && { ...state.pointer },
             run: () => {
               state.writes += 1;
-              assert.match(sql, /marketplace_publications/u);
+              assert.match(sql, new RegExp(table, "u"));
               assert.doesNotMatch(sql, /marketplace_accepted/u);
               if (state.fault === "before") {
                 throw new Error("transport lost");
@@ -154,4 +154,12 @@ test("corrupted published bytes fail even for an idempotent retry", async () => 
   state.objects.set(receipt.object_key, new TextEncoder().encode("corrupt"));
   await assert.rejects(promotePublication(input(1)), /integrity/u);
   assert.equal(state.writes, 1);
+});
+
+test("release details use a separate pointer and object namespace", async () => {
+  const { state, input } = storage("marketplace_release_details");
+  const receipt = await promoteReleaseDetails(input(1));
+  assert.equal(receipt.status, "published");
+  assert.match(receipt.object_key, /^release-details\//u);
+  assert.equal(state.pointer.revision, 1);
 });

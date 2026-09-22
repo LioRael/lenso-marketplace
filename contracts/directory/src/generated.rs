@@ -6,7 +6,7 @@ use lenso_kernel::{InvocationContext, NativeRequestEndpoint, NativeRequestFuture
 use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany, CapabilityReference};
 pub const CAPABILITY_ID: &str = "lenso.marketplace.directory@1";
 pub const DESCRIPTOR_VERSION: &str = "1.0.0";
-pub const DESCRIPTOR_DIGEST: &str = "sha256:13ac83654ce4b66668209732b8696d031f98f5fe666ea65708f6301515cb730d";
+pub const DESCRIPTOR_DIGEST: &str = "sha256:caaffdbde03f58b943f43d5791145152a7f4e52156d900fc2a6cb5ee0017615f";
 pub const PORTABLE: bool = true;
 pub const CROSS_LANE_TRANSFER: bool = false;
 pub const DIRECTORY_CAPABILITY_ID: &str = CAPABILITY_ID;
@@ -16,7 +16,7 @@ pub const DIRECTORY_CONTRACT: CapabilityReference<DirectoryClient> = CapabilityR
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_provided_directory { () => { "{\"capability_id\":\"lenso.marketplace.directory@1\",\"descriptor_version\":\"1.0.0\",\"operations\":[\"read_snapshot\"],\"operation_kinds\":{},\"default_admission\":{\"queue_capacity\":0,\"max_concurrency\":1},\"operation_admissions\":{},\"event_admission\":null,\"cross_lane_transfer\":false}" }; }
+macro_rules! __lenso_provided_directory { () => { "{\"capability_id\":\"lenso.marketplace.directory@1\",\"descriptor_version\":\"1.0.0\",\"operations\":[\"read_release_details\",\"read_snapshot\"],\"operation_kinds\":{},\"default_admission\":{\"queue_capacity\":0,\"max_concurrency\":1},\"operation_admissions\":{},\"event_admission\":null,\"cross_lane_transfer\":false}" }; }
 
 #[doc(hidden)]
 #[macro_export]
@@ -38,10 +38,29 @@ macro_rules! __lenso_required_many_directory_client {
     ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.marketplace.directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}") };
 }
 
+pub const READ_RELEASE_DETAILS_OPERATION: &str = "read_release_details";
 pub const READ_SNAPSHOT_OPERATION: &str = "read_snapshot";
 
 pub use lenso_contract_runtime::{RawJson, UnknownDomainError};
 use lenso_contract_runtime::{decode_portable_json, encode_portable_json};
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ReadReleaseDetailsRequest {
+
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ReadReleaseDetailsResponse {
+    #[serde(rename = "envelope_json")]
+    #[serde(deserialize_with = "lenso_contract_runtime::serde::deserialize_required")]
+    pub envelope_json: RawJson,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReadReleaseDetailsError {
+    NotPublished,
+    Unknown(UnknownDomainError),
+}
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ReadSnapshotRequest {
@@ -62,8 +81,31 @@ pub enum ReadSnapshotError {
 }
 
 #[derive(Debug)]
-pub struct Directory;
-impl RequestCapability for Directory {
+pub struct DirectoryReadReleaseDetails;
+impl RequestCapability for DirectoryReadReleaseDetails {
+    type Request = ReadReleaseDetailsRequest;
+    type Response = ReadReleaseDetailsResponse;
+    type DomainError = ReadReleaseDetailsError;
+    const ID: &'static str = CAPABILITY_ID;
+    const DESCRIPTOR_VERSION: &'static str = DESCRIPTOR_VERSION;
+
+    fn invoke_native(endpoint: &dyn NativeRequestEndpoint, operation: &str, request: Self::Request, context: InvocationContext) -> NativeRequestFuture<Self> {
+        if operation != READ_RELEASE_DETAILS_OPERATION {
+            return lenso_kernel::invoke_typed_or_erased_native_request::<Self>(endpoint, operation, request, context);
+        }
+        let Some(typed_endpoint) = endpoint
+            .typed_endpoint()
+            .and_then(|endpoint| endpoint.downcast_ref::<DirectoryRequestEndpoint>())
+        else {
+            return lenso_kernel::invoke_typed_or_erased_native_request::<Self>(endpoint, operation, request, context);
+        };
+        Rc::clone(&typed_endpoint.provider).read_release_details(context, request)
+    }
+}
+
+#[derive(Debug)]
+pub struct DirectoryReadSnapshot;
+impl RequestCapability for DirectoryReadSnapshot {
     type Request = ReadSnapshotRequest;
     type Response = ReadSnapshotResponse;
     type DomainError = ReadSnapshotError;
@@ -81,6 +123,53 @@ impl RequestCapability for Directory {
             return lenso_kernel::invoke_typed_or_erased_native_request::<Self>(endpoint, operation, request, context);
         };
         Rc::clone(&typed_endpoint.provider).read_snapshot(context, request)
+    }
+}
+
+impl serde::Serialize for ReadReleaseDetailsError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeMap;
+        match self {
+            Self::NotPublished => serializer.serialize_str("not_published"),
+            Self::Unknown(value) => {
+                let mut map = serializer.serialize_map(Some(1 + usize::from(value.payload.is_some()) + value.extra.len()))?;
+                map.serialize_entry("code", &value.code)?;
+                if let Some(payload) = &value.payload {
+                    map.serialize_entry("payload", payload)?;
+                }
+                for (key, extra) in &value.extra {
+                    map.serialize_entry(key, extra)?;
+                }
+                map.end()
+            },
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ReadReleaseDetailsError {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = <serde_json::Value as serde::Deserialize>::deserialize(deserializer)?;
+        match value {
+            serde_json::Value::String(code) => match code.as_str() {
+                "not_published" => Ok(Self::NotPublished),
+                _ => Ok(Self::Unknown(UnknownDomainError { code, payload: None, extra: std::collections::BTreeMap::new() })),
+            },
+            serde_json::Value::Object(mut object) => {
+                let Some(code) = object.remove("code").and_then(|value| value.as_str().map(ToOwned::to_owned)) else {
+                    return Err(serde::de::Error::custom("Domain Error object is missing a string code"));
+                };
+                let payload = object.remove("payload");
+                let extra = object.into_iter().collect::<std::collections::BTreeMap<_, _>>();
+                Ok(Self::Unknown(UnknownDomainError { code, payload, extra }))
+            }
+            other => Err(serde::de::Error::custom(format!("Domain Error must be a string or object, got {other}"))),
+        }
     }
 }
 
@@ -131,12 +220,48 @@ impl<'de> serde::Deserialize<'de> for ReadSnapshotError {
     }
 }
 
+pub fn encode_read_release_details_request(value: &ReadReleaseDetailsRequest) -> Result<String, serde_json::Error> { encode_portable_json(value) }
+pub fn decode_read_release_details_request(wire: &str) -> Result<ReadReleaseDetailsRequest, serde_json::Error> { decode_portable_json(wire) }
+pub fn encode_read_release_details_response(value: &ReadReleaseDetailsResponse) -> Result<String, serde_json::Error> { encode_portable_json(value) }
+pub fn decode_read_release_details_response(wire: &str) -> Result<ReadReleaseDetailsResponse, serde_json::Error> { decode_portable_json(wire) }
+pub fn encode_read_release_details_error(value: &ReadReleaseDetailsError) -> Result<String, serde_json::Error> { encode_portable_json(value) }
+pub fn decode_read_release_details_error(wire: &str) -> Result<ReadReleaseDetailsError, serde_json::Error> { decode_portable_json(wire) }
+
 pub fn encode_read_snapshot_request(value: &ReadSnapshotRequest) -> Result<String, serde_json::Error> { encode_portable_json(value) }
 pub fn decode_read_snapshot_request(wire: &str) -> Result<ReadSnapshotRequest, serde_json::Error> { decode_portable_json(wire) }
 pub fn encode_read_snapshot_response(value: &ReadSnapshotResponse) -> Result<String, serde_json::Error> { encode_portable_json(value) }
 pub fn decode_read_snapshot_response(wire: &str) -> Result<ReadSnapshotResponse, serde_json::Error> { decode_portable_json(wire) }
 pub fn encode_read_snapshot_error(value: &ReadSnapshotError) -> Result<String, serde_json::Error> { encode_portable_json(value) }
 pub fn decode_read_snapshot_error(wire: &str) -> Result<ReadSnapshotError, serde_json::Error> { decode_portable_json(wire) }
+
+#[doc(hidden)]
+pub trait __LensoIntoDirectoryReadReleaseDetailsResult {
+    fn __lenso_into_result(self) -> Result<Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError>, RuntimeFailure>;
+}
+impl __LensoIntoDirectoryReadReleaseDetailsResult for Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError> {
+    fn __lenso_into_result(self) -> Result<Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError>, RuntimeFailure> { Ok(self) }
+}
+impl __LensoIntoDirectoryReadReleaseDetailsResult for Result<Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError>, RuntimeFailure> {
+    fn __lenso_into_result(self) -> Result<Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError>, RuntimeFailure> { self }
+}
+impl __LensoIntoDirectoryReadReleaseDetailsResult for Result<ReadReleaseDetailsResponse, lenso_plugin_authoring::PluginError<ReadReleaseDetailsError, RuntimeFailure>> {
+    fn __lenso_into_result(self) -> Result<Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError>, RuntimeFailure> {
+        match self {
+            Ok(value) => Ok(Ok(value)),
+            Err(lenso_plugin_authoring::PluginError::Domain(error)) => Ok(Err(error)),
+            Err(lenso_plugin_authoring::PluginError::Runtime(error)) => Err(error),
+        }
+    }
+}
+impl __LensoIntoDirectoryReadReleaseDetailsResult for Result<ReadReleaseDetailsResponse, DirectoryReadReleaseDetailsInvocationError> {
+    fn __lenso_into_result(self) -> Result<Result<ReadReleaseDetailsResponse, ReadReleaseDetailsError>, RuntimeFailure> {
+        match self {
+            Ok(value) => Ok(Ok(value)),
+            Err(DirectoryReadReleaseDetailsInvocationError::Domain(error)) => Ok(Err(error)),
+            Err(DirectoryReadReleaseDetailsInvocationError::Runtime(error)) => Err(error),
+        }
+    }
+}
 
 #[doc(hidden)]
 pub trait __LensoIntoDirectoryReadSnapshotResult {
@@ -157,18 +282,19 @@ impl __LensoIntoDirectoryReadSnapshotResult for Result<ReadSnapshotResponse, len
         }
     }
 }
-impl __LensoIntoDirectoryReadSnapshotResult for Result<ReadSnapshotResponse, DirectoryInvocationError> {
+impl __LensoIntoDirectoryReadSnapshotResult for Result<ReadSnapshotResponse, DirectoryReadSnapshotInvocationError> {
     fn __lenso_into_result(self) -> Result<Result<ReadSnapshotResponse, ReadSnapshotError>, RuntimeFailure> {
         match self {
             Ok(value) => Ok(Ok(value)),
-            Err(DirectoryInvocationError::Domain(error)) => Ok(Err(error)),
-            Err(DirectoryInvocationError::Runtime(error)) => Err(error),
+            Err(DirectoryReadSnapshotInvocationError::Domain(error)) => Ok(Err(error)),
+            Err(DirectoryReadSnapshotInvocationError::Runtime(error)) => Err(error),
         }
     }
 }
 
 pub trait DirectoryProvider: fmt::Debug + 'static {
-    fn read_snapshot(&self, context: InvocationContext, request: ReadSnapshotRequest) -> NativeRequestFuture<Directory>;
+    fn read_release_details(&self, context: InvocationContext, request: ReadReleaseDetailsRequest) -> NativeRequestFuture<DirectoryReadReleaseDetails>;
+    fn read_snapshot(&self, context: InvocationContext, request: ReadSnapshotRequest) -> NativeRequestFuture<DirectoryReadSnapshot>;
 }
 
 #[doc(hidden)]
@@ -177,7 +303,14 @@ macro_rules! __lenso_native_lower_directory {
     ($plugin:ty, $support:path) => {
         use $support as __LensoNativeSupportDirectory;
         impl $crate::DirectoryProvider for $plugin {
-        fn read_snapshot(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadSnapshotRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::Directory> {
+        fn read_release_details(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadReleaseDetailsRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::DirectoryReadReleaseDetails> {
+            let plugin = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let result = <$plugin>::read_release_details(&plugin, context, request).await;
+                $crate::__LensoIntoDirectoryReadReleaseDetailsResult::__lenso_into_result(result)
+            })
+        }
+        fn read_snapshot(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadSnapshotRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::DirectoryReadSnapshot> {
             let plugin = self.clone();
             ::std::boxed::Box::pin(async move {
                 let result = <$plugin>::read_snapshot(&plugin, context, request).await;
@@ -194,7 +327,15 @@ macro_rules! __lenso_native_lower_object_directory {
     ($object:ty, $plugin:ty, $support:path) => {
         use $support as __LensoNativeSupportDirectory;
         impl $crate::DirectoryProvider for $object {
-        fn read_snapshot(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadSnapshotRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::Directory> {
+        fn read_release_details(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadReleaseDetailsRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::DirectoryReadReleaseDetails> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::read_release_details(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoDirectoryReadReleaseDetailsResult::__lenso_into_result(result)
+            })
+        }
+        fn read_snapshot(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadSnapshotRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::DirectoryReadSnapshot> {
             let object = self.clone();
             ::std::boxed::Box::pin(async move {
                 let plugin = object.get()?;
@@ -212,7 +353,14 @@ macro_rules! __lenso_native_lower_trait_object_directory {
     ($object:ty, $plugin:ty, $support:path) => {
         use $support as __LensoNativeSupportDirectory;
         impl $crate::DirectoryProvider for $object {
-        fn read_snapshot(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadSnapshotRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::Directory> {
+        fn read_release_details(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadReleaseDetailsRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::DirectoryReadReleaseDetails> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::DirectoryProvider>::read_release_details(plugin.as_ref(), context, request).await
+            })
+        }
+        fn read_snapshot(&self, context: __LensoNativeSupportDirectory::InvocationContext, request: $crate::ReadSnapshotRequest) -> __LensoNativeSupportDirectory::NativeRequestFuture<$crate::DirectoryReadSnapshot> {
             let object = self.clone();
             ::std::boxed::Box::pin(async move {
                 let plugin = object.get()?;
@@ -240,11 +388,25 @@ impl<P: DirectoryProvider> NativeRequestEndpoint for DirectoryEndpoint<P> {
     fn capability_id(&self) -> &'static str { CAPABILITY_ID }
     fn descriptor_version(&self) -> &'static str { DESCRIPTOR_VERSION }
     fn operations(&self) -> &'static [&'static str] { &[
+        READ_RELEASE_DETAILS_OPERATION,
         READ_SNAPSHOT_OPERATION,
     ] }
     fn typed_endpoint(&self) -> Option<&dyn std::any::Any> { Some(&self.request_endpoint) }
     fn invoke(&self, operation: &str, request: Box<dyn std::any::Any>, context: InvocationContext) -> LocalBoxFuture<'static, Result<Result<Box<dyn std::any::Any>, Box<dyn std::any::Any>>, RuntimeFailure>> {
         match operation {
+            READ_RELEASE_DETAILS_OPERATION => {
+                let Ok(request) = request.downcast::<ReadReleaseDetailsRequest>() else {
+                    return Box::pin(futures::future::ready(Err(RuntimeFailure::ProtocolViolation { capability: CAPABILITY_ID })));
+                };
+                let invocation = Rc::clone(&self.provider).read_release_details(context, *request);
+                Box::pin(async move {
+                    invocation.await.map(|result| {
+                        result
+                            .map(|value| Box::new(value) as Box<dyn std::any::Any>)
+                            .map_err(|error| Box::new(error) as Box<dyn std::any::Any>)
+                    })
+                })
+            },
             READ_SNAPSHOT_OPERATION => {
                 let Ok(request) = request.downcast::<ReadSnapshotRequest>() else {
                     return Box::pin(futures::future::ready(Err(RuntimeFailure::ProtocolViolation { capability: CAPABILITY_ID })));
@@ -295,13 +457,10 @@ macro_rules! __lenso_native_provide_directory {
 
 #[derive(Clone, Debug)]
 pub struct DirectoryClient {
-    read_snapshot: NativeRequestHandle<Directory>,
+    read_release_details: NativeRequestHandle<DirectoryReadReleaseDetails>,
+    read_snapshot: NativeRequestHandle<DirectoryReadSnapshot>,
 }
 impl DirectoryClient {
-    pub fn new(handle: NativeRequestHandle<Directory>) -> Self {
-        Self { read_snapshot: handle }
-    }
-
     pub fn from_dependencies(dependencies: &PluginDependencies) -> Result<Self, RuntimeFailure> {
         <Self as CapabilityClient>::from_dependencies(dependencies)
     }
@@ -313,16 +472,28 @@ impl DirectoryClient {
         <Self as CapabilityClient>::from_requirement(dependencies, requirement_id)
     }
 
-    pub async fn read_snapshot(&self, request: ReadSnapshotRequest) -> Result<ReadSnapshotResponse, DirectoryInvocationError> {
-        self.read_snapshot.invoke(READ_SNAPSHOT_OPERATION, request).await
-            .map_err(DirectoryInvocationError::Runtime)?
-            .map_err(DirectoryInvocationError::Domain)
+    pub async fn read_release_details(&self, request: ReadReleaseDetailsRequest) -> Result<ReadReleaseDetailsResponse, DirectoryReadReleaseDetailsInvocationError> {
+        self.read_release_details.invoke(READ_RELEASE_DETAILS_OPERATION, request).await
+            .map_err(DirectoryReadReleaseDetailsInvocationError::Runtime)?
+            .map_err(DirectoryReadReleaseDetailsInvocationError::Domain)
     }
 
-    pub async fn read_snapshot_with_context(&self, context: InvocationContext, request: ReadSnapshotRequest) -> Result<ReadSnapshotResponse, DirectoryInvocationError> {
+    pub async fn read_release_details_with_context(&self, context: InvocationContext, request: ReadReleaseDetailsRequest) -> Result<ReadReleaseDetailsResponse, DirectoryReadReleaseDetailsInvocationError> {
+        self.read_release_details.invoke_with_context(READ_RELEASE_DETAILS_OPERATION, context, request).await
+            .map_err(DirectoryReadReleaseDetailsInvocationError::Runtime)?
+            .map_err(DirectoryReadReleaseDetailsInvocationError::Domain)
+    }
+
+    pub async fn read_snapshot(&self, request: ReadSnapshotRequest) -> Result<ReadSnapshotResponse, DirectoryReadSnapshotInvocationError> {
+        self.read_snapshot.invoke(READ_SNAPSHOT_OPERATION, request).await
+            .map_err(DirectoryReadSnapshotInvocationError::Runtime)?
+            .map_err(DirectoryReadSnapshotInvocationError::Domain)
+    }
+
+    pub async fn read_snapshot_with_context(&self, context: InvocationContext, request: ReadSnapshotRequest) -> Result<ReadSnapshotResponse, DirectoryReadSnapshotInvocationError> {
         self.read_snapshot.invoke_with_context(READ_SNAPSHOT_OPERATION, context, request).await
-            .map_err(DirectoryInvocationError::Runtime)?
-            .map_err(DirectoryInvocationError::Domain)
+            .map_err(DirectoryReadSnapshotInvocationError::Runtime)?
+            .map_err(DirectoryReadSnapshotInvocationError::Domain)
     }
 }
 
@@ -335,7 +506,8 @@ impl CapabilityClient for DirectoryClient {
 
     fn from_dependencies(dependencies: &PluginDependencies) -> Result<Self, RuntimeFailure> {
         Ok(Self {
-            read_snapshot: dependencies.one::<Directory>()?,
+            read_release_details: dependencies.one::<DirectoryReadReleaseDetails>()?,
+            read_snapshot: dependencies.one::<DirectoryReadSnapshot>()?,
         })
     }
 
@@ -366,7 +538,8 @@ impl CapabilityClientMany for DirectoryClient {
                 Ok(BoundCapabilityClient::new(
                     binding.provider_instance(),
                     Self {
-                    read_snapshot: binding.handle().ok_or(RuntimeFailure::Unavailable { capability: CAPABILITY_ID })?.typed::<Directory>()?,
+                    read_release_details: binding.handle().ok_or(RuntimeFailure::Unavailable { capability: CAPABILITY_ID })?.typed::<DirectoryReadReleaseDetails>()?,
+                    read_snapshot: binding.handle().ok_or(RuntimeFailure::Unavailable { capability: CAPABILITY_ID })?.typed::<DirectoryReadSnapshot>()?,
                     },
                 ))
             })
@@ -383,7 +556,12 @@ impl CapabilityClientMany for DirectoryClient {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum DirectoryInvocationError {
+pub enum DirectoryReadReleaseDetailsInvocationError {
+    Domain(ReadReleaseDetailsError),
+    Runtime(RuntimeFailure),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub enum DirectoryReadSnapshotInvocationError {
     Domain(ReadSnapshotError),
     Runtime(RuntimeFailure),
 }

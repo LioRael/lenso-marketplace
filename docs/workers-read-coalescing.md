@@ -51,21 +51,9 @@ Missing publication is returned separately from prior accepted state so the
 existing Directory-unavailable handling remains in Rust. Runtime cancellation,
 late-callback fencing and R2 reader cleanup also cover the combined operation.
 
-## Validation on the W05 source
+## Regression coverage
 
-The committed cross-language signed vector and archived Workers evidence are
-unchanged. New tests cover exact-byte call counts, missing state, corrupt pointers,
-checkpoint and envelope objects, bounds, cancellation, fresh winner reads and
-Rust trust/CAS regression behavior.
-
-Coordinator validation passed with the frozen repository dependencies:
-
-- `pnpm build`;
-- all 40 `pnpm test:workers` checks, including the workerd promotion fixture;
-- all 10 `lenso-marketplace-web-plugin` unit and integration tests;
-- Rust 1.94 wasm32 Clippy with warnings denied;
-- the Workers release build and Wrangler deployment dry run; and
-- `git diff --check`.
-
-Required `catalog`, `event-host` and `quality` delivery checks remain unchanged.
-These local checks and a dry run do not prove a new deployment.
+Tests cover exact-byte call counts, missing state, corrupt pointers, checkpoint
+and envelope objects, bounds, cancellation, fresh winner reads and Rust trust/CAS
+behavior. Run `pnpm test:workers` and the Web Plugin tests after changing this
+path. Local checks and a Wrangler dry run do not prove a deployment.

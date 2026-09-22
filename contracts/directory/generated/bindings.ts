@@ -3,7 +3,7 @@ import * as lensoContractRuntime from "@lenso/contract-runtime";
 
 export const CAPABILITY_ID = "lenso.marketplace.directory@1";
 export const DESCRIPTOR_VERSION = "1.0.0";
-export const DESCRIPTOR_DIGEST = "sha256:13ac83654ce4b66668209732b8696d031f98f5fe666ea65708f6301515cb730d";
+export const DESCRIPTOR_DIGEST = "sha256:caaffdbde03f58b943f43d5791145152a7f4e52156d900fc2a6cb5ee0017615f";
 export const PORTABLE = true;
 export const CROSS_LANE_TRANSFER = false;
 
@@ -34,6 +34,14 @@ export interface CapabilityContractReference<Client, Provider extends object, Ru
   readonly __provider?: Provider;
 }
 
+export interface ReadReleaseDetailsRequest {
+
+}
+
+export interface ReadReleaseDetailsResponse {
+  envelope_json: string;
+}
+
 export interface ReadSnapshotRequest {
 
 }
@@ -42,9 +50,19 @@ export interface ReadSnapshotResponse {
   envelope_json: string;
 }
 
+export type ReadReleaseDetailsError = "not_published" | UnknownDomainError;
+export type ReadReleaseDetailsInvocationError = { readonly kind: "domain"; readonly error: ReadReleaseDetailsError } | { readonly kind: "runtime"; readonly error: RuntimeFailure };
+export type ReadReleaseDetailsResult = { readonly ok: true; readonly value: ReadReleaseDetailsResponse } | { readonly ok: false; readonly error: ReadReleaseDetailsInvocationError };
 export type ReadSnapshotError = "not_published" | UnknownDomainError;
 export type ReadSnapshotInvocationError = { readonly kind: "domain"; readonly error: ReadSnapshotError } | { readonly kind: "runtime"; readonly error: RuntimeFailure };
 export type ReadSnapshotResult = { readonly ok: true; readonly value: ReadSnapshotResponse } | { readonly ok: false; readonly error: ReadSnapshotInvocationError };
+export function encodeReadReleaseDetailsRequest(value: ReadReleaseDetailsRequest): string { return lensoContractRuntime.encodePortableJson(value, "request"); }
+export function decodeReadReleaseDetailsRequest(wire: string): ReadReleaseDetailsRequest { return lensoContractRuntime.decodePortableJson<ReadReleaseDetailsRequest>(wire); }
+export function encodeReadReleaseDetailsResponse(value: ReadReleaseDetailsResponse): string { return lensoContractRuntime.encodePortableJson(value, "response"); }
+export function decodeReadReleaseDetailsResponse(wire: string): ReadReleaseDetailsResponse { return lensoContractRuntime.decodePortableJson<ReadReleaseDetailsResponse>(wire); }
+export function encodeReadReleaseDetailsError(value: ReadReleaseDetailsError): string { return lensoContractRuntime.encodePortableJson(value, "Domain Error"); }
+export function decodeReadReleaseDetailsError(wire: string): ReadReleaseDetailsError { return lensoContractRuntime.decodeDomainError<ReadReleaseDetailsError>(wire, ["not_published"]); }
+
 export function encodeReadSnapshotRequest(value: ReadSnapshotRequest): string { return lensoContractRuntime.encodePortableJson(value, "request"); }
 export function decodeReadSnapshotRequest(wire: string): ReadSnapshotRequest { return lensoContractRuntime.decodePortableJson<ReadSnapshotRequest>(wire); }
 export function encodeReadSnapshotResponse(value: ReadSnapshotResponse): string { return lensoContractRuntime.encodePortableJson(value, "response"); }
@@ -54,14 +72,16 @@ export function decodeReadSnapshotError(wire: string): ReadSnapshotError { retur
 
 
 export interface DirectoryClient {
+  read_release_details(request: ReadReleaseDetailsRequest, context?: InvocationContext): Promise<ReadReleaseDetailsResult>;
   read_snapshot(request: ReadSnapshotRequest, context?: InvocationContext): Promise<ReadSnapshotResult>;
 }
 
 export interface DirectoryProvider {
+  read_release_details(context: InvocationContext, request: ReadReleaseDetailsRequest): Promise<ReadReleaseDetailsResult>;
   read_snapshot(context: InvocationContext, request: ReadSnapshotRequest): Promise<ReadSnapshotResult>;
 }
 
-export const Directory: CapabilityContractReference<DirectoryClient, DirectoryProvider, DependencyInvoker> = { kind: "lenso.capability", ...bindDirectoryDependency(), capability_id: CAPABILITY_ID, descriptor_version: DESCRIPTOR_VERSION, descriptor_digest: DESCRIPTOR_DIGEST, generated_client: "DirectoryClient", descriptor: { capability_id: CAPABILITY_ID, descriptor_version: DESCRIPTOR_VERSION, operations: ["read_snapshot"], stream_operations: [], event_operations: [] }, bindProvider: bindDirectoryProvider, required(id) { return { kind: "lenso.dependency", ...(id === undefined ? {} : { id }), contract: this, cardinality: "one" }; }, optional(id) { return { kind: "lenso.dependency", ...(id === undefined ? {} : { id }), contract: this, cardinality: "optional" }; }, many(id) { return { kind: "lenso.dependency", ...(id === undefined ? {} : { id }), contract: this, cardinality: "many" }; }, };
+export const Directory: CapabilityContractReference<DirectoryClient, DirectoryProvider, DependencyInvoker> = { kind: "lenso.capability", ...bindDirectoryDependency(), capability_id: CAPABILITY_ID, descriptor_version: DESCRIPTOR_VERSION, descriptor_digest: DESCRIPTOR_DIGEST, generated_client: "DirectoryClient", descriptor: { capability_id: CAPABILITY_ID, descriptor_version: DESCRIPTOR_VERSION, operations: ["read_release_details", "read_snapshot"], stream_operations: [], event_operations: [] }, bindProvider: bindDirectoryProvider, required(id) { return { kind: "lenso.dependency", ...(id === undefined ? {} : { id }), contract: this, cardinality: "one" }; }, optional(id) { return { kind: "lenso.dependency", ...(id === undefined ? {} : { id }), contract: this, cardinality: "optional" }; }, many(id) { return { kind: "lenso.dependency", ...(id === undefined ? {} : { id }), contract: this, cardinality: "many" }; }, };
 export const DIRECTORY_CONTRACT = Directory;
 
 export type ProviderDispatchOutcome =
@@ -131,12 +151,32 @@ export function bindDirectoryProvider(
     descriptor: {
       capability_id: CAPABILITY_ID,
       descriptor_version: DESCRIPTOR_VERSION,
-      operations: ["read_snapshot"],
+      operations: ["read_release_details", "read_snapshot"],
       stream_operations: [],
       event_operations: [],
     },
     async invokeRequest(operation, context, payload) {
       switch (operation) {
+      case "read_release_details": {
+        let request: ReadReleaseDetailsRequest;
+        try {
+          request = decodeReadReleaseDetailsRequest(lensoContractRuntime.encodePortableJson(payload, "request"));
+        } catch (error) {
+          return { kind: "runtime", failure: { kind: "protocol_violation", detail: providerErrorMessage(error) } };
+        }
+        try {
+          const result = await provider.read_release_details(context, request);
+          if (result.ok) {
+            return { kind: "success", value: JSON.parse(encodeReadReleaseDetailsResponse(result.value)) as unknown };
+          }
+          if (result.error.kind === "domain") {
+            return { kind: "domain", value: JSON.parse(encodeReadReleaseDetailsError(result.error.error)) as unknown };
+          }
+          return { kind: "runtime", failure: result.error.error };
+        } catch (error) {
+          return { kind: "runtime", failure: { kind: "plugin_failure", detail: providerErrorMessage(error) } };
+        }
+      }
       case "read_snapshot": {
         let request: ReadSnapshotRequest;
         try {
@@ -223,12 +263,33 @@ export function bindDirectoryDependency(): CapabilityDependencyBinding<Directory
     descriptor: {
       capability_id: CAPABILITY_ID,
       descriptor_version: DESCRIPTOR_VERSION,
-      operations: ["read_snapshot"],
+      operations: ["read_release_details", "read_snapshot"],
       stream_operations: [],
       event_operations: [],
     },
     createClient(invoke) {
       return {
+      async read_release_details(request, context) {
+        let payload: unknown;
+        try {
+          payload = JSON.parse(encodeReadReleaseDetailsRequest(request)) as unknown;
+        } catch (error) {
+          return { ok: false, error: { kind: "runtime", error: { kind: "protocol_violation", detail: dependencyErrorMessage(error) } } };
+        }
+        const call = context ?? { requestId: "0" as Uint64, cancelled: false };
+        try {
+          const outcome = await invoke("read_release_details", call, payload);
+          if (outcome.kind === "success") {
+            return { ok: true, value: decodeReadReleaseDetailsResponse(JSON.stringify(outcome.value)) };
+          }
+          if (outcome.kind === "domain") {
+            return { ok: false, error: { kind: "domain", error: decodeReadReleaseDetailsError(JSON.stringify(outcome.value)) } };
+          }
+          return { ok: false, error: { kind: "runtime", error: outcome.failure } };
+        } catch (error) {
+          return { ok: false, error: { kind: "runtime", error: { kind: "plugin_failure", detail: dependencyErrorMessage(error) } } };
+        }
+      },
       async read_snapshot(request, context) {
         let payload: unknown;
         try {

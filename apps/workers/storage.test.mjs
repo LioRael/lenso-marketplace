@@ -108,9 +108,11 @@ const fixture = (envelope = signedEnvelope) => {
   const state = {
     calls: { batch: 0, first: 0, get: [], put: 0, run: 0 },
     controller: new AbortController(),
+    details: { digest: hash(envelope), object_key: "proof/details.json" },
     objects: new Map([
       [key, raw],
       ["proof/first.json", envelope],
+      ["proof/details.json", envelope],
     ]),
     pointer: { object_key: key, token: accepted.token },
     publication: { digest: hash(envelope), object_key: "proof/first.json" },
@@ -133,15 +135,22 @@ const fixture = (envelope = signedEnvelope) => {
       return {
         bind(...args) {
           assert.deepEqual(args, [catalog]);
-          const table = sql.includes("marketplace_publications")
-            ? "publication"
-            : "pointer";
-          assert.equal(
-            sql,
-            table === "publication"
-              ? "SELECT object_key,digest FROM marketplace_publications WHERE catalog_id=?"
-              : "SELECT token,object_key FROM marketplace_accepted WHERE catalog_id=?"
-          );
+          let table = "pointer";
+          if (sql.includes("marketplace_release_details")) {
+            table = "details";
+          } else if (sql.includes("marketplace_publications")) {
+            table = "publication";
+          }
+          let expected =
+            "SELECT token,object_key FROM marketplace_accepted WHERE catalog_id=?";
+          if (table === "publication") {
+            expected =
+              "SELECT object_key,digest FROM marketplace_publications WHERE catalog_id=?";
+          } else if (table === "details") {
+            expected =
+              "SELECT object_key,digest FROM marketplace_release_details WHERE catalog_id=?";
+          }
+          assert.equal(sql, expected);
           return {
             first() {
               state.calls.first += 1;
@@ -337,6 +346,15 @@ test("raw publication reads remain independent of accepted corruption", async ()
     put: 0,
     run: 0,
   });
+});
+
+test("raw release details use their independent signed pointer", async () => {
+  const { state, storage } = fixture();
+  assert.equal(
+    JSON.parse(await storage("published_details", input)),
+    signedEnvelope
+  );
+  assert.deepEqual(state.calls.get, ["proof/details.json"]);
 });
 
 test("failed or malformed D1 batch cannot become missing accepted state", async () => {

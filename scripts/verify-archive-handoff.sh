@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-: "${CARGO:?Set CARGO to the repository Cargo wrapper}"
-: "${1:?Provide the lenso-cli source checkout with VerifiedPluginArchive}"
+: "${CARGO:=cargo}"
+: "${1:?Provide the lenso Rust workspace checkout}"
 : "${2:?Provide a CLI-built Echo archive}"
 marketplace_root="$(cd "$(dirname "$0")/.." && pwd)"
 proof_root="$(mktemp -d "${TMPDIR:-/tmp}/lenso-marketplace-handoff.XXXXXX")"
@@ -9,7 +9,8 @@ trap 'rm -rf "$proof_root"' EXIT
 python3 - "$proof_root" "$marketplace_root" "$1" <<'PY'
 from pathlib import Path
 import json, sys
-root, marketplace, cli = map(lambda value: Path(value).resolve(), sys.argv[1:])
+root, marketplace, lenso = map(lambda value: Path(value).resolve(), sys.argv[1:])
+cli = lenso / 'crates/lenso-cli'
 q = lambda value: json.dumps(str(value))
 (root / 'Cargo.toml').write_text(f'''
 [package]
@@ -22,7 +23,7 @@ path = {q(marketplace / 'tests/integration/archive_handoff.rs')}
 [dependencies]
 lenso-app-authoring = {{ package = "lenso-cli", path = {q(cli)}, default-features = false }}
 lenso-marketplace-directory-plugin = {{ path = {q(marketplace / 'plugins/directory')} }}
-lenso-plugin-catalog = {{ git = "https://github.com/LioRael/lenso-cli.git", rev = "78fc2b188eec19acd886c0c20457de7a2cccfc97", features = ["bundle-verification"] }}
+lenso-plugin-catalog = {{ path = {q(lenso / 'crates/lenso-plugin-catalog')}, features = ["bundle-verification"] }}
 tempfile = "3"
 lenso-app-plan = "0.4.1"
 ed25519-dalek = "2.2"

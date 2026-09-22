@@ -17,7 +17,6 @@ Plugins. Console Agent owns installation and consumes the signed catalog API.
 | `tools/publisher` | Local operator CLI for Directory publishing and backup |
 | `tools/cloudflare` | Private publication promotion and deployment config generation |
 | `tests` | Test plugins, protocol fixtures, integration and explicit Workers proof host |
-| `docs/archive` | Historical designs and qualification evidence, not current runbooks |
 
 Read [architecture](docs/architecture.md) for dependency direction and data flows.
 
@@ -42,9 +41,8 @@ pnpm test:workers
 CARGO=cargo pnpm build:workers
 ```
 
-In the Lenso sibling workspace, replace `CARGO=cargo` with the absolute path to
-`.lenso-tools/bin/lenso-cargo`. Browser acceptance needs `lenso-cli` and Playwright
-Chromium. Workers builds need `wasm32-unknown-unknown` and wasm-bindgen-cli 0.2.127.
+Browser acceptance needs `lenso-cli` and Playwright Chromium. Workers builds need
+`wasm32-unknown-unknown` and wasm-bindgen-cli 0.2.127.
 
 ## Run
 

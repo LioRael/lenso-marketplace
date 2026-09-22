@@ -11,7 +11,5 @@ export default defineConfig({
     "**/generated/**",
     "plugins/directory/config.schema.json",
     "plugins/web/config.schema.json",
-    "docs/archive/**",
-    "tests/workers/proof/cohort.json",
   ],
 });

@@ -57,10 +57,6 @@ wasm32-unknown-unknown`; do not enable native feature sets for the whole workspa
 on that target. The two executable test Plugin projects stay excluded because
 they exercise external Plugin packaging rather than application composition.
 
-Historical G-stage receipts and recovery experiments live under `docs/archive`.
-They retain original paths/digests as evidence. Current commands live in README,
-operations and package scripts; archive procedures are not production defaults.
-
 ### Plugin browsing and release history
 
 The browser catalog selects one listed release per plugin before search, facets,

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { isAbsolute } from "node:path";
 
 import { cloudflareStorage } from "./cloudflare.mjs";
-import { promotePublication } from "./promote.mjs";
+import { promotePublication, promoteReleaseDetails } from "./promote.mjs";
 
 // Run only in the protected operator host. CONFIG contains public identifiers,
 // absolute publisher paths and the operator-reviewed expected remote pointer.
@@ -33,8 +33,14 @@ const main = async () => {
   };
   // Export cannot create or renew a publication. Its bytes come from the
   // authoritative durable database, not a user-supplied envelope file.
-  const publication = publisher("export");
-  const receipt = await promotePublication({
+  const details = config.kind === "release-details";
+  assert.ok(
+    config.kind === undefined || details,
+    "kind must be omitted or release-details"
+  );
+  const publication = publisher(details ? "export-details" : "export");
+  const promote = details ? promoteReleaseDetails : promotePublication;
+  const receipt = await promote({
     ...cloudflareStorage({
       ...config,
       accessKeyId: process.env.MARKETPLACE_R2_ACCESS_KEY_ID,
@@ -44,7 +50,8 @@ const main = async () => {
     catalogId: config.catalogId,
     envelope: publication.envelope,
     expected: config.expected,
-    verify: (envelope) => publisher("verify", envelope),
+    verify: (envelope) =>
+      publisher(details ? "verify-details" : "verify", envelope),
   });
   process.stdout.write(`${JSON.stringify(receipt)}\n`);
 };

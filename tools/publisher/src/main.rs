@@ -3,7 +3,7 @@
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
 use lenso_marketplace_directory_plugin::publishing::{Directory, PublishedDirectory};
-use lenso_plugin_catalog::digest;
+use lenso_plugin_catalog::{ReleaseDetails, digest};
 use serde::Deserialize;
 use std::{
     collections::BTreeSet,
@@ -27,7 +27,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|export|verify|backup|publish [ACTOR EXPECTED_REVISION VALIDITY_SECONDS]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|publish-details|export-details|verify-details|backup [...]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -41,7 +41,8 @@ fn run() -> Result<()> {
     let public_key = hex::decode(&config.public_key_hex).context("invalid public key hex")?;
     ensure!(public_key.len() == 32, "public key must contain 32 bytes");
     match args[1].as_str() {
-        "claim" | "submit" | "inspect" | "approve" => {
+        "claim" | "submit" | "inspect" | "approve" | "submit-details" | "inspect-details"
+        | "approve-details" => {
             // These are protected local operator commands, never public actor authentication.
             PublishedDirectory::open(&config.database, &config.catalog_id)?;
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
@@ -84,6 +85,45 @@ fn run() -> Result<()> {
                     directory.approve(&args[2], args[3].parse()?, &args[4], &args[5], now)?;
                     serde_json::json!({"status":"approved","submission_id":args[3]})
                 }
+                "submit-details" => {
+                    ensure!(
+                        args.len() == 4,
+                        "submit-details requires AUTHOR DETAILS_JSON"
+                    );
+                    let bytes = fs::read(&args[3])?;
+                    ensure!(
+                        bytes.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                        "release details exceed limit"
+                    );
+                    let details: ReleaseDetails = serde_json::from_slice(&bytes)?;
+                    let id = directory.submit_details(&args[2], &details, now)?;
+                    let (_, proposal_digest, state) =
+                        directory.inspect_details_submission(&args[2], id)?;
+                    serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
+                }
+                "inspect-details" => {
+                    ensure!(
+                        args.len() == 4,
+                        "inspect-details requires ACTOR SUBMISSION_ID"
+                    );
+                    let (details, proposal_digest, state) =
+                        directory.inspect_details_submission(&args[2], args[3].parse()?)?;
+                    serde_json::json!({"release_details":details,"proposal_digest":proposal_digest,"state":state})
+                }
+                "approve-details" => {
+                    ensure!(
+                        args.len() == 6,
+                        "approve-details requires REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY"
+                    );
+                    directory.approve_details(
+                        &args[2],
+                        args[3].parse()?,
+                        &args[4],
+                        &args[5],
+                        now,
+                    )?;
+                    serde_json::json!({"status":"approved","submission_id":args[3]})
+                }
                 _ => unreachable!(),
             };
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
@@ -111,6 +151,31 @@ fn run() -> Result<()> {
             let verified = lenso_plugin_catalog::verify(&envelope, &trust, None, now)?;
             let snapshot = verified.snapshot();
             let receipt = serde_json::json!({"catalog_id": snapshot.catalog_id, "revision": snapshot.revision, "expires_at": snapshot.expires_at});
+            serde_json::to_writer(io::stdout().lock(), &receipt)?;
+        }
+        "verify-details" => {
+            ensure!(args.len() == 2, "verify-details accepts no extra arguments");
+            let mut envelope = Vec::new();
+            io::stdin()
+                .lock()
+                .take((lenso_plugin_catalog::MAX_ENVELOPE_BYTES + 1) as u64)
+                .read_to_end(&mut envelope)?;
+            ensure!(
+                envelope.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                "envelope exceeds limit"
+            );
+            let trust = lenso_plugin_catalog::Trust {
+                catalog_id: config.catalog_id,
+                keys: std::collections::BTreeMap::from([(
+                    config.key_id,
+                    ed25519_dalek::VerifyingKey::from_bytes(&public_key.as_slice().try_into()?)?,
+                )]),
+            };
+            let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let verified =
+                lenso_plugin_catalog::verify_release_details(&envelope, &trust, None, now)?;
+            let snapshot = verified.snapshot();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
         "initialize" => {
@@ -148,10 +213,18 @@ fn run() -> Result<()> {
             let envelope = view.latest()?.context("no publication exists")?;
             emit(envelope.as_bytes())?;
         }
-        "publish" => {
+        "export-details" => {
+            ensure!(args.len() == 2, "export-details accepts no extra arguments");
+            let view = PublishedDirectory::open(&config.database, &config.catalog_id)?;
+            let envelope = view
+                .latest_details()?
+                .context("no release details publication exists")?;
+            emit(envelope.as_bytes())?;
+        }
+        "publish" | "publish-details" => {
             ensure!(
                 args.len() == 5,
-                "publish requires actor, expected revision and validity seconds"
+                "publish operation requires actor, expected revision and validity seconds"
             );
             ensure!(
                 config.reviewers.contains(&args[2]),
@@ -181,14 +254,19 @@ fn run() -> Result<()> {
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let mut directory =
                 Directory::open(&config.database, &config.catalog_id, config.reviewers)?;
-            let bytes = directory.publish(
-                &args[2],
-                expected,
-                now,
-                now.checked_add(validity).context("expiry overflow")?,
-                &config.key_id,
-                &key,
-            )?;
+            let expires_at = now.checked_add(validity).context("expiry overflow")?;
+            let bytes = if args[1] == "publish-details" {
+                directory.publish_details(
+                    &args[2],
+                    expected,
+                    now,
+                    expires_at,
+                    &config.key_id,
+                    &key,
+                )?
+            } else {
+                directory.publish(&args[2], expected, now, expires_at, &config.key_id, &key)?
+            };
             // A broken pipe does not undo the committed publication. Export is
             // the recovery operation; blindly retrying publish must lose its CAS.
             emit(&bytes)?;

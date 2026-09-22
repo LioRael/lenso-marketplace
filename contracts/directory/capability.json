@@ -10,6 +10,13 @@
       "request_schema": "schemas/read-request.schema.json",
       "response_schema": "schemas/read-response.schema.json",
       "domain_error_schema": "schemas/read-error.schema.json"
+    },
+    {
+      "name": "read_release_details",
+      "interaction": "request",
+      "request_schema": "schemas/read-request.schema.json",
+      "response_schema": "schemas/read-response.schema.json",
+      "domain_error_schema": "schemas/read-error.schema.json"
     }
   ]
 }

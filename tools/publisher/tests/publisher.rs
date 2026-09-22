@@ -175,6 +175,129 @@ fn operator_preserves_committed_bytes_and_rejects_stale_publication() {
 }
 
 #[test]
+fn operator_reviews_publishes_and_verifies_release_details() {
+    let home = tempfile::tempdir().unwrap();
+    let config = home.path().join("operator.json");
+    let database = home.path().join("publisher.sqlite3");
+    let details_path = home.path().join("release-details.json");
+    let key = [23u8; 32];
+    fs::write(
+        &config,
+        serde_json::to_vec(&serde_json::json!({
+            "database":database,"catalog_id":"details-test","reviewers":["reviewer"],
+            "key_id":"operator-key","public_key_hex":hex::encode(SigningKey::from_bytes(&key).verifying_key().as_bytes())
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    assert!(invoke(&config, &["initialize"], None).status.success());
+    assert!(
+        invoke(
+            &config,
+            &["claim", "reviewer", "example", "publisher", "author"],
+            None,
+        )
+        .status
+        .success()
+    );
+
+    // The base publication lifecycle is covered separately. Seed its exact
+    // committed output here so this process test remains focused on the
+    // release-details operator surface.
+    let release: lenso_plugin_catalog::Release = serde_json::from_value(serde_json::json!({
+        "plugin_id":"example.echo","version":"1.0.0","publisher_id":"publisher",
+        "title":"Echo","summary":"Echo text","description":"","source_url":"https://example.test/source",
+        "source_revision":"0123456789abcdef0123456789abcdef01234567","license":"MIT","availability":"listed",
+        "artifact":{"url":"https://example.test/plugin","digest":lenso_plugin_catalog::digest(b"plugin"),"size":6,"manifest_digest":lenso_plugin_catalog::digest(b"manifest")}
+    }))
+    .unwrap();
+    let body = serde_json::to_string(&release).unwrap();
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    connection
+        .execute(
+            "INSERT INTO submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'published')",
+            rusqlite::params![
+                "example.echo@1.0.0",
+                "publisher",
+                body,
+                lenso_plugin_catalog::digest(serde_json::to_string(&release).unwrap().as_bytes())
+            ],
+        )
+        .unwrap();
+    drop(connection);
+
+    fs::write(
+        &details_path,
+        serde_json::to_vec(&serde_json::json!({
+            "plugin_id":"example.echo","version":"1.0.0",
+            "base_release_identity":release.immutable_identity().unwrap(),
+            "distributions":[
+                {"id":"portable","kind":"portable_bundle","package":"example.echo","version":"1.0.0","artifact":release.artifact,"targets":[]},
+                {"id":"linked-rust","kind":"cargo_package","package":"lenso-echo-plugin","version":"1.0.0","integrity":lenso_plugin_catalog::digest(b"crate"),"registry_url":"https://crates.io","targets":["aarch64-apple-darwin"]}
+            ],
+            "documentation":[]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let submitted = invoke(
+        &config,
+        &["submit-details", "author", details_path.to_str().unwrap()],
+        None,
+    );
+    assert!(
+        submitted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&submitted.stderr)
+    );
+    let submitted: serde_json::Value = serde_json::from_slice(&submitted.stdout).unwrap();
+    let id = submitted["submission_id"].as_i64().unwrap().to_string();
+    let digest = submitted["proposal_digest"].as_str().unwrap();
+    assert!(
+        invoke(
+            &config,
+            &["approve-details", "reviewer", &id, digest, "v1"],
+            None,
+        )
+        .status
+        .success()
+    );
+    let published = invoke(
+        &config,
+        &["publish-details", "reviewer", "0", "3600"],
+        Some(&key),
+    );
+    assert!(
+        published.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published.stderr)
+    );
+    assert_eq!(
+        published.stdout,
+        invoke(&config, &["export-details"], None).stdout
+    );
+    let receipt: serde_json::Value = serde_json::from_slice(&published.stdout).unwrap();
+    let verified = invoke(
+        &config,
+        &["verify-details"],
+        Some(receipt["envelope"].as_str().unwrap().as_bytes()),
+    );
+    assert!(verified.status.success());
+    let verified: serde_json::Value = serde_json::from_slice(&verified.stdout).unwrap();
+    assert_eq!(verified["catalog_id"], "details-test");
+    assert_eq!(verified["revision"], 1);
+    assert!(
+        !invoke(
+            &config,
+            &["publish-details", "reviewer", "0", "3600"],
+            Some(&key),
+        )
+        .status
+        .success()
+    );
+}
+
+#[test]
 fn namespace_commands_require_existing_catalog_and_reviewer() {
     let root = tempfile::tempdir().unwrap();
     let config = root.path().join("operator.json");

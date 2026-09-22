@@ -75,11 +75,9 @@ local test config there. Never substitute public deployment resources. Generate
 fixtures from the root with `cargo run --locked -p marketplace-test-support
 --example workers_fixtures -- /tmp/NEW_FIXTURE_DIRECTORY`.
 
-## Historical recovery
+## Recovery
 
-`docs/archive/recovery` preserves the executed recovery experiment and immutable
-receipts. It is not a general production restore command. For a real recovery,
-restore the approved publisher backup, verify signed publication history and
+Restore the approved publisher backup, verify signed publication history and
 resource bindings, advance through an authorized forward publication, then verify
-public responses before returning traffic. Never replay archived test credentials,
+public responses before returning traffic. Never replay test credentials, test
 resource mutations or expired signatures as a production recovery procedure.

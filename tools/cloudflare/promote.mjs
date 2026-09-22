@@ -133,13 +133,15 @@ const uploadPublication = async (bucket, target, bytes, fresh) => {
   fresh();
 };
 
-export const promotePublication = async ({
+const promoteWithTarget = async ({
   database,
   bucket,
   verify,
   catalogId,
   envelope,
   expected,
+  table,
+  objectPrefix,
   now = () => Math.floor(Date.now() / 1000),
 }) => {
   const { bytes, candidate, fresh } = await validatePublication({
@@ -152,13 +154,13 @@ export const promotePublication = async ({
   const digest = await sha256(bytes);
   const target = {
     digest,
-    object_key: `publications/${encodeURIComponent(catalogId)}/${digest.slice(7)}.json`,
+    object_key: `${objectPrefix}/${encodeURIComponent(catalogId)}/${digest.slice(7)}.json`,
     revision: candidate.revision,
   };
   const read = async () =>
     (await database
       .prepare(
-        "SELECT revision,object_key,digest FROM marketplace_publications WHERE catalog_id=?"
+        `SELECT revision,object_key,digest FROM ${table} WHERE catalog_id=?`
       )
       .bind(catalogId)
       .first()) ?? null;
@@ -178,12 +180,12 @@ export const promotePublication = async ({
     expected === null
       ? database
           .prepare(
-            "INSERT INTO marketplace_publications(catalog_id,revision,object_key,digest) VALUES(?,?,?,?) ON CONFLICT(catalog_id) DO NOTHING"
+            `INSERT INTO ${table}(catalog_id,revision,object_key,digest) VALUES(?,?,?,?) ON CONFLICT(catalog_id) DO NOTHING`
           )
           .bind(catalogId, target.revision, target.object_key, target.digest)
       : database
           .prepare(
-            "UPDATE marketplace_publications SET revision=?,object_key=?,digest=? WHERE catalog_id=? AND revision=? AND object_key=? AND digest=?"
+            `UPDATE ${table} SET revision=?,object_key=?,digest=? WHERE catalog_id=? AND revision=? AND object_key=? AND digest=?`
           )
           .bind(
             target.revision,
@@ -220,3 +222,17 @@ export const promotePublication = async ({
   }
   throw new Error("publication pointer conflict or superseded publication");
 };
+
+export const promotePublication = (input) =>
+  promoteWithTarget({
+    ...input,
+    objectPrefix: "publications",
+    table: "marketplace_publications",
+  });
+
+export const promoteReleaseDetails = (input) =>
+  promoteWithTarget({
+    ...input,
+    objectPrefix: "release-details",
+    table: "marketplace_release_details",
+  });

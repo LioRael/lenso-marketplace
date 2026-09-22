@@ -5,8 +5,8 @@ Status: Stage 1 real-flow prototype. The production Worker still uses
 
 ## Purpose
 
-The prototype answers one narrow question from the developer-experience plan:
-can Cloudflare's released Rust SDK expose the existing Marketplace Plugin graph
+The prototype answers one narrow compatibility question: can Cloudflare's
+released Rust SDK expose the existing Marketplace Plugin graph
 against real local D1/R2 bindings without a sibling checkout or handwritten
 JavaScript storage bridge?
 

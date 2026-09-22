@@ -72,6 +72,13 @@ const publicationStatement = (database, catalog) =>
     )
     .bind(catalog);
 
+const releaseDetailsStatement = (database, catalog) =>
+  database
+    .prepare(
+      "SELECT object_key,digest FROM marketplace_release_details WHERE catalog_id=?"
+    )
+    .bind(catalog);
+
 const acceptedStatement = (database, catalog) =>
   database
     .prepare(
@@ -277,6 +284,9 @@ export const createStorage = (database, bucket, signal, scope) => {
       result = await readCatalog(database, bucket, catalog, signal, track);
     } else if (operation === "published") {
       const row = await publicationStatement(database, catalog).first();
+      result = await readPublished(bucket, row, signal, track);
+    } else if (operation === "published_details") {
+      const row = await releaseDetailsStatement(database, catalog).first();
       result = await readPublished(bucket, row, signal, track);
     } else if (operation === "accepted") {
       const row = await acceptedStatement(database, catalog).first();

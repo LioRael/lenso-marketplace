@@ -104,7 +104,7 @@ impl MarketplaceDirectory {
         &self,
         _context: InvocationContext,
         _request: contract::ReadSnapshotRequest,
-    ) -> NativeRequestFuture<contract::Directory> {
+    ) -> NativeRequestFuture<contract::DirectoryReadSnapshot> {
         if !self.ready.get() {
             return Box::pin(async {
                 Err(RuntimeFailure::Unavailable {
@@ -141,6 +141,50 @@ impl MarketplaceDirectory {
         };
         #[cfg(not(feature = "native"))]
         let result = Err(failure("directory storage unavailable"));
+        Box::pin(async move { result })
+    }
+
+    fn read_release_details(
+        &self,
+        _context: InvocationContext,
+        _request: contract::ReadReleaseDetailsRequest,
+    ) -> NativeRequestFuture<contract::DirectoryReadReleaseDetails> {
+        if !self.ready.get() {
+            return Box::pin(async {
+                Err(RuntimeFailure::Unavailable {
+                    capability: contract::CAPABILITY_ID,
+                })
+            });
+        }
+        if let Some(storage) = &self.storage {
+            let storage = storage.clone();
+            let catalog = self.config.catalog_id.clone();
+            return Box::pin(async move {
+                match storage.published_details(&catalog).await.map_err(failure)? {
+                    Some(envelope) => Ok(Ok(contract::ReadReleaseDetailsResponse {
+                        envelope_json: envelope.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(contract::ReadReleaseDetailsError::NotPublished)),
+                }
+            });
+        }
+        #[cfg(feature = "native")]
+        let result = match self.reader.borrow().as_ref() {
+            None => Err(RuntimeFailure::Unavailable {
+                capability: contract::CAPABILITY_ID,
+            }),
+            Some(reader) => reader
+                .latest_details()
+                .map_err(failure)
+                .and_then(|snapshot| match snapshot {
+                    Some(envelope_json) => Ok(Ok(contract::ReadReleaseDetailsResponse {
+                        envelope_json: envelope_json.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(contract::ReadReleaseDetailsError::NotPublished)),
+                }),
+        };
+        #[cfg(not(feature = "native"))]
+        let result = Err(failure("event storage unavailable"));
         Box::pin(async move { result })
     }
 }

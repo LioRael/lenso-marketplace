@@ -149,7 +149,7 @@ impl MarketplaceWeb {
                         .map_err(failure)?,
                     false,
                 )),
-                Err(directory::DirectoryInvocationError::Runtime(_)) => cache
+                Err(directory::DirectoryReadSnapshotInvocationError::Runtime(_)) => cache
                     .current_for_browse(now)
                     .await
                     .map_err(failure)?
@@ -172,7 +172,7 @@ impl MarketplaceWeb {
                         .map_err(failure)?,
                     false,
                 )),
-                Err(directory::DirectoryInvocationError::Runtime(_)) => cache
+                Err(directory::DirectoryReadSnapshotInvocationError::Runtime(_)) => cache
                     .current_for_browse(now)
                     .map_err(failure)?
                     .map(|snapshot| (snapshot, true))
@@ -263,6 +263,26 @@ impl MarketplaceWeb {
         Ok(asset(
             "application/json",
             snapshot.envelope_json.as_str().as_bytes(),
+        ))
+    }
+    /// Separately signed additive distribution and documentation metadata.
+    #[get("marketplace.release-details", "/api/marketplace/v1/release-details")]
+    async fn release_details(
+        &self,
+        context: InvocationContext,
+    ) -> Result<HandleResponse, EndpointHandleInvocationError> {
+        let details = self
+            .directory
+            .read_release_details_with_context(context, directory::ReadReleaseDetailsRequest {})
+            .await
+            .map_err(|error| {
+                EndpointHandleInvocationError::Runtime(failure(format!(
+                    "release details unavailable: {error:?}"
+                )))
+            })?;
+        Ok(asset(
+            "application/json",
+            details.envelope_json.as_str().as_bytes(),
         ))
     }
     #[get("marketplace.search", "/api/marketplace/v1/plugins")]
