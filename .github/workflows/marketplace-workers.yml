@@ -2,7 +2,7 @@ name: Marketplace Workers
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, "candidate/**"]
 
 permissions:
   contents: read
