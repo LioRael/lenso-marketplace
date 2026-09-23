@@ -276,7 +276,10 @@ impl Directory {
 mod tests {
     use std::collections::BTreeMap;
 
-    use lenso_plugin_catalog::{Availability, Trust, linked_cargo::verify};
+    use lenso_plugin_catalog::{
+        Availability, Trust,
+        linked_cargo::{LinkedCargoIntegration, verify},
+    };
 
     use super::*;
 
@@ -313,6 +316,7 @@ mod tests {
             package: "example-web-plugin".into(),
             registry_url: "https://crates.io".into(),
             crate_digest: digest(crate_archive),
+            integration: LinkedCargoIntegration::LinkedPlugin,
             targets: vec!["aarch64-apple-darwin".into()],
             availability: Availability::Listed,
             documentation: Vec::new(),
@@ -430,6 +434,7 @@ mod tests {
         let mut release = release(&archive);
         release.plugin_id = "lenso.web-ingress".into();
         release.package = "lenso-web-ingress-plugin".into();
+        release.integration = LinkedCargoIntegration::HostProvided;
         release.source_revision = "0e93f1149ac1b0905a51d76692d369a028f3a532".into();
         let temp = tempfile::tempdir().unwrap();
         let mut directory = Directory::open(

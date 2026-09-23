@@ -318,6 +318,7 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         "title":"Web","summary":"Linked Web Plugin","source_url":"https://github.com/example/web",
         "source_revision":"a".repeat(40),"license":"MIT","package":"example-web-plugin",
         "registry_url":"https://crates.io","crate_digest":lenso_plugin_catalog::digest(&crate_bytes),
+        "integration":"linked_plugin",
         "targets":["aarch64-apple-darwin"],"availability":"listed"
     })).unwrap()).unwrap();
     assert!(invoke(&config, &["initialize"], None).status.success());

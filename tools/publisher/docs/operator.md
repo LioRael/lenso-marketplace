@@ -134,7 +134,9 @@ and backup are confirmed; the publisher database stores metadata, not archive by
 This separate channel accepts an exact registry `.crate` as a Host build input;
 it does not turn that crate into a loadable portable Bundle. The JSON release
 names the Plugin ID, package/version, publisher, source revision, registry URL,
-archive SHA-256 and supported targets. The operator verifies the archive digest
+archive SHA-256, supported targets, and integration kind (`linked_plugin` or
+`host_provided`). `host_provided` requires a product Host-specific adapter and
+must not be offered as a generic `lenso app add` candidate. The operator verifies the archive digest
 and its `Cargo.toml` package name, version and Lenso Plugin ID before creating a
 submission. Review must still establish namespace ownership, source provenance,
 registry availability and the actual Host build/linked factory behavior. The
@@ -154,7 +156,10 @@ publication pointer from the portable catalog and release-details snapshots.
 trust. An identical retry returns the existing submission; changed content under
 the same Plugin ID/version is rejected. A portable base release with that identity
 must instead use the existing release-details channel for a linked distribution.
-No CLI adoption/build command for this source-only channel is implemented yet.
+The development CLI accepts an exact signed local snapshot and matching `.crate`
+through `lenso app add PLUGIN_ID@VERSION --linked-snapshot ... --trust ... --crate ...`.
+It does not fetch the archive or prove registry provenance automatically; reviewers
+must verify registry availability and the generated Host build separately.
 
 ### Public submission tracking
 
