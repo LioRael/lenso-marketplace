@@ -1,7 +1,9 @@
 # Lenso Marketplace
 
 A Plugin marketplace built with Lenso. Directory owns published catalog data;
-Web owns browsing. Native and Cloudflare Workers are two hosts for the same
+Web currently serves the legacy browsing UI and catalog API. The Site has a
+separate local signed-directory UI candidate, but no production cutover is
+claimed. Native and Cloudflare Workers are two hosts for the Marketplace
 Plugins. Console Agent owns installation and consumes the signed catalog API.
 
 ## Repository map
@@ -12,7 +14,7 @@ Plugins. Console Agent owns installation and consumes the signed catalog API.
 | `apps/workers` | Workers composition, D1/R2 adapters and public entrypoint |
 | `apps/workers-sdk-prototype` | Disposable official `workers-rs` comparison host |
 | `plugins/directory` | Catalog publishing, review/audit state and published-snapshot reads |
-| `plugins/web` | Search/detail HTTP, Lenso UI frontend and consumer verification cache |
+| `plugins/web` | Search/detail HTTP, legacy embedded frontend and consumer verification cache; the Site candidate owns the replacement browsing UI |
 | `contracts/directory`, `contracts/linked-directory` | Separate generated read Capabilities for portable and source-only publications; no storage implementation |
 | `tools/publisher` | Local operator CLI for Directory publishing and backup |
 | `tools/cloudflare` | Private publication promotion and deployment config generation |

@@ -11,7 +11,7 @@ directly, without a local protocol facade.
 | Owner | Owned state and lifecycle | Collaboration |
 | --- | --- | --- |
 | Directory Plugin | Namespace ownership, immutable submissions, reviews, audit and publication; SQLite handles close with native instance | Provides Directory read Capability; event host injects only `PublishedStorage` |
-| Web Plugin | Search/detail, static UI, verified browsing checkpoint and expiry notices; cache belongs to consumer instance/storage binding | Requires Directory Capability; event host injects only accepted-cache storage, clock and diagnostics |
+| Web Plugin | Search/detail API, legacy static UI, verified browsing checkpoint and expiry notices; cache belongs to consumer instance/storage binding | Requires Directory Capability; event host injects only accepted-cache storage, clock and diagnostics. Site's replacement UI is not a deployed cutover. |
 | Native App | Plugin Root, host catalog, binding and HTTP ingress | Composes the two Plugins using generated factories |
 | Workers App | Event host, runtime admission and D1/R2 transport | Implements each Plugin's own storage port separately; does not decide signatures or catalog admission |
 | Publisher CLI | Operator configuration and stdin/key boundary | Calls Directory-owned publishing API; no HTTP route and no Web dependency |
