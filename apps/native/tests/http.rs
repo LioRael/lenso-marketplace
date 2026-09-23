@@ -133,6 +133,8 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
                 package: "example-web-plugin".into(),
                 registry_url: "https://crates.io".into(),
                 crate_digest: lenso_plugin_catalog::digest(&crate_bytes),
+                integration:
+                    lenso_plugin_catalog::linked_cargo::LinkedCargoIntegration::LinkedPlugin,
                 targets: vec!["aarch64-apple-darwin".into()],
                 availability: lenso_plugin_catalog::Availability::Listed,
                 documentation: Vec::new(),
