@@ -129,6 +129,37 @@ reporting publication complete. The same sequence handles each new version;
 namespace claims are not repeated. Preserve the submitted files until publication
 and backup are confirmed; the publisher database stores metadata, not archive bytes.
 
+## Add a documentation revision to published release details
+
+`submit-details` remains immutable for one Plugin ID and version. To add a new
+documentation identity (`id` plus `revision`) to already published release
+details, submit the complete next `ReleaseDetails` JSON instead. Preserve the
+base-release identity, every distribution and every previously published
+documentation entry exactly; only append new documentation entries. The
+Directory rejects a second pending revision for the same release.
+
+```sh
+lenso-marketplace-publisher operator.json submit-details-revision AUTHOR /absolute/revised-details.json
+lenso-marketplace-publisher operator.json inspect-details-revision REVIEWER REVISION_ID
+lenso-marketplace-publisher operator.json approve-details-revision REVIEWER REVISION_ID EXPECTED_DIGEST POLICY
+lenso-marketplace-publisher operator.json publish-details REVIEWER EXPECTED_REVISION 604800 < signing-key.bin
+lenso-marketplace-publisher operator.json export-details
+```
+
+The first three commands require the existing protected publisher database;
+they do not publish or grant authority from JSON. Inspection returns the exact
+proposed body and digest for review. `publish-details` signs one new snapshot
+in the same transaction that marks the amendment published; prior submissions,
+amendments and signed snapshots stay in the database. A stale expected revision
+is rejected. Verify the new envelope and its checkpoint against the previous
+one before promoting it publicly.
+
+This is metadata revision support, not document-byte hosting. A signed
+documentation entry names an HTTPS URL, SHA-256 digest, size and Markdown media
+type, but this publisher does not upload, fetch, sanitize or serve those bytes.
+Review the exact bounded Markdown bytes and their immutable URL separately;
+never infer safety or successful hosting from a signed metadata snapshot.
+
 ## Source-only linked Cargo release
 
 This separate channel accepts an exact registry `.crate` as a Host build input;

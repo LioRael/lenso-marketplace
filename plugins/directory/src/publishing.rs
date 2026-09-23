@@ -7,9 +7,14 @@ use lenso_plugin_catalog::{
     sign_release_details,
 };
 use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
-use std::{collections::BTreeSet, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+};
 
+mod details_revision;
 mod linked_cargo;
+use details_revision::ensure_additive_documents;
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
 
 pub struct Directory {
@@ -121,6 +126,8 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS details_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS details_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE UNIQUE INDEX IF NOT EXISTS details_amendments_identity_digest ON details_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS details_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS linked_cargo_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS linked_cargo_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
@@ -508,14 +515,55 @@ impl Directory {
             current == i64::try_from(expected_revision)?,
             "release details revision changed; read publication result"
         );
-        let bodies: Vec<String> = transaction
-            .prepare("SELECT body FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
-            .query_map([], |row| row.get(0))?
+        let bodies: Vec<(String, String)> = transaction
+            .prepare("SELECT body,digest FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
             .collect::<rusqlite::Result<_>>()?;
-        let releases = bodies
-            .iter()
-            .map(|body| serde_json::from_str(body))
-            .collect::<serde_json::Result<Vec<ReleaseDetails>>>()?;
+        let mut releases = BTreeMap::<String, (ReleaseDetails, String)>::new();
+        for (body, reviewed_digest) in &bodies {
+            ensure!(
+                digest(body.as_bytes()) == *reviewed_digest,
+                "reviewed release details digest mismatch"
+            );
+            let details: ReleaseDetails = serde_json::from_str(body)?;
+            let identity = format!("{}@{}", details.plugin_id, details.version);
+            ensure!(
+                releases
+                    .insert(identity, (details, digest(body.as_bytes())))
+                    .is_none(),
+                "duplicate release details identity"
+            );
+        }
+        let amendments: Vec<(String, String, String, String, String)> = transaction
+            .prepare("SELECT identity,body,digest,base_digest,state FROM details_amendments WHERE state IN ('approved','published') ORDER BY id")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut approved = BTreeSet::new();
+        for (identity, body, reviewed_digest, base_digest, state) in amendments {
+            ensure!(
+                digest(body.as_bytes()) == reviewed_digest,
+                "reviewed documentation revision digest mismatch"
+            );
+            let (previous, previous_digest) = releases
+                .get(&identity)
+                .context("documentation revision has no published base")?;
+            ensure!(
+                previous_digest == &base_digest,
+                "documentation revision base changed"
+            );
+            let details: ReleaseDetails = serde_json::from_str(&body)?;
+            details.validate()?;
+            ensure_additive_documents(previous, &details)?;
+            if state == "approved" {
+                ensure!(
+                    approved.insert(identity.clone()),
+                    "multiple approved documentation revisions"
+                );
+            }
+            releases.insert(identity, (details, digest(body.as_bytes())));
+        }
+        let releases: Vec<ReleaseDetails> =
+            releases.into_values().map(|(details, _)| details).collect();
         let revision = current
             .checked_add(1)
             .context("release details revision overflow")?;
@@ -536,6 +584,10 @@ impl Directory {
         )?;
         transaction.execute(
             "UPDATE details_submissions SET state='published' WHERE state='approved'",
+            [],
+        )?;
+        transaction.execute(
+            "UPDATE details_amendments SET state='published' WHERE state='approved'",
             [],
         )?;
         transaction.execute(
@@ -561,7 +613,7 @@ impl Directory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lenso_plugin_catalog::{Distribution, DistributionKind};
+    use lenso_plugin_catalog::{Distribution, DistributionKind, Documentation};
     fn release() -> Release {
         Release {
             plugin_id: "example.echo".into(),
@@ -611,6 +663,19 @@ mod tests {
                 },
             ],
             documentation: vec![],
+        }
+    }
+    fn document(revision: &str) -> Documentation {
+        Documentation {
+            id: "getting-started".into(),
+            revision: revision.into(),
+            language: "en".into(),
+            topic: "start".into(),
+            target: None,
+            url: format!("https://example.test/docs/0.1.0/getting-started/{revision}"),
+            digest: digest(revision.as_bytes()),
+            size: revision.len() as u64,
+            media_type: "text/markdown".into(),
         }
     }
     #[test]
@@ -711,7 +776,8 @@ mod tests {
         assert_eq!(reopened.latest().unwrap().unwrap(), published);
         let verified = lenso_plugin_catalog::verify(&published, &trust, None, 150).unwrap();
         assert_eq!(verified.snapshot().releases.len(), 1);
-        let release_details = details(&release());
+        let mut release_details = details(&release());
+        release_details.documentation.push(document("r1"));
         let details_id = reopened
             .submit_details("author", &release_details, 106)
             .unwrap();
@@ -732,10 +798,160 @@ mod tests {
             .select_details(&verified_details, "example.echo", "0.1.0", 150)
             .unwrap();
         assert_eq!(joined.distributions.len(), 2);
+        assert_eq!(joined.documentation, vec![document("r1")]);
         assert_eq!(
             reopened.latest_details().unwrap().unwrap(),
             details_envelope
         );
+        let mut next_details = release_details.clone();
+        next_details.documentation.push(document("r2"));
+        assert!(
+            reopened
+                .submit_details("author", &next_details, 109)
+                .is_err()
+        );
+        assert!(
+            reopened
+                .submit_details_revision("stranger", &next_details, 109)
+                .is_err()
+        );
+        let mut changed_old = next_details.clone();
+        changed_old.documentation[0].digest = lenso_plugin_catalog::digest(b"changed");
+        assert!(
+            reopened
+                .submit_details_revision("author", &changed_old, 109)
+                .is_err()
+        );
+        let mut changed_distribution = next_details.clone();
+        changed_distribution.distributions.pop();
+        assert!(
+            reopened
+                .submit_details_revision("author", &changed_distribution, 109)
+                .is_err()
+        );
+        let mut invalid_media = next_details.clone();
+        invalid_media.documentation[1].media_type = "text/mdx".into();
+        assert!(
+            reopened
+                .submit_details_revision("author", &invalid_media, 109)
+                .is_err()
+        );
+        let mut insecure_url = next_details.clone();
+        insecure_url.documentation[1].url = "http://example.test/document.md".into();
+        assert!(
+            reopened
+                .submit_details_revision("author", &insecure_url, 109)
+                .is_err()
+        );
+        let mut oversized = next_details.clone();
+        oversized.documentation[1].size = 1024 * 1024 + 1;
+        assert!(
+            reopened
+                .submit_details_revision("author", &oversized, 109)
+                .is_err()
+        );
+        let revision_id = reopened
+            .submit_details_revision("author", &next_details, 109)
+            .unwrap();
+        assert_eq!(
+            reopened
+                .submit_details_revision("author", &next_details, 109)
+                .unwrap(),
+            revision_id
+        );
+        assert!(
+            reopened
+                .inspect_details_revision("stranger", revision_id)
+                .is_err()
+        );
+        let mut competing = next_details.clone();
+        competing.documentation.push(document("r3"));
+        assert!(
+            reopened
+                .submit_details_revision("author", &competing, 109)
+                .is_err()
+        );
+        let (_, revision_digest, state) = reopened
+            .inspect_details_revision("author", revision_id)
+            .unwrap();
+        assert_eq!(state, "awaiting_review");
+        assert!(
+            reopened
+                .approve_details_revision("author", revision_id, &revision_digest, "v1", 110)
+                .is_err()
+        );
+        assert!(
+            reopened
+                .approve_details_revision("reviewer", revision_id, "wrong", "v1", 110)
+                .is_err()
+        );
+        reopened
+            .approve_details_revision("reviewer", revision_id, &revision_digest, "v1", 110)
+            .unwrap();
+        let reviewed_body: String = reopened
+            .connection
+            .query_row(
+                "SELECT body FROM details_amendments WHERE id=?1",
+                [revision_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        reopened
+            .connection
+            .execute(
+                "UPDATE details_amendments SET body='{}' WHERE id=?1",
+                [revision_id],
+            )
+            .unwrap();
+        assert!(
+            reopened
+                .publish_details("reviewer", 1, 111, 200, "test-key", &key)
+                .is_err()
+        );
+        assert_eq!(
+            reopened.latest_details().unwrap().unwrap(),
+            details_envelope
+        );
+        reopened
+            .connection
+            .execute(
+                "UPDATE details_amendments SET body=?1 WHERE id=?2",
+                params![reviewed_body, revision_id],
+            )
+            .unwrap();
+        let next_envelope = reopened
+            .publish_details("reviewer", 1, 111, 200, "test-key", &key)
+            .unwrap();
+        assert!(
+            reopened
+                .publish_details("reviewer", 1, 111, 200, "test-key", &key)
+                .is_err()
+        );
+        let verified_next = lenso_plugin_catalog::verify_release_details(
+            &next_envelope,
+            &trust,
+            Some(verified_details.checkpoint()),
+            150,
+        )
+        .unwrap();
+        assert_eq!(
+            verified
+                .select_details(&verified_next, "example.echo", "0.1.0", 150)
+                .unwrap()
+                .documentation,
+            vec![document("r1"), document("r2")]
+        );
+        assert_eq!(
+            reopened
+                .inspect_details_revision("author", revision_id)
+                .unwrap()
+                .2,
+            "published"
+        );
+        let next_revision_id = reopened
+            .submit_details_revision("author", &competing, 112)
+            .unwrap();
+        assert_ne!(next_revision_id, revision_id);
         assert_eq!(
             reopened.inspect_submission("author", id).unwrap().2,
             "published"
@@ -743,5 +959,11 @@ mod tests {
         let mut changed = release();
         changed.artifact.digest = lenso_plugin_catalog::digest(b"changed");
         assert!(reopened.insert_verified("author", &changed, 110).is_err());
+        drop(reopened);
+        let reader = PublishedDirectory::open(&path, "test").unwrap();
+        assert_eq!(
+            reader.latest_details().unwrap().unwrap(),
+            String::from_utf8(next_envelope).unwrap()
+        );
     }
 }

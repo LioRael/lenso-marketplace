@@ -289,6 +289,82 @@ fn operator_reviews_publishes_and_verifies_release_details() {
     let verified: serde_json::Value = serde_json::from_slice(&verified.stdout).unwrap();
     assert_eq!(verified["catalog_id"], "details-test");
     assert_eq!(verified["revision"], 1);
+    let mut revision: serde_json::Value =
+        serde_json::from_slice(&fs::read(&details_path).unwrap()).unwrap();
+    revision["documentation"] = serde_json::json!([{
+        "id":"getting-started","revision":"r1","language":"en","topic":"start",
+        "url":"https://example.test/docs/1.0.0/getting-started/r1",
+        "digest":lenso_plugin_catalog::digest(b"docs"),"size":4,"media_type":"text/markdown"
+    }]);
+    fs::write(&details_path, serde_json::to_vec(&revision).unwrap()).unwrap();
+    assert!(
+        !invoke(
+            &config,
+            &["submit-details", "author", details_path.to_str().unwrap()],
+            None,
+        )
+        .status
+        .success()
+    );
+    let revised = invoke(
+        &config,
+        &[
+            "submit-details-revision",
+            "author",
+            details_path.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        revised.status.success(),
+        "{}",
+        String::from_utf8_lossy(&revised.stderr)
+    );
+    let revised: serde_json::Value = serde_json::from_slice(&revised.stdout).unwrap();
+    let revision_id = revised["revision_id"].as_i64().unwrap().to_string();
+    let inspected = invoke(
+        &config,
+        &["inspect-details-revision", "reviewer", &revision_id],
+        None,
+    );
+    assert!(inspected.status.success());
+    let inspected: serde_json::Value = serde_json::from_slice(&inspected.stdout).unwrap();
+    assert_eq!(inspected["state"], "awaiting_review");
+    assert!(
+        invoke(
+            &config,
+            &[
+                "approve-details-revision",
+                "reviewer",
+                &revision_id,
+                revised["proposal_digest"].as_str().unwrap(),
+                "v1",
+            ],
+            None,
+        )
+        .status
+        .success()
+    );
+    let published_revision = invoke(
+        &config,
+        &["publish-details", "reviewer", "1", "3600"],
+        Some(&key),
+    );
+    assert!(
+        published_revision.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published_revision.stderr)
+    );
+    let published_revision: serde_json::Value =
+        serde_json::from_slice(&published_revision.stdout).unwrap();
+    let checked = invoke(
+        &config,
+        &["verify-details"],
+        Some(published_revision["envelope"].as_str().unwrap().as_bytes()),
+    );
+    assert!(checked.status.success());
+    let checked: serde_json::Value = serde_json::from_slice(&checked.stdout).unwrap();
+    assert_eq!(checked["revision"], 2);
     assert!(
         !invoke(
             &config,

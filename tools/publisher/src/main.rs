@@ -27,7 +27,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|backup [...]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|submit-details-revision|inspect-details-revision|approve-details-revision|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|backup [...]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -48,6 +48,9 @@ fn run() -> Result<()> {
         | "submit-details"
         | "inspect-details"
         | "approve-details"
+        | "submit-details-revision"
+        | "inspect-details-revision"
+        | "approve-details-revision"
         | "submit-linked-cargo"
         | "inspect-linked-cargo"
         | "approve-linked-cargo" => {
@@ -109,6 +112,22 @@ fn run() -> Result<()> {
                         directory.inspect_details_submission(&args[2], id)?;
                     serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
                 }
+                "submit-details-revision" => {
+                    ensure!(
+                        args.len() == 4,
+                        "submit-details-revision requires AUTHOR DETAILS_JSON"
+                    );
+                    let bytes = fs::read(&args[3])?;
+                    ensure!(
+                        bytes.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                        "release details exceed limit"
+                    );
+                    let details: ReleaseDetails = serde_json::from_slice(&bytes)?;
+                    let id = directory.submit_details_revision(&args[2], &details, now)?;
+                    let (_, proposal_digest, state) =
+                        directory.inspect_details_revision(&args[2], id)?;
+                    serde_json::json!({"revision_id":id,"proposal_digest":proposal_digest,"state":state})
+                }
                 "inspect-details" => {
                     ensure!(
                         args.len() == 4,
@@ -116,6 +135,15 @@ fn run() -> Result<()> {
                     );
                     let (details, proposal_digest, state) =
                         directory.inspect_details_submission(&args[2], args[3].parse()?)?;
+                    serde_json::json!({"release_details":details,"proposal_digest":proposal_digest,"state":state})
+                }
+                "inspect-details-revision" => {
+                    ensure!(
+                        args.len() == 4,
+                        "inspect-details-revision requires ACTOR REVISION_ID"
+                    );
+                    let (details, proposal_digest, state) =
+                        directory.inspect_details_revision(&args[2], args[3].parse()?)?;
                     serde_json::json!({"release_details":details,"proposal_digest":proposal_digest,"state":state})
                 }
                 "approve-details" => {
@@ -131,6 +159,20 @@ fn run() -> Result<()> {
                         now,
                     )?;
                     serde_json::json!({"status":"approved","submission_id":args[3]})
+                }
+                "approve-details-revision" => {
+                    ensure!(
+                        args.len() == 6,
+                        "approve-details-revision requires REVIEWER REVISION_ID EXPECTED_DIGEST POLICY"
+                    );
+                    directory.approve_details_revision(
+                        &args[2],
+                        args[3].parse()?,
+                        &args[4],
+                        &args[5],
+                        now,
+                    )?;
+                    serde_json::json!({"status":"approved","revision_id":args[3]})
                 }
                 "submit-linked-cargo" => {
                     ensure!(
