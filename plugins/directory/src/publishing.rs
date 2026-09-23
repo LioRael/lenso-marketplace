@@ -10,6 +10,7 @@ use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
 use std::{collections::BTreeSet, path::Path};
 
 mod linked_cargo;
+pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
 
 pub struct Directory {
     connection: Connection,

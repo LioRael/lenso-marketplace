@@ -8,8 +8,7 @@ GitHub Issue review, not a public upload API or self-service Marketplace account
 The workflow below is for a portable `plugin.lenso-plugin` archive. Linked Rust
 Cargo packages have a separate, operator-mediated source-only channel described
 in the [operator guide](../tools/publisher/docs/operator.md#source-only-linked-cargo-release).
-That channel does not yet provide an author preparation tool or `lenso` adoption
-command; a signed listing alone is not an installable Plugin.
+The same author tool also prepares a source-only linked submission (below).
 
 ## Install the preparation tool
 
@@ -122,3 +121,28 @@ The maintainer imports, reviews, publishes and verifies each update using the
 [operator guide](../tools/publisher/docs/operator.md). Public browse defaults to the
 latest listed stable version; old versions remain reachable from release details.
 Users install or update through Console Agent tools.
+
+## Prepare a source-only linked Cargo submission
+
+Use the exact registry `.crate` bytes for the release. Create a metadata JSON
+with `publisher_id`, `title`, `summary`, `source_url`, exact `source_revision`,
+`license`, `registry_url`, `integration` (`linked_plugin` or `host_provided`),
+and supported `targets`. Optional `documentation` entries follow the signed
+catalog resource schema. Do not put Plugin ID, package name, version, or digest
+in this file: the author tool derives them from the bounded `.crate` archive and
+its `Cargo.toml`.
+
+```sh
+lenso-marketplace-author prepare-linked-cargo ./my-plugin-1.0.0.crate ./linked-metadata.json ./linked-submission-1.0.0
+lenso-marketplace-author check-linked-cargo ./linked-submission-1.0.0
+```
+
+The new directory contains `release.json` and the exact `plugin.crate` bytes.
+The operator can import these with `submit-linked-cargo`; namespace ownership,
+source provenance, actual registry availability, and Host build behavior remain
+separate review requirements. The archive is a Host build input, not a portable
+Bundle. The development CLI can adopt an exact signed linked snapshot with
+`lenso app add PLUGIN_ID@VERSION --linked-snapshot SNAPSHOT --trust TRUST --crate PACKAGE.crate`;
+this requires a matching published `.crate` and a subsequent Host build.
+`host_provided` integrations require a product-specific Host adapter and are not
+generic `app add` candidates. No author command signs or publishes a release.

@@ -304,23 +304,26 @@ fn operator_reviews_publishes_and_verifies_release_details() {
 fn operator_reviews_and_exports_source_only_linked_cargo_release() {
     let root = tempfile::tempdir().unwrap();
     let config = root.path().join("operator.json");
-    let release = root.path().join("linked.json");
-    let archive = root.path().join("plugin.crate");
+    let metadata = root.path().join("linked-metadata.json");
+    let crate_path = root.path().join("example-web-plugin-0.4.5.crate");
+    let candidate = root.path().join("linked-candidate");
     let key = [29u8; 32];
     fs::write(&config, serde_json::to_vec(&serde_json::json!({
         "database":root.path().join("publisher.sqlite3"),"catalog_id":"linked-test","reviewers":["reviewer"],
         "key_id":"operator-key","public_key_hex":hex::encode(SigningKey::from_bytes(&key).verifying_key().as_bytes())
     })).unwrap()).unwrap();
     let crate_bytes = crate_archive::create("example-web-plugin", "0.4.5", "example.web");
-    fs::write(&archive, &crate_bytes).unwrap();
-    fs::write(&release, serde_json::to_vec(&serde_json::json!({
-        "plugin_id":"example.web","version":"0.4.5","publisher_id":"publisher",
+    fs::write(&crate_path, &crate_bytes).unwrap();
+    fs::write(&metadata, serde_json::to_vec(&serde_json::json!({
+        "publisher_id":"publisher",
         "title":"Web","summary":"Linked Web Plugin","source_url":"https://github.com/example/web",
-        "source_revision":"a".repeat(40),"license":"MIT","package":"example-web-plugin",
-        "registry_url":"https://crates.io","crate_digest":lenso_plugin_catalog::digest(&crate_bytes),
+        "source_revision":"a".repeat(40),"license":"MIT",
+        "registry_url":"https://crates.io",
         "integration":"linked_plugin",
-        "targets":["aarch64-apple-darwin"],"availability":"listed"
+        "targets":["aarch64-apple-darwin"]
     })).unwrap()).unwrap();
+    lenso_marketplace_publisher::prepare_linked_cargo(&crate_path, &metadata, &candidate).unwrap();
+    lenso_marketplace_publisher::check_linked_cargo(&candidate).unwrap();
     assert!(invoke(&config, &["initialize"], None).status.success());
     assert!(
         invoke(
@@ -336,8 +339,8 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         &[
             "submit-linked-cargo",
             "author",
-            release.to_str().unwrap(),
-            archive.to_str().unwrap(),
+            candidate.join("release.json").to_str().unwrap(),
+            candidate.join("plugin.crate").to_str().unwrap(),
         ],
         None,
     );
@@ -662,4 +665,83 @@ fn author_rejects_invalid_archive_without_creating_output() {
             .status
             .success()
     );
+}
+
+#[test]
+fn linked_cargo_author_derives_identity_and_checks_exact_bytes() {
+    let root = tempfile::tempdir().unwrap();
+    let archive = root.path().join("example-web-plugin-0.4.5.crate");
+    let metadata = root.path().join("linked-metadata.json");
+    let output = root.path().join("linked-submission");
+    let bytes = crate_archive::create("example-web-plugin", "0.4.5", "example.web");
+    fs::write(&archive, &bytes).unwrap();
+    fs::write(
+        &metadata,
+        serde_json::to_vec(&serde_json::json!({
+            "publisher_id":"publisher", "title":"Web", "summary":"Linked Web Plugin",
+            "source_url":"https://github.com/example/web", "source_revision":"a".repeat(40),
+            "license":"MIT", "registry_url":"https://crates.io",
+            "integration":"linked_plugin", "targets":["aarch64-apple-darwin"]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let prepared = Command::new(env!("CARGO_BIN_EXE_lenso-marketplace-author"))
+        .args([
+            "prepare-linked-cargo",
+            archive.to_str().unwrap(),
+            metadata.to_str().unwrap(),
+            output.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        prepared.status.success(),
+        "{}",
+        String::from_utf8_lossy(&prepared.stderr)
+    );
+    let receipt: serde_json::Value = serde_json::from_slice(&prepared.stdout).unwrap();
+    assert_eq!(receipt["plugin_id"], "example.web");
+    assert_eq!(receipt["version"], "0.4.5");
+    assert_eq!(
+        receipt["crate_digest"],
+        lenso_plugin_catalog::digest(&bytes)
+    );
+    assert_eq!(fs::read(output.join("plugin.crate")).unwrap(), bytes);
+    let release = lenso_marketplace_publisher::check_linked_cargo(&output).unwrap();
+    assert_eq!(release.package, "example-web-plugin");
+    let checked = Command::new(env!("CARGO_BIN_EXE_lenso-marketplace-author"))
+        .args(["check-linked-cargo", output.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        checked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&checked.stderr)
+    );
+    assert!(
+        lenso_marketplace_publisher::prepare_linked_cargo(&archive, &metadata, &output).is_err()
+    );
+    let mut forged = release.clone();
+    forged.plugin_id = "example.other".into();
+    fs::write(
+        output.join("release.json"),
+        serde_json::to_vec(&forged).unwrap(),
+    )
+    .unwrap();
+    assert!(lenso_marketplace_publisher::check_linked_cargo(&output).is_err());
+    fs::write(
+        output.join("release.json"),
+        serde_json::to_vec(&release).unwrap(),
+    )
+    .unwrap();
+    fs::write(output.join("plugin.crate"), b"changed").unwrap();
+    assert!(lenso_marketplace_publisher::check_linked_cargo(&output).is_err());
+    let invalid_output = root.path().join("invalid-submission");
+    fs::write(&archive, b"not a crate").unwrap();
+    assert!(
+        lenso_marketplace_publisher::prepare_linked_cargo(&archive, &metadata, &invalid_output)
+            .is_err()
+    );
+    assert!(!invalid_output.exists());
 }

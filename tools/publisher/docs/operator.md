@@ -140,7 +140,11 @@ must not be offered as a generic `lenso app add` candidate. The operator verifie
 and its `Cargo.toml` package name, version and Lenso Plugin ID before creating a
 submission. Review must still establish namespace ownership, source provenance,
 registry availability and the actual Host build/linked factory behavior. The
-archive is not stored in the publisher database.
+archive is not stored in the publisher database. Authors can create a checked
+`release.json` plus exact `plugin.crate` directory with
+`lenso-marketplace-author prepare-linked-cargo` and recheck it with
+`check-linked-cargo`. The tool derives Plugin ID, package name, version, and
+SHA-256 from the `.crate`; it does not authenticate the registry or source commit.
 
 ```sh
 lenso-marketplace-publisher operator.json submit-linked-cargo AUTHOR /absolute/release.json /absolute/plugin.crate

@@ -7,11 +7,23 @@ const MAX_UNPACKED_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRIES: usize = 4096;
 const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
 
-fn verify_crate_manifest(release: &LinkedCargoRelease, bytes: &[u8]) -> Result<()> {
-    let root = format!("{}-{}/", release.package, release.version);
-    let manifest_path = format!("{root}Cargo.toml");
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkedCargoCrateIdentity {
+    pub package: String,
+    pub version: String,
+    pub plugin_id: String,
+}
+
+/// Inspect exact `.crate` bytes without executing or unpacking them to disk.
+/// This is shared by author preparation and Directory admission.
+pub fn linked_cargo_crate_identity(bytes: &[u8]) -> Result<LinkedCargoCrateIdentity> {
+    ensure!(
+        !bytes.is_empty() && bytes.len() <= MAX_CRATE_BYTES,
+        "crate archive size exceeds limit"
+    );
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
     let mut manifest = None;
+    let mut root = None;
     let mut unpacked = 0u64;
     let mut count = 0usize;
     for entry in archive.entries().context("invalid crate archive")? {
@@ -29,10 +41,24 @@ fn verify_crate_manifest(release: &LinkedCargoRelease, bytes: &[u8]) -> Result<(
             "crate archive uncompressed size exceeds limit"
         );
         let path = std::str::from_utf8(&entry.path_bytes())?.to_owned();
+        let (archive_root, relative_path) = path
+            .split_once('/')
+            .context("crate archive path is outside its package root")?;
         ensure!(
-            path.starts_with(&root)
-                && !path[root.len()..].contains('\\')
-                && path[root.len()..]
+            !archive_root.is_empty(),
+            "crate archive path is outside its package root"
+        );
+        if let Some(root) = &root {
+            ensure!(
+                root == archive_root,
+                "crate archive has multiple package roots"
+            );
+        } else {
+            root = Some(archive_root.to_owned());
+        }
+        ensure!(
+            !relative_path.contains('\\')
+                && relative_path
                     .split('/')
                     .all(|component| !matches!(component, "" | "." | "..")),
             "crate archive path is outside its package root"
@@ -41,7 +67,7 @@ fn verify_crate_manifest(release: &LinkedCargoRelease, bytes: &[u8]) -> Result<(
             entry.header().entry_type().is_file(),
             "crate archive contains a non-file entry"
         );
-        if path == manifest_path {
+        if relative_path == "Cargo.toml" {
             ensure!(manifest.is_none(), "crate archive has duplicate Cargo.toml");
             ensure!(
                 entry.size() <= MAX_MANIFEST_BYTES,
@@ -55,17 +81,41 @@ fn verify_crate_manifest(release: &LinkedCargoRelease, bytes: &[u8]) -> Result<(
     let manifest: toml::Value =
         toml::from_str(&manifest.context("crate archive is missing Cargo.toml")?)
             .context("invalid crate Cargo.toml")?;
+    let package = manifest["package"]["name"]
+        .as_str()
+        .context("crate package name is missing")?
+        .to_owned();
+    let version = manifest["package"]["version"]
+        .as_str()
+        .context("crate package version is missing")?
+        .to_owned();
+    let plugin_id = manifest["package"]["metadata"]["lenso"]["plugin-id"]
+        .as_str()
+        .context("crate Lenso Plugin ID is missing")?
+        .to_owned();
     ensure!(
-        manifest["package"]["name"].as_str() == Some(release.package.as_str()),
+        root.as_deref() == Some(format!("{package}-{version}").as_str()),
+        "crate archive root does not match package and version"
+    );
+    Ok(LinkedCargoCrateIdentity {
+        package,
+        version,
+        plugin_id,
+    })
+}
+
+fn verify_crate_manifest(release: &LinkedCargoRelease, bytes: &[u8]) -> Result<()> {
+    let identity = linked_cargo_crate_identity(bytes)?;
+    ensure!(
+        identity.package == release.package,
         "crate package name does not match release"
     );
     ensure!(
-        manifest["package"]["version"].as_str() == Some(release.version.as_str()),
+        identity.version == release.version,
         "crate package version does not match release"
     );
     ensure!(
-        manifest["package"]["metadata"]["lenso"]["plugin-id"].as_str()
-            == Some(release.plugin_id.as_str()),
+        identity.plugin_id == release.plugin_id,
         "crate Plugin ID does not match release"
     );
     Ok(())

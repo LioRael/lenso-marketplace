@@ -2,13 +2,49 @@ use anyhow::{Result, bail, ensure};
 use std::{io, path::Path};
 fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = "usage: lenso-marketplace-author prepare ARCHIVE METADATA.json NEW_DIRECTORY | check SUBMISSION_DIRECTORY | submission-url SUBMISSION_DIRECTORY";
+    let usage = "usage: lenso-marketplace-author prepare ARCHIVE METADATA.json NEW_DIRECTORY | check SUBMISSION_DIRECTORY | submission-url SUBMISSION_DIRECTORY | prepare-linked-cargo PACKAGE.crate METADATA.json NEW_DIRECTORY | check-linked-cargo SUBMISSION_DIRECTORY";
     if args.as_slice() == ["--help"] {
         println!("{usage}");
         return Ok(());
     }
     if args.as_slice() == ["--version"] {
         println!("lenso-marketplace-author {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    if args
+        .first()
+        .is_some_and(|command| command == "prepare-linked-cargo")
+    {
+        ensure!(args.len() == 4, usage);
+        let release = lenso_marketplace_publisher::prepare_linked_cargo(
+            Path::new(&args[1]),
+            Path::new(&args[2]),
+            Path::new(&args[3]),
+        )?;
+        serde_json::to_writer(
+            io::stdout().lock(),
+            &serde_json::json!({
+                "status":"prepared", "plugin_id":release.plugin_id,
+                "version":release.version, "crate_digest":release.crate_digest,
+                "note":"Local validation only. Submit the exact .crate and release.json for namespace review and publication."
+            }),
+        )?;
+        return Ok(());
+    }
+    if args
+        .first()
+        .is_some_and(|command| command == "check-linked-cargo")
+    {
+        ensure!(args.len() == 2, usage);
+        let release = lenso_marketplace_publisher::check_linked_cargo(Path::new(&args[1]))?;
+        serde_json::to_writer(
+            io::stdout().lock(),
+            &serde_json::json!({
+                "status":"verified", "plugin_id":release.plugin_id,
+                "version":release.version, "crate_digest":release.crate_digest,
+                "note":"Local validation only. Registry provenance and Host build behavior require independent review."
+            }),
+        )?;
         return Ok(());
     }
     let release = match args.first().map(String::as_str) {
