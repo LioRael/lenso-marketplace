@@ -205,47 +205,76 @@ impl MarketplaceWeb {
 impl MarketplaceWeb {
     #[get("marketplace.index", "/")]
     async fn index(&self) -> Result<HandleResponse, EndpointHandleInvocationError> {
-        Ok(asset(
-            "text/html; charset=utf-8",
-            include_bytes!("../ui/dist/index.html"),
-        ))
+        #[cfg(feature = "legacy-ui")]
+        {
+            Ok(asset(
+                "text/html; charset=utf-8",
+                include_bytes!("../ui/dist/index.html"),
+            ))
+        }
+        #[cfg(not(feature = "legacy-ui"))]
+        {
+            Ok(legacy_ui_unavailable())
+        }
     }
     #[get("marketplace.script", "/marketplace.js")]
     async fn script(&self) -> Result<HandleResponse, EndpointHandleInvocationError> {
-        Ok(asset(
-            "text/javascript; charset=utf-8",
-            include_bytes!("../ui/dist/marketplace.js"),
-        ))
+        #[cfg(feature = "legacy-ui")]
+        {
+            Ok(asset(
+                "text/javascript; charset=utf-8",
+                include_bytes!("../ui/dist/marketplace.js"),
+            ))
+        }
+        #[cfg(not(feature = "legacy-ui"))]
+        {
+            Ok(legacy_ui_unavailable())
+        }
     }
     #[get("marketplace.styles", "/marketplace.css")]
     async fn styles(&self) -> Result<HandleResponse, EndpointHandleInvocationError> {
-        Ok(asset(
-            "text/css; charset=utf-8",
-            include_bytes!("../ui/dist/marketplace.css"),
-        ))
+        #[cfg(feature = "legacy-ui")]
+        {
+            Ok(asset(
+                "text/css; charset=utf-8",
+                include_bytes!("../ui/dist/marketplace.css"),
+            ))
+        }
+        #[cfg(not(feature = "legacy-ui"))]
+        {
+            Ok(legacy_ui_unavailable())
+        }
     }
     #[get("marketplace.sample-art", "/sample-assets/{name}")]
     async fn sample_art(
         &self,
         Path(path): Path<SampleAssetPath>,
     ) -> Result<HandleResponse, EndpointHandleInvocationError> {
-        let bytes: &[u8] = match path.name.as_str() {
-            "projects.png" => include_bytes!("../ui/assets/projects.png"),
-            "observe.png" => include_bytes!("../ui/assets/observe.png"),
-            "git.png" => include_bytes!("../ui/assets/git.png"),
-            "files.png" => include_bytes!("../ui/assets/files.png"),
-            "notes.png" => include_bytes!("../ui/assets/notes.png"),
-            "echo.png" => include_bytes!("../ui/assets/echo.png"),
-            "projects-preview.png" => include_bytes!("../ui/assets/projects-preview.png"),
-            _ => {
-                return Ok(response::problem(
-                    StatusCode::NOT_FOUND,
-                    "asset_not_found",
-                    "Sample image does not exist",
-                ));
-            }
-        };
-        Ok(asset("image/png", bytes))
+        #[cfg(feature = "legacy-ui")]
+        {
+            let bytes: &[u8] = match path.name.as_str() {
+                "projects.png" => include_bytes!("../ui/assets/projects.png"),
+                "observe.png" => include_bytes!("../ui/assets/observe.png"),
+                "git.png" => include_bytes!("../ui/assets/git.png"),
+                "files.png" => include_bytes!("../ui/assets/files.png"),
+                "notes.png" => include_bytes!("../ui/assets/notes.png"),
+                "echo.png" => include_bytes!("../ui/assets/echo.png"),
+                "projects-preview.png" => include_bytes!("../ui/assets/projects-preview.png"),
+                _ => {
+                    return Ok(response::problem(
+                        StatusCode::NOT_FOUND,
+                        "asset_not_found",
+                        "Sample image does not exist",
+                    ));
+                }
+            };
+            Ok(asset("image/png", bytes))
+        }
+        #[cfg(not(feature = "legacy-ui"))]
+        {
+            let _ = path;
+            Ok(legacy_ui_unavailable())
+        }
     }
     /// Public immutable signed metadata; consumers retain their own trust policy.
     #[get("marketplace.snapshot", "/api/marketplace/v1/snapshot")]
@@ -448,6 +477,15 @@ fn failure(detail: impl std::fmt::Display) -> RuntimeFailure {
 }
 pub fn link() {}
 
+#[cfg(not(feature = "legacy-ui"))]
+fn legacy_ui_unavailable() -> HandleResponse {
+    response::problem(
+        StatusCode::NOT_FOUND,
+        "asset_not_found",
+        "Asset does not exist",
+    )
+}
+
 fn asset(content_type: &str, bytes: &[u8]) -> HandleResponse {
     use lenso_capability_http_endpoint::HandleResponseHeadersItem;
     // Exact Base UI 1.7.0 scrollbar stylesheet emitted by Select. Keep inline
@@ -468,6 +506,16 @@ fn asset(content_type: &str, bytes: &[u8]) -> HandleResponse {
         status: 200,
         body: bytes.to_vec().into(),
         headers,
+    }
+}
+
+#[cfg(all(test, not(feature = "legacy-ui")))]
+mod no_legacy_ui_tests {
+    #[test]
+    fn legacy_routes_do_not_serve_placeholder_assets() {
+        let response = super::legacy_ui_unavailable();
+        assert_eq!(response.status, 404);
+        assert!(!response.body.is_empty());
     }
 }
 

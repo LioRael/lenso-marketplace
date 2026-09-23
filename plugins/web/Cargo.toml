@@ -10,8 +10,9 @@ plugin-id = "lenso.marketplace.web"
 root-slot = "web"
 
 [features]
-default = ["native"]
+default = ["native", "legacy-ui"]
 native = ["dep:rusqlite"]
+legacy-ui = []
 
 [dependencies]
 anyhow = "1"

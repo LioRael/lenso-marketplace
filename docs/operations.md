@@ -11,6 +11,11 @@ environment configuration must set the Worker/account, hostname, D1 and private
 R2 bindings, catalog ID, trusted key ID and public key. Never supply signing keys
 to the public Worker. The default config contains no test identity or resources.
 
+The Workers Rust backend alone can be checked without the UI source or build:
+its Web Plugin dependency disables default features. That is not a deployable
+UI handoff. Keep `pnpm build` and the existing Static Assets binding in the
+deployment workflow until the Site owns the deployed browser surface.
+
 Generate a configuration with `node tools/cloudflare/deployment-config.mjs
 INPUT.json OUTPUT.json`. The input must explicitly include `environment:
 "production"`, the 32-character Cloudflare `account_id`, a custom hostname, the

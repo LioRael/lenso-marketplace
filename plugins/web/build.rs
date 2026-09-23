@@ -1,5 +1,9 @@
 use sha2::{Digest, Sha256};
 fn main() {
+    if std::env::var_os("CARGO_FEATURE_LEGACY_UI").is_none() {
+        return;
+    }
+
     let mut hash = Sha256::new();
     for file in [
         "main.tsx",

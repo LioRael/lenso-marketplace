@@ -49,6 +49,13 @@ be mistaken for valid HTML. Static requests therefore do not consume the Wasm
 event-admission window, while Native keeps the same Web Plugin endpoints for its
 local HTTP host.
 
+The Web Plugin's default `legacy-ui` feature embeds that UI for Native and
+checks its source fingerprint. Workers select `default-features = false`: the
+Rust Web backend then compiles without `plugins/web/ui` or `ui/dist`, and its
+legacy asset handlers return 404 if reached. This only separates the Rust
+backend build from UI ownership; the current deployed Worker still needs the
+built `ui/dist` directory for the Static Assets binding until the Site cutover.
+
 ## Build boundary
 
 The root workspace pins common host dependencies and selects native packages by
