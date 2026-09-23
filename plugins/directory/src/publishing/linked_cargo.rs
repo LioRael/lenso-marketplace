@@ -31,6 +31,7 @@ fn verify_crate_manifest(release: &LinkedCargoRelease, bytes: &[u8]) -> Result<(
         let path = std::str::from_utf8(&entry.path_bytes())?.to_owned();
         ensure!(
             path.starts_with(&root)
+                && !path[root.len()..].contains('\\')
                 && path[root.len()..]
                     .split('/')
                     .all(|component| !matches!(component, "" | "." | "..")),
@@ -303,6 +304,26 @@ mod tests {
         builder.into_inner().unwrap().finish().unwrap()
     }
 
+    fn crate_archive_with_windows_escape() -> Vec<u8> {
+        let manifest = "[package]\nname = \"example-web-plugin\"\nversion = \"0.4.5\"\n[package.metadata.lenso]\nplugin-id = \"example.web\"\n";
+        let encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        for (path, contents) in [
+            ("example-web-plugin-0.4.5/Cargo.toml", manifest.as_bytes()),
+            (
+                "example-web-plugin-0.4.5/src\\..\\escape.rs",
+                b"escape".as_slice(),
+            ),
+        ] {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(contents.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder.append_data(&mut header, path, contents).unwrap();
+        }
+        builder.into_inner().unwrap().finish().unwrap()
+    }
+
     fn release(crate_archive: &[u8]) -> LinkedCargoRelease {
         LinkedCargoRelease {
             plugin_id: "example.web".into(),
@@ -414,6 +435,12 @@ mod tests {
         assert!(
             directory
                 .submit_linked_cargo("author", &release(b"not a crate"), b"not a crate", 101)
+                .is_err()
+        );
+        let windows_escape = crate_archive_with_windows_escape();
+        assert!(
+            directory
+                .submit_linked_cargo("author", &release(&windows_escape), &windows_escape, 101)
                 .is_err()
         );
         let count: i64 = directory
