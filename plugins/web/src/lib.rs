@@ -272,7 +272,7 @@ impl MarketplaceWeb {
         }
         #[cfg(not(feature = "legacy-ui"))]
         {
-            let _ = path;
+            let _ = path.name;
             Ok(legacy_ui_unavailable())
         }
     }
