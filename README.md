@@ -13,7 +13,7 @@ Plugins. Console Agent owns installation and consumes the signed catalog API.
 | `apps/workers-sdk-prototype` | Disposable official `workers-rs` comparison host |
 | `plugins/directory` | Catalog publishing, review/audit state and published-snapshot reads |
 | `plugins/web` | Search/detail HTTP, Lenso UI frontend and consumer verification cache |
-| `contracts/directory` | Generated Directory Capability; no storage implementation |
+| `contracts/directory`, `contracts/linked-directory` | Separate generated read Capabilities for portable and source-only publications; no storage implementation |
 | `tools/publisher` | Local operator CLI for Directory publishing and backup |
 | `tools/cloudflare` | Private publication promotion and deployment config generation |
 | `tests` | Test plugins, protocol fixtures, integration and explicit Workers proof host |

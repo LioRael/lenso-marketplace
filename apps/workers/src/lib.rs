@@ -89,6 +89,16 @@ impl lenso_marketplace_directory_plugin::storage::PublishedStorage for Storage {
     ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
         Box::pin(self.invoke("published_details", serde_json::json!({"catalog":catalog})))
     }
+
+    fn published_linked_cargo<'a>(
+        &'a self,
+        catalog: &'a str,
+    ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
+        Box::pin(self.invoke(
+            "published_linked_cargo",
+            serde_json::json!({"catalog":catalog}),
+        ))
+    }
 }
 impl CacheStorage for Storage {
     fn prepare_catalog_read(&self, catalog: &str) {
@@ -221,6 +231,11 @@ pub async fn handle_http(input: String, scope: JsValue) -> Result<String, JsValu
         HostBinding::new(
             PluginInstanceId::new("lenso.marketplace.web", "default"),
             lenso_capability_marketplace_directory::CAPABILITY_ID,
+            "marketplace-directories",
+        ),
+        HostBinding::new(
+            PluginInstanceId::new("lenso.marketplace.web", "default"),
+            lenso_capability_marketplace_linked_directory::CAPABILITY_ID,
             "marketplace-directories",
         ),
     ]);

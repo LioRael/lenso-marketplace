@@ -22,3 +22,5 @@ path = "src/author.rs"
 [dev-dependencies]
 rusqlite = { version = "0.40", features = ["bundled"] }
 tempfile = "3"
+flate2 = "1"
+tar = "0.4"

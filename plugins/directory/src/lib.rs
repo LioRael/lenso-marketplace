@@ -7,6 +7,7 @@ pub mod storage;
 use crate::publishing::PublishedDirectory;
 use crate::storage::PublishedStorage;
 use lenso_capability_marketplace_directory as contract;
+use lenso_capability_marketplace_linked_directory as linked_contract;
 use lenso_kernel::{
     DeactivateContext, InvocationContext, NativeRequestFuture, PrepareContext, RuntimeFailure,
 };
@@ -98,8 +99,56 @@ impl lenso::Lifecycle for MarketplaceDirectory {
     }
 }
 
-#[lenso::provides(contract::Directory)]
+#[lenso::provides(contract::Directory, linked_contract::LinkedDirectory)]
 impl MarketplaceDirectory {
+    fn read_linked_cargo(
+        &self,
+        _context: InvocationContext,
+        _request: linked_contract::ReadLinkedCargoRequest,
+    ) -> NativeRequestFuture<linked_contract::LinkedDirectory> {
+        if !self.ready.get() {
+            return Box::pin(async {
+                Err(RuntimeFailure::Unavailable {
+                    capability: linked_contract::CAPABILITY_ID,
+                })
+            });
+        }
+        if let Some(storage) = &self.storage {
+            let storage = storage.clone();
+            let catalog = self.config.catalog_id.clone();
+            return Box::pin(async move {
+                match storage
+                    .published_linked_cargo(&catalog)
+                    .await
+                    .map_err(failure)?
+                {
+                    Some(envelope) => Ok(Ok(linked_contract::ReadLinkedCargoResponse {
+                        envelope_json: envelope.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(linked_contract::ReadLinkedCargoError::NotPublished)),
+                }
+            });
+        }
+        #[cfg(feature = "native")]
+        let result = match self.reader.borrow().as_ref() {
+            None => Err(RuntimeFailure::Unavailable {
+                capability: linked_contract::CAPABILITY_ID,
+            }),
+            Some(reader) => reader
+                .latest_linked_cargo()
+                .map_err(failure)
+                .and_then(|snapshot| match snapshot {
+                    Some(envelope_json) => Ok(Ok(linked_contract::ReadLinkedCargoResponse {
+                        envelope_json: envelope_json.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(linked_contract::ReadLinkedCargoError::NotPublished)),
+                }),
+        };
+        #[cfg(not(feature = "native"))]
+        let result = Err(failure("event storage unavailable"));
+        Box::pin(async move { result })
+    }
+
     fn read_snapshot(
         &self,
         _context: InvocationContext,

@@ -3,7 +3,7 @@
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
 use lenso_marketplace_directory_plugin::publishing::{Directory, PublishedDirectory};
-use lenso_plugin_catalog::{ReleaseDetails, digest};
+use lenso_plugin_catalog::{ReleaseDetails, digest, linked_cargo::LinkedCargoRelease};
 use serde::Deserialize;
 use std::{
     collections::BTreeSet,
@@ -27,7 +27,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|publish-details|export-details|verify-details|backup [...]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|backup [...]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -41,8 +41,16 @@ fn run() -> Result<()> {
     let public_key = hex::decode(&config.public_key_hex).context("invalid public key hex")?;
     ensure!(public_key.len() == 32, "public key must contain 32 bytes");
     match args[1].as_str() {
-        "claim" | "submit" | "inspect" | "approve" | "submit-details" | "inspect-details"
-        | "approve-details" => {
+        "claim"
+        | "submit"
+        | "inspect"
+        | "approve"
+        | "submit-details"
+        | "inspect-details"
+        | "approve-details"
+        | "submit-linked-cargo"
+        | "inspect-linked-cargo"
+        | "approve-linked-cargo" => {
             // These are protected local operator commands, never public actor authentication.
             PublishedDirectory::open(&config.database, &config.catalog_id)?;
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
@@ -124,6 +132,50 @@ fn run() -> Result<()> {
                     )?;
                     serde_json::json!({"status":"approved","submission_id":args[3]})
                 }
+                "submit-linked-cargo" => {
+                    ensure!(
+                        args.len() == 5,
+                        "submit-linked-cargo requires AUTHOR RELEASE_JSON CRATE_ARCHIVE"
+                    );
+                    let release_bytes = fs::read(&args[3])?;
+                    ensure!(
+                        release_bytes.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                        "linked Cargo release exceeds limit"
+                    );
+                    let release: LinkedCargoRelease = serde_json::from_slice(&release_bytes)?;
+                    ensure!(
+                        fs::metadata(&args[4])?.len() <= 32 * 1024 * 1024,
+                        "crate archive exceeds limit"
+                    );
+                    let archive = fs::read(&args[4])?;
+                    let id = directory.submit_linked_cargo(&args[2], &release, &archive, now)?;
+                    let (_, proposal_digest, state) =
+                        directory.inspect_linked_cargo_submission(&args[2], id)?;
+                    serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
+                }
+                "inspect-linked-cargo" => {
+                    ensure!(
+                        args.len() == 4,
+                        "inspect-linked-cargo requires ACTOR SUBMISSION_ID"
+                    );
+                    let (release, proposal_digest, state) =
+                        directory.inspect_linked_cargo_submission(&args[2], args[3].parse()?)?;
+                    serde_json::json!({"release":release,"proposal_digest":proposal_digest,"state":state})
+                }
+                "approve-linked-cargo" => {
+                    ensure!(
+                        args.len() == 6,
+                        "approve-linked-cargo requires REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY"
+                    );
+                    directory.approve_linked_cargo(
+                        &args[2],
+                        args[3].parse()?,
+                        &args[4],
+                        &args[5],
+                        now,
+                    )?;
+                    serde_json::json!({"status":"approved","submission_id":args[3]})
+                }
                 _ => unreachable!(),
             };
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
@@ -178,6 +230,34 @@ fn run() -> Result<()> {
             let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
+        "verify-linked-cargo" => {
+            ensure!(
+                args.len() == 2,
+                "verify-linked-cargo accepts no extra arguments"
+            );
+            let mut envelope = Vec::new();
+            io::stdin()
+                .lock()
+                .take((lenso_plugin_catalog::MAX_ENVELOPE_BYTES + 1) as u64)
+                .read_to_end(&mut envelope)?;
+            ensure!(
+                envelope.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                "envelope exceeds limit"
+            );
+            let trust = lenso_plugin_catalog::Trust {
+                catalog_id: config.catalog_id,
+                keys: std::collections::BTreeMap::from([(
+                    config.key_id,
+                    ed25519_dalek::VerifyingKey::from_bytes(&public_key.as_slice().try_into()?)?,
+                )]),
+            };
+            let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let verified =
+                lenso_plugin_catalog::linked_cargo::verify(&envelope, &trust, None, now)?;
+            let snapshot = verified.snapshot();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
+            serde_json::to_writer(io::stdout().lock(), &receipt)?;
+        }
         "initialize" => {
             ensure!(args.len() == 2, "initialize accepts no extra arguments");
             // create_new prevents accidental reuse; failed initialization leaves
@@ -199,10 +279,12 @@ fn run() -> Result<()> {
             view.backup(&destination)?;
             let copied = PublishedDirectory::open(&destination, &config.catalog_id)?;
             let latest = copied.latest()?;
+            let linked_cargo = copied.latest_linked_cargo()?;
             let receipt = serde_json::json!({
                 "backup": destination,
                 "catalog_id": config.catalog_id,
-                "publication_digest": latest.as_ref().map(|bytes| digest(bytes.as_bytes()))
+                "publication_digest": latest.as_ref().map(|bytes| digest(bytes.as_bytes())),
+                "linked_cargo_publication_digest": linked_cargo.as_ref().map(|bytes| digest(bytes.as_bytes()))
             });
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
             writeln!(io::stdout().lock())?;
@@ -221,7 +303,18 @@ fn run() -> Result<()> {
                 .context("no release details publication exists")?;
             emit(envelope.as_bytes())?;
         }
-        "publish" | "publish-details" => {
+        "export-linked-cargo" => {
+            ensure!(
+                args.len() == 2,
+                "export-linked-cargo accepts no extra arguments"
+            );
+            let view = PublishedDirectory::open(&config.database, &config.catalog_id)?;
+            let envelope = view
+                .latest_linked_cargo()?
+                .context("no linked Cargo publication exists")?;
+            emit(envelope.as_bytes())?;
+        }
+        "publish" | "publish-details" | "publish-linked-cargo" => {
             ensure!(
                 args.len() == 5,
                 "publish operation requires actor, expected revision and validity seconds"
@@ -257,6 +350,15 @@ fn run() -> Result<()> {
             let expires_at = now.checked_add(validity).context("expiry overflow")?;
             let bytes = if args[1] == "publish-details" {
                 directory.publish_details(
+                    &args[2],
+                    expected,
+                    now,
+                    expires_at,
+                    &config.key_id,
+                    &key,
+                )?
+            } else if args[1] == "publish-linked-cargo" {
+                directory.publish_linked_cargo(
                     &args[2],
                     expected,
                     now,

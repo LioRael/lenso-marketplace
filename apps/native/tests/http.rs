@@ -4,6 +4,9 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+#[path = "../../../tests/support/crate_archive.rs"]
+mod crate_archive;
+
 #[tokio::test(flavor = "current_thread")]
 async fn real_host_serves_verified_catalog_and_honest_failures() {
     tokio::task::LocalSet::new()
@@ -113,6 +116,58 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
                     .snapshot()
                     .revision,
                 1
+            );
+            publisher
+                .claim_namespace("reviewer", "example", "publisher", "author", now)
+                .unwrap();
+            let crate_bytes = crate_archive::create("example-web-plugin", "0.4.5", "example.web");
+            let linked = lenso_plugin_catalog::linked_cargo::LinkedCargoRelease {
+                plugin_id: "example.web".into(),
+                version: "0.4.5".into(),
+                publisher_id: "publisher".into(),
+                title: "Web".into(),
+                summary: "Linked Web Plugin".into(),
+                source_url: "https://github.com/example/web".into(),
+                source_revision: "a".repeat(40),
+                license: "MIT".into(),
+                package: "example-web-plugin".into(),
+                registry_url: "https://crates.io".into(),
+                crate_digest: lenso_plugin_catalog::digest(&crate_bytes),
+                targets: vec!["aarch64-apple-darwin".into()],
+                availability: lenso_plugin_catalog::Availability::Listed,
+                documentation: Vec::new(),
+            };
+            let id = publisher
+                .submit_linked_cargo("author", &linked, &crate_bytes, now)
+                .unwrap();
+            let (_, proposal_digest, _) = publisher
+                .inspect_linked_cargo_submission("author", id)
+                .unwrap();
+            publisher
+                .approve_linked_cargo("reviewer", id, &proposal_digest, "v1", now)
+                .unwrap();
+            publisher
+                .publish_linked_cargo("reviewer", 0, now, now + 3600, "test-key", &key)
+                .unwrap();
+            let linked_envelope = client
+                .get(format!("http://{address}/api/marketplace/v1/linked-cargo"))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(linked_envelope.status(), 200);
+            let linked_envelope = linked_envelope.text().await.unwrap();
+            assert_eq!(
+                lenso_plugin_catalog::linked_cargo::verify(
+                    linked_envelope.as_bytes(),
+                    &trust,
+                    None,
+                    now
+                )
+                .unwrap()
+                .select("example.web", "0.4.5", now)
+                .unwrap()
+                .package,
+                "example-web-plugin"
             );
 
             assert_eq!(

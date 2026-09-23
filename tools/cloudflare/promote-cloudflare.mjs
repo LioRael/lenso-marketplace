@@ -4,7 +4,11 @@ import { readFileSync } from "node:fs";
 import { isAbsolute } from "node:path";
 
 import { cloudflareStorage } from "./cloudflare.mjs";
-import { promotePublication, promoteReleaseDetails } from "./promote.mjs";
+import {
+  promotePublication,
+  promoteReleaseDetails,
+  promoteLinkedCargo,
+} from "./promote.mjs";
 
 // Run only in the protected operator host. CONFIG contains public identifiers,
 // absolute publisher paths and the operator-reviewed expected remote pointer.
@@ -34,12 +38,24 @@ const main = async () => {
   // Export cannot create or renew a publication. Its bytes come from the
   // authoritative durable database, not a user-supplied envelope file.
   const details = config.kind === "release-details";
+  const linked = config.kind === "linked-cargo";
   assert.ok(
-    config.kind === undefined || details,
-    "kind must be omitted or release-details"
+    config.kind === undefined || details || linked,
+    "kind must be omitted, release-details or linked-cargo"
   );
-  const publication = publisher(details ? "export-details" : "export");
-  const promote = details ? promoteReleaseDetails : promotePublication;
+  let exportOperation = "export";
+  let verifyOperation = "verify";
+  let promote = promotePublication;
+  if (details) {
+    exportOperation = "export-details";
+    verifyOperation = "verify-details";
+    promote = promoteReleaseDetails;
+  } else if (linked) {
+    exportOperation = "export-linked-cargo";
+    verifyOperation = "verify-linked-cargo";
+    promote = promoteLinkedCargo;
+  }
+  const publication = publisher(exportOperation);
   const receipt = await promote({
     ...cloudflareStorage({
       ...config,
@@ -50,8 +66,7 @@ const main = async () => {
     catalogId: config.catalogId,
     envelope: publication.envelope,
     expected: config.expected,
-    verify: (envelope) =>
-      publisher(details ? "verify-details" : "verify", envelope),
+    verify: (envelope) => publisher(verifyOperation, envelope),
   });
   process.stdout.write(`${JSON.stringify(receipt)}\n`);
 };

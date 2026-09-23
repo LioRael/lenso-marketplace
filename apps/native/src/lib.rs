@@ -55,6 +55,11 @@ pub async fn start(config: &Config) -> anyhow::Result<(NativeApp, SocketAddr)> {
             lenso_capability_marketplace_directory::CAPABILITY_ID,
             "marketplace-directories",
         ),
+        HostBinding::new(
+            PluginInstanceId::new("lenso.marketplace.web", "default"),
+            lenso_capability_marketplace_linked_directory::CAPABILITY_ID,
+            "marketplace-directories",
+        ),
     ]);
     let control = config.app_root.join(".lenso");
     std::fs::create_dir_all(&control)?;

@@ -12,4 +12,11 @@ pub trait PublishedStorage: std::fmt::Debug {
     ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
         Box::pin(async { Ok(None) })
     }
+
+    fn published_linked_cargo<'a>(
+        &'a self,
+        _catalog: &'a str,
+    ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
+        Box::pin(async { Ok(None) })
+    }
 }

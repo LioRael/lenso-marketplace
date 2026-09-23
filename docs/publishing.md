@@ -5,6 +5,12 @@ configuration or database. A maintainer verifies namespace ownership and reviews
 the exact release before publishing it. Submission transport is currently a
 GitHub Issue review, not a public upload API or self-service Marketplace account system.
 
+The workflow below is for a portable `plugin.lenso-plugin` archive. Linked Rust
+Cargo packages have a separate, operator-mediated source-only channel described
+in the [operator guide](../tools/publisher/docs/operator.md#source-only-linked-cargo-release).
+That channel does not yet provide an author preparation tool or `lenso` adoption
+command; a signed listing alone is not an installable Plugin.
+
 ## Install the preparation tool
 
 Prebuilt downloads are produced by the `author-v*` release workflow for macOS

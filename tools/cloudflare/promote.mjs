@@ -236,3 +236,10 @@ export const promoteReleaseDetails = (input) =>
     objectPrefix: "release-details",
     table: "marketplace_release_details",
   });
+
+export const promoteLinkedCargo = (input) =>
+  promoteWithTarget({
+    ...input,
+    objectPrefix: "linked-cargo",
+    table: "marketplace_linked_cargo",
+  });

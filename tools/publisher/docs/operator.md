@@ -129,6 +129,33 @@ reporting publication complete. The same sequence handles each new version;
 namespace claims are not repeated. Preserve the submitted files until publication
 and backup are confirmed; the publisher database stores metadata, not archive bytes.
 
+## Source-only linked Cargo release
+
+This separate channel accepts an exact registry `.crate` as a Host build input;
+it does not turn that crate into a loadable portable Bundle. The JSON release
+names the Plugin ID, package/version, publisher, source revision, registry URL,
+archive SHA-256 and supported targets. The operator verifies the archive digest
+and its `Cargo.toml` package name, version and Lenso Plugin ID before creating a
+submission. Review must still establish namespace ownership, source provenance,
+registry availability and the actual Host build/linked factory behavior. The
+archive is not stored in the publisher database.
+
+```sh
+lenso-marketplace-publisher operator.json submit-linked-cargo AUTHOR /absolute/release.json /absolute/plugin.crate
+lenso-marketplace-publisher operator.json inspect-linked-cargo REVIEWER SUBMISSION_ID
+lenso-marketplace-publisher operator.json approve-linked-cargo REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY
+lenso-marketplace-publisher operator.json publish-linked-cargo REVIEWER EXPECTED_REVISION 604800 < signing-key.bin
+lenso-marketplace-publisher operator.json export-linked-cargo
+```
+
+The signed source-only snapshot has independent revision, signature domain and
+publication pointer from the portable catalog and release-details snapshots.
+`verify-linked-cargo` reads an exact envelope from stdin using configured public
+trust. An identical retry returns the existing submission; changed content under
+the same Plugin ID/version is rejected. A portable base release with that identity
+must instead use the existing release-details channel for a linked distribution.
+No CLI adoption/build command for this source-only channel is implemented yet.
+
 ### Public submission tracking
 
 The GitHub plugin submission issue is the review conversation. Record the internal

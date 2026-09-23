@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { promotePublication, promoteReleaseDetails } from "./promote.mjs";
+import {
+  promotePublication,
+  promoteReleaseDetails,
+  promoteLinkedCargo,
+} from "./promote.mjs";
 
 const storage = (table = "marketplace_publications") => {
   const state = {
@@ -161,5 +165,13 @@ test("release details use a separate pointer and object namespace", async () => 
   const receipt = await promoteReleaseDetails(input(1));
   assert.equal(receipt.status, "published");
   assert.match(receipt.object_key, /^release-details\//u);
+  assert.equal(state.pointer.revision, 1);
+});
+
+test("linked Cargo releases use a separate pointer and object namespace", async () => {
+  const { state, input } = storage("marketplace_linked_cargo");
+  const receipt = await promoteLinkedCargo(input(1));
+  assert.equal(receipt.status, "published");
+  assert.match(receipt.object_key, /^linked-cargo\//u);
   assert.equal(state.pointer.revision, 1);
 });

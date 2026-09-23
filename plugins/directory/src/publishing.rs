@@ -9,6 +9,8 @@ use lenso_plugin_catalog::{
 use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
 use std::{collections::BTreeSet, path::Path};
 
+mod linked_cargo;
+
 pub struct Directory {
     connection: Connection,
     reviewers: BTreeSet<String>,
@@ -92,6 +94,18 @@ impl PublishedDirectory {
             Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
         }
     }
+
+    pub fn latest_linked_cargo(&self) -> Result<Option<String>> {
+        let value: Option<Option<Vec<u8>>> = self.connection.query_row(
+            "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM linked_cargo_snapshots ORDER BY revision DESC LIMIT 1",
+            [i64::try_from(lenso_plugin_catalog::MAX_ENVELOPE_BYTES)?], |row| row.get(0)
+        ).optional()?;
+        match value {
+            None => Ok(None),
+            Some(None) => anyhow::bail!("published linked Cargo envelope exceeds size limit"),
+            Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+        }
+    }
 }
 
 impl Directory {
@@ -107,6 +121,8 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS details_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS details_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS linked_cargo_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS linked_cargo_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, subject TEXT NOT NULL, at INTEGER NOT NULL);
         ")?;
         connection.execute("INSERT OR IGNORE INTO metadata VALUES(1, ?1)", [catalog_id])?;
@@ -205,6 +221,15 @@ impl Directory {
         let body = serde_json::to_string(release)?;
         let body_digest = digest(body.as_bytes());
         let identity = format!("{}@{}", release.plugin_id, release.version);
+        let existing_linked: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM linked_cargo_submissions WHERE identity=?1)",
+            [&identity],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            !existing_linked,
+            "a source-only linked Cargo release already owns this identity"
+        );
         let existing: Option<(i64, String)> = transaction
             .query_row(
                 "SELECT id,digest FROM submissions WHERE identity=?1",
@@ -586,6 +611,31 @@ mod tests {
             ],
             documentation: vec![],
         }
+    }
+    #[test]
+    fn portable_release_cannot_reuse_source_only_identity() {
+        let home = tempfile::tempdir().unwrap();
+        let mut directory = Directory::open(
+            &home.path().join("directory.db"),
+            "test",
+            BTreeSet::from(["reviewer".into()]),
+        )
+        .unwrap();
+        directory
+            .claim_namespace("reviewer", "example", "publisher", "author", 100)
+            .unwrap();
+        directory
+            .connection
+            .execute(
+                "INSERT INTO linked_cargo_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'awaiting_review')",
+                params!["example.echo@0.1.0", "publisher", "{}", digest(b"{}")],
+            )
+            .unwrap();
+        assert!(
+            directory
+                .insert_verified("author", &release(), 101)
+                .is_err()
+        );
     }
     #[test]
     fn ownership_approval_and_snapshot_survive_restart() {

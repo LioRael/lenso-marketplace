@@ -5,6 +5,9 @@ use std::{
     process::{Command, Output, Stdio},
 };
 
+#[path = "../../../tests/support/crate_archive.rs"]
+mod crate_archive;
+
 fn invoke(config: &std::path::Path, args: &[&str], key: Option<&[u8]>) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_lenso-marketplace-publisher"))
         .arg(config)
@@ -295,6 +298,96 @@ fn operator_reviews_publishes_and_verifies_release_details() {
         .status
         .success()
     );
+}
+
+#[test]
+fn operator_reviews_and_exports_source_only_linked_cargo_release() {
+    let root = tempfile::tempdir().unwrap();
+    let config = root.path().join("operator.json");
+    let release = root.path().join("linked.json");
+    let archive = root.path().join("plugin.crate");
+    let key = [29u8; 32];
+    fs::write(&config, serde_json::to_vec(&serde_json::json!({
+        "database":root.path().join("publisher.sqlite3"),"catalog_id":"linked-test","reviewers":["reviewer"],
+        "key_id":"operator-key","public_key_hex":hex::encode(SigningKey::from_bytes(&key).verifying_key().as_bytes())
+    })).unwrap()).unwrap();
+    let crate_bytes = crate_archive::create("example-web-plugin", "0.4.5", "example.web");
+    fs::write(&archive, &crate_bytes).unwrap();
+    fs::write(&release, serde_json::to_vec(&serde_json::json!({
+        "plugin_id":"example.web","version":"0.4.5","publisher_id":"publisher",
+        "title":"Web","summary":"Linked Web Plugin","source_url":"https://github.com/example/web",
+        "source_revision":"a".repeat(40),"license":"MIT","package":"example-web-plugin",
+        "registry_url":"https://crates.io","crate_digest":lenso_plugin_catalog::digest(&crate_bytes),
+        "targets":["aarch64-apple-darwin"],"availability":"listed"
+    })).unwrap()).unwrap();
+    assert!(invoke(&config, &["initialize"], None).status.success());
+    assert!(
+        invoke(
+            &config,
+            &["claim", "reviewer", "example", "publisher", "author"],
+            None
+        )
+        .status
+        .success()
+    );
+    let submitted = invoke(
+        &config,
+        &[
+            "submit-linked-cargo",
+            "author",
+            release.to_str().unwrap(),
+            archive.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        submitted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&submitted.stderr)
+    );
+    let receipt: serde_json::Value = serde_json::from_slice(&submitted.stdout).unwrap();
+    let id = receipt["submission_id"].as_i64().unwrap().to_string();
+    let digest = receipt["proposal_digest"].as_str().unwrap();
+    assert!(
+        invoke(
+            &config,
+            &["approve-linked-cargo", "reviewer", &id, digest, "v1"],
+            None
+        )
+        .status
+        .success()
+    );
+    let published = invoke(
+        &config,
+        &["publish-linked-cargo", "reviewer", "0", "3600"],
+        Some(&key),
+    );
+    assert!(
+        published.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published.stderr)
+    );
+    assert_eq!(
+        published.stdout,
+        invoke(&config, &["export-linked-cargo"], None).stdout
+    );
+    let envelope: serde_json::Value = serde_json::from_slice(&published.stdout).unwrap();
+    let verified = invoke(
+        &config,
+        &["verify-linked-cargo"],
+        Some(envelope["envelope"].as_str().unwrap().as_bytes()),
+    );
+    assert!(verified.status.success());
+    assert!(
+        !invoke(
+            &config,
+            &["publish-linked-cargo", "reviewer", "0", "3600"],
+            Some(&key)
+        )
+        .status
+        .success()
+    );
+    assert!(!invoke(&config, &["export"], None).status.success());
 }
 
 #[test]

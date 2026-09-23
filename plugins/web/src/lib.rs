@@ -8,6 +8,7 @@ use lenso_capability_http_endpoint::{
     response::{self, StatusCode},
 };
 use lenso_capability_marketplace_directory as directory;
+use lenso_capability_marketplace_linked_directory as linked_directory;
 use lenso_kernel::{DeactivateContext, InvocationContext, PrepareContext, RuntimeFailure};
 use lenso_plugin_catalog::{BrowseSnapshot, Trust};
 #[cfg(not(feature = "native"))]
@@ -39,6 +40,7 @@ struct MarketplaceWeb {
     #[config]
     config: Config,
     directory: Port<directory::DirectoryClient>,
+    linked_directory: Port<linked_directory::LinkedDirectoryClient>,
     cache: Rc<RefCell<Option<VerifiedCache>>>,
     event_cache: Rc<RefCell<Option<EventCache>>>,
     storage: Option<Rc<dyn CacheStorage>>,
@@ -283,6 +285,26 @@ impl MarketplaceWeb {
         Ok(asset(
             "application/json",
             details.envelope_json.as_str().as_bytes(),
+        ))
+    }
+    /// Separately signed source-only Cargo releases; never a portable Bundle.
+    #[get("marketplace.linked-cargo", "/api/marketplace/v1/linked-cargo")]
+    async fn linked_cargo(
+        &self,
+        context: InvocationContext,
+    ) -> Result<HandleResponse, EndpointHandleInvocationError> {
+        let source = self
+            .linked_directory
+            .read_linked_cargo_with_context(context, linked_directory::ReadLinkedCargoRequest {})
+            .await
+            .map_err(|error| {
+                EndpointHandleInvocationError::Runtime(failure(format!(
+                    "linked Cargo directory unavailable: {error:?}"
+                )))
+            })?;
+        Ok(asset(
+            "application/json",
+            source.envelope_json.as_str().as_bytes(),
         ))
     }
     #[get("marketplace.search", "/api/marketplace/v1/plugins")]

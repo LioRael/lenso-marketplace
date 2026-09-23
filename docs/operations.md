@@ -61,6 +61,16 @@ See their operator guides. Preserve the original publication bytes, expected
 pointer, signature verification and confirmation of uncertain writes. Signing
 credentials stay in operator storage, never repository files or the read Host.
 
+Source-only linked Cargo releases use the separate
+`apps/workers/migrations/d1/0003_linked_cargo.sql` pointer table. Apply that
+migration to the intended D1 database before promoting or serving the channel.
+Set `kind: "linked-cargo"` in the operator promotion config; the promoter exports
+and verifies the independently signed envelope and conditionally updates only
+the `marketplace_linked_cargo` pointer. Verify the public
+`/api/marketplace/v1/linked-cargo` response against configured trust after
+promotion. Building the Worker or creating a local publication does not prove
+the migration, remote promotion, or public availability occurred.
+
 Expired verified catalogs remain browsable with a stale notice. New installation
 requires current metadata. Renew with a new signed revision; do not edit expiry
 inside a signed envelope. Monitor expiry before installations are interrupted.
