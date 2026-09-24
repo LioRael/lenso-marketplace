@@ -2,8 +2,8 @@
 
 ## Public deployment
 
-Build from the repository root with `pnpm build` and `CARGO=cargo pnpm
-build:workers`. The UI build writes `plugins/web/ui/dist`, which is deployed as
+Build from the repository root with `pnpm build` and `pnpm build:workers`.
+The UI build writes `plugins/web/ui/dist`, which is deployed as
 Cloudflare Static Assets in the same release; only `/api/*` and `/artifacts/*`
 are routed through the Wasm Worker. The only public entrypoint is
 `apps/workers/worker.mjs`. A reviewed

@@ -58,7 +58,7 @@ From the repository root:
 
 ```sh
 cargo install worker-build --version 0.8.5 --locked
-CARGO=cargo pnpm test:workers:sdk
+pnpm test:workers:sdk
 ```
 
 The focused command:
