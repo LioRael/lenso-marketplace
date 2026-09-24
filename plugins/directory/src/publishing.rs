@@ -130,6 +130,8 @@ impl Directory {
             CREATE UNIQUE INDEX IF NOT EXISTS details_amendments_identity_digest ON details_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS details_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS linked_cargo_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS linked_cargo_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE UNIQUE INDEX IF NOT EXISTS linked_cargo_amendments_identity_digest ON linked_cargo_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS linked_cargo_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, subject TEXT NOT NULL, at INTEGER NOT NULL);
         ")?;

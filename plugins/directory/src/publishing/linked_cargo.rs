@@ -252,6 +252,131 @@ impl Directory {
         Ok(())
     }
 
+    pub fn submit_linked_cargo_document_revision(
+        &mut self,
+        actor: &str,
+        release: &LinkedCargoRelease,
+        now: u64,
+    ) -> Result<i64> {
+        release.validate()?;
+        let identity = format!("{}@{}", release.plugin_id, release.version);
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let (base_body, base_digest, publisher, state): (String, String, String, String) =
+            transaction.query_row(
+                "SELECT body,digest,publisher,state FROM linked_cargo_submissions WHERE identity=?1",
+                [&identity],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )?;
+        ensure!(
+            digest(base_body.as_bytes()) == base_digest,
+            "stored linked Cargo release digest mismatch"
+        );
+        ensure!(
+            state == "published",
+            "linked Cargo release is not published"
+        );
+        let owns_namespace: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
+            params![publisher, actor],
+            |row| row.get(0),
+        )?;
+        ensure!(owns_namespace, "publisher does not own this namespace");
+        let latest: Option<(i64, String, String, String)> = transaction
+            .query_row(
+                "SELECT id,body,digest,state FROM linked_cargo_amendments WHERE identity=?1 ORDER BY id DESC LIMIT 1",
+                [&identity],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .optional()?;
+        let body = serde_json::to_string(release)?;
+        if let Some((id, previous, previous_digest, _)) = &latest {
+            ensure!(
+                digest(previous.as_bytes()) == *previous_digest,
+                "stored linked Cargo documentation revision digest mismatch"
+            );
+            if previous == &body {
+                return Ok(*id);
+            }
+        }
+        ensure!(
+            latest
+                .as_ref()
+                .is_none_or(|(_, _, _, state)| state == "published"),
+            "another linked Cargo documentation revision is awaiting publication"
+        );
+        let previous_body = latest
+            .as_ref()
+            .map_or(base_body.as_str(), |(_, body, _, _)| body.as_str());
+        let previous: LinkedCargoRelease = serde_json::from_str(previous_body)?;
+        ensure_additive_linked_documentation(&previous, release)?;
+        let body_digest = digest(body.as_bytes());
+        transaction.execute(
+            "INSERT INTO linked_cargo_amendments(identity,publisher,body,digest,base_digest,state) VALUES(?1,?2,?3,?4,?5,'awaiting_review')",
+            params![identity, publisher, body, body_digest, digest(previous_body.as_bytes())],
+        )?;
+        let id = transaction.last_insert_rowid();
+        transaction.execute(
+            "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'submit_linked_cargo_document_revision',?2,?3)",
+            params![actor, id.to_string(), i64::try_from(now)?],
+        )?;
+        transaction.commit()?;
+        Ok(id)
+    }
+
+    pub fn inspect_linked_cargo_document_revision(
+        &self,
+        actor: &str,
+        amendment: i64,
+    ) -> Result<(LinkedCargoRelease, String, String)> {
+        let (body, digest, state, publisher): (String, String, String, String) =
+            self.connection.query_row(
+                "SELECT body,digest,state,publisher FROM linked_cargo_amendments WHERE id=?1",
+                [amendment],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )?;
+        let owner: bool = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
+            params![publisher, actor],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            owner || self.reviewers.contains(actor),
+            "linked Cargo documentation revision access denied"
+        );
+        Ok((serde_json::from_str(&body)?, digest, state))
+    }
+
+    pub fn approve_linked_cargo_document_revision(
+        &mut self,
+        actor: &str,
+        amendment: i64,
+        expected_digest: &str,
+        policy: &str,
+        now: u64,
+    ) -> Result<()> {
+        self.authorize_review(actor)?;
+        lenso_plugin_catalog::bounded_text(policy, 128)?;
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let changed = transaction.execute(
+            "UPDATE linked_cargo_amendments SET state='approved',reviewer=?1,policy=?2 WHERE id=?3 AND digest=?4 AND state='awaiting_review'",
+            params![actor, policy, amendment, expected_digest],
+        )?;
+        ensure!(
+            changed == 1,
+            "linked Cargo documentation revision changed or is not awaiting review"
+        );
+        transaction.execute(
+            "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'approve_linked_cargo_document_revision',?2,?3)",
+            params![actor, amendment.to_string(), i64::try_from(now)?],
+        )?;
+        transaction.commit()?;
+        Ok(())
+    }
+
     pub fn publish_linked_cargo(
         &mut self,
         actor: &str,
@@ -274,13 +399,54 @@ impl Directory {
             current == i64::try_from(expected_revision)?,
             "linked Cargo revision changed; read publication result"
         );
-        let bodies: Vec<String> = transaction.prepare(
-            "SELECT body FROM linked_cargo_submissions WHERE state IN ('approved','published') ORDER BY identity"
-        )?.query_map([], |row| row.get(0))?.collect::<rusqlite::Result<_>>()?;
-        let releases = bodies
-            .iter()
-            .map(|body| serde_json::from_str(body))
-            .collect::<serde_json::Result<Vec<LinkedCargoRelease>>>()?;
+        let bodies: Vec<(String, String)> = transaction.prepare(
+            "SELECT body,digest FROM linked_cargo_submissions WHERE state IN ('approved','published') ORDER BY identity"
+        )?.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+        let mut releases = BTreeMap::<String, (LinkedCargoRelease, String)>::new();
+        for (body, reviewed_digest) in &bodies {
+            ensure!(
+                digest(body.as_bytes()) == *reviewed_digest,
+                "reviewed linked Cargo release digest mismatch"
+            );
+            let release: LinkedCargoRelease = serde_json::from_str(body)?;
+            let identity = format!("{}@{}", release.plugin_id, release.version);
+            ensure!(
+                releases
+                    .insert(identity, (release, reviewed_digest.clone()))
+                    .is_none(),
+                "duplicate linked Cargo release identity"
+            );
+        }
+        let amendments: Vec<(String, String, String, String, String)> = transaction
+            .prepare("SELECT identity,body,digest,base_digest,state FROM linked_cargo_amendments WHERE state IN ('approved','published') ORDER BY id")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut approved = BTreeSet::new();
+        for (identity, body, reviewed_digest, base_digest, state) in amendments {
+            ensure!(
+                digest(body.as_bytes()) == reviewed_digest,
+                "reviewed linked Cargo documentation revision digest mismatch"
+            );
+            let (previous, previous_digest) = releases
+                .get(&identity)
+                .context("linked Cargo documentation revision has no published base")?;
+            ensure!(
+                previous_digest == &base_digest,
+                "linked Cargo documentation revision base changed"
+            );
+            let release: LinkedCargoRelease = serde_json::from_str(&body)?;
+            release.validate()?;
+            ensure_additive_linked_documentation(previous, &release)?;
+            if state == "approved" {
+                ensure!(
+                    approved.insert(identity.clone()),
+                    "multiple approved linked Cargo documentation revisions"
+                );
+            }
+            releases.insert(identity, (release, reviewed_digest));
+        }
+        let releases: Vec<LinkedCargoRelease> =
+            releases.into_values().map(|(release, _)| release).collect();
         let revision = current
             .checked_add(1)
             .context("linked Cargo revision overflow")?;
@@ -304,6 +470,10 @@ impl Directory {
             [],
         )?;
         transaction.execute(
+            "UPDATE linked_cargo_amendments SET state='published' WHERE state='approved'",
+            [],
+        )?;
+        transaction.execute(
             "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'publish_linked_cargo',?2,?3)",
             params![actor, revision.to_string(), i64::try_from(now)?],
         )?;
@@ -323,12 +493,35 @@ impl Directory {
     }
 }
 
+fn ensure_additive_linked_documentation(
+    previous: &LinkedCargoRelease,
+    next: &LinkedCargoRelease,
+) -> Result<()> {
+    let mut expected = previous.clone();
+    expected.documentation = next.documentation.clone();
+    ensure!(
+        expected == *next,
+        "linked Cargo documentation revision changed the release"
+    );
+    ensure!(
+        next.documentation.len() > previous.documentation.len(),
+        "linked Cargo documentation revision must add a new document identity"
+    );
+    for old in &previous.documentation {
+        ensure!(
+            next.documentation.iter().any(|document| document == old),
+            "linked Cargo documentation revision removed or changed a published document"
+        );
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
 
     use lenso_plugin_catalog::{
-        Availability, Trust,
+        Availability, Documentation, Trust,
         linked_cargo::{LinkedCargoIntegration, verify},
     };
 
@@ -394,6 +587,20 @@ mod tests {
         }
     }
 
+    fn document(revision: &str) -> Documentation {
+        Documentation {
+            id: "getting-started".into(),
+            revision: revision.into(),
+            language: "en".into(),
+            topic: "start".into(),
+            target: None,
+            url: format!("https://example.test/docs/example.web/0.4.5/{revision}.md"),
+            digest: digest(revision.as_bytes()),
+            size: revision.len() as u64,
+            media_type: "text/markdown".into(),
+        }
+    }
+
     #[test]
     fn source_only_release_requires_review_and_preserves_old_catalog() {
         let temp = tempfile::tempdir().unwrap();
@@ -419,8 +626,10 @@ mod tests {
                 .submit_linked_cargo("stranger", &release(&archive), &archive, 101)
                 .is_err()
         );
+        let mut source_release = release(&archive);
+        source_release.documentation.push(document("r1"));
         let id = directory
-            .submit_linked_cargo("author", &release(&archive), &archive, 101)
+            .submit_linked_cargo("author", &source_release, &archive, 101)
             .unwrap();
         let (_, digest, state) = directory
             .inspect_linked_cargo_submission("author", id)
@@ -442,8 +651,8 @@ mod tests {
             verified
                 .select("example.web", "0.4.5", 150)
                 .unwrap()
-                .package,
-            "example-web-plugin"
+                .documentation,
+            vec![document("r1")]
         );
         assert_eq!(
             directory.latest_linked_cargo().unwrap(),
@@ -456,6 +665,173 @@ mod tests {
             reader.latest_linked_cargo().unwrap(),
             Some(String::from_utf8(envelope).unwrap())
         );
+    }
+
+    #[test]
+    fn linked_document_revision_is_additive_and_keeps_previous_signature() {
+        let temp = tempfile::tempdir().unwrap();
+        let key = SigningKey::from_bytes(&[20; 32]);
+        let trust = Trust {
+            catalog_id: "catalog".into(),
+            keys: BTreeMap::from([("key".into(), key.verifying_key())]),
+        };
+        let mut directory = Directory::open(
+            &temp.path().join("directory.db"),
+            "catalog",
+            BTreeSet::from(["reviewer".into()]),
+        )
+        .unwrap();
+        directory
+            .claim_namespace("reviewer", "example", "publisher", "author", 100)
+            .unwrap();
+        let archive = crate_archive("example-web-plugin", "0.4.5", "example.web");
+        let mut source_release = release(&archive);
+        source_release.documentation.push(document("r1"));
+        let id = directory
+            .submit_linked_cargo("author", &source_release, &archive, 101)
+            .unwrap();
+        let (_, proposal_digest, _) = directory
+            .inspect_linked_cargo_submission("author", id)
+            .unwrap();
+        directory
+            .approve_linked_cargo("reviewer", id, &proposal_digest, "v1", 102)
+            .unwrap();
+        let mut premature = source_release.clone();
+        premature.documentation.push(document("r2"));
+        assert!(
+            directory
+                .submit_linked_cargo_document_revision("author", &premature, 102)
+                .is_err()
+        );
+        let first = directory
+            .publish_linked_cargo("reviewer", 0, 103, 200, "key", &key)
+            .unwrap();
+
+        let mut next = source_release.clone();
+        next.documentation.push(document("r2"));
+        assert!(
+            directory
+                .submit_linked_cargo_document_revision("stranger", &next, 104)
+                .is_err()
+        );
+        let mut changed = next.clone();
+        changed.documentation[0].digest = digest(b"changed");
+        assert!(
+            directory
+                .submit_linked_cargo_document_revision("author", &changed, 104)
+                .is_err()
+        );
+        changed = next.clone();
+        changed.crate_digest = digest(b"different crate");
+        assert!(
+            directory
+                .submit_linked_cargo_document_revision("author", &changed, 104)
+                .is_err()
+        );
+        let amendment = directory
+            .submit_linked_cargo_document_revision("author", &next, 104)
+            .unwrap();
+        assert_eq!(
+            directory
+                .submit_linked_cargo_document_revision("author", &next, 104)
+                .unwrap(),
+            amendment
+        );
+        let mut competing = next.clone();
+        competing.documentation.push(document("r3"));
+        assert!(
+            directory
+                .submit_linked_cargo_document_revision("author", &competing, 104)
+                .is_err()
+        );
+        let (_, amendment_digest, state) = directory
+            .inspect_linked_cargo_document_revision("author", amendment)
+            .unwrap();
+        assert_eq!(state, "awaiting_review");
+        assert!(
+            directory
+                .approve_linked_cargo_document_revision("reviewer", amendment, "wrong", "v1", 105)
+                .is_err()
+        );
+        directory
+            .approve_linked_cargo_document_revision(
+                "reviewer",
+                amendment,
+                &amendment_digest,
+                "v1",
+                105,
+            )
+            .unwrap();
+        assert!(
+            directory
+                .publish_linked_cargo("reviewer", 0, 106, 200, "key", &key)
+                .is_err()
+        );
+        let reviewed_body: String = directory
+            .connection
+            .query_row(
+                "SELECT body FROM linked_cargo_amendments WHERE id=?1",
+                [amendment],
+                |row| row.get(0),
+            )
+            .unwrap();
+        directory
+            .connection
+            .execute(
+                "UPDATE linked_cargo_amendments SET body='{}' WHERE id=?1",
+                [amendment],
+            )
+            .unwrap();
+        assert!(
+            directory
+                .publish_linked_cargo("reviewer", 1, 106, 200, "key", &key)
+                .is_err()
+        );
+        assert_eq!(
+            directory.latest_linked_cargo().unwrap(),
+            Some(first.clone())
+        );
+        directory
+            .connection
+            .execute(
+                "UPDATE linked_cargo_amendments SET body=?1 WHERE id=?2",
+                params![reviewed_body, amendment],
+            )
+            .unwrap();
+        let second = directory
+            .publish_linked_cargo("reviewer", 1, 106, 200, "key", &key)
+            .unwrap();
+        assert_eq!(
+            directory.latest_linked_cargo().unwrap(),
+            Some(second.clone())
+        );
+        let old = verify(&first, &trust, None, 150).unwrap();
+        assert_eq!(
+            old.select("example.web", "0.4.5", 150)
+                .unwrap()
+                .documentation,
+            vec![document("r1")]
+        );
+        let updated = verify(&second, &trust, Some(old.checkpoint()), 150).unwrap();
+        assert_eq!(
+            updated
+                .select("example.web", "0.4.5", 150)
+                .unwrap()
+                .documentation,
+            vec![document("r1"), document("r2")]
+        );
+        assert_eq!(
+            directory
+                .inspect_linked_cargo_document_revision("author", amendment)
+                .unwrap()
+                .2,
+            "published"
+        );
+        directory
+            .submit_linked_cargo_document_revision("author", &competing, 107)
+            .unwrap();
+        assert!(directory.latest().unwrap().is_none());
+        assert!(directory.latest_details().unwrap().is_none());
     }
 
     #[test]

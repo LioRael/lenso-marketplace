@@ -189,7 +189,22 @@ The signed source-only snapshot has independent revision, signature domain and
 publication pointer from the portable catalog and release-details snapshots.
 `verify-linked-cargo` reads an exact envelope from stdin using configured public
 trust. An identical retry returns the existing submission; changed content under
-the same Plugin ID/version is rejected. A portable base release with that identity
+the same Plugin ID/version is rejected. To append documentation to an already
+published source-only version, submit the complete linked release JSON with all
+existing fields and documents unchanged, adding only new document identities:
+
+```sh
+lenso-marketplace-publisher operator.json submit-linked-cargo-docs-revision AUTHOR /absolute/revised-linked-release.json
+lenso-marketplace-publisher operator.json inspect-linked-cargo-docs-revision REVIEWER REVISION_ID
+lenso-marketplace-publisher operator.json approve-linked-cargo-docs-revision REVIEWER REVISION_ID EXPECTED_DIGEST POLICY
+lenso-marketplace-publisher operator.json publish-linked-cargo REVIEWER EXPECTED_REVISION 604800 < signing-key.bin
+lenso-marketplace-publisher operator.json export-linked-cargo
+```
+
+The revision is append-only and requires the same publisher ownership and
+reviewer approval as the original release. It does not replace the old signed
+snapshot or check the remote Markdown bytes. Review the exact document digest,
+size and URL separately before publication. A portable base release with that identity
 must instead use the existing release-details channel for a linked distribution.
 The development CLI accepts an exact signed local snapshot and matching `.crate`
 through `lenso app add PLUGIN_ID@VERSION --linked-snapshot ... --trust ... --crate ...`.

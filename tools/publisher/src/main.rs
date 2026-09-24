@@ -27,7 +27,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|submit-details-revision|inspect-details-revision|approve-details-revision|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|backup [...]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|submit-details-revision|inspect-details-revision|approve-details-revision|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|submit-linked-cargo-docs-revision|inspect-linked-cargo-docs-revision|approve-linked-cargo-docs-revision|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|backup [...]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -53,7 +53,10 @@ fn run() -> Result<()> {
         | "approve-details-revision"
         | "submit-linked-cargo"
         | "inspect-linked-cargo"
-        | "approve-linked-cargo" => {
+        | "approve-linked-cargo"
+        | "submit-linked-cargo-docs-revision"
+        | "inspect-linked-cargo-docs-revision"
+        | "approve-linked-cargo-docs-revision" => {
             // These are protected local operator commands, never public actor authentication.
             PublishedDirectory::open(&config.database, &config.catalog_id)?;
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
@@ -217,6 +220,46 @@ fn run() -> Result<()> {
                         now,
                     )?;
                     serde_json::json!({"status":"approved","submission_id":args[3]})
+                }
+                "submit-linked-cargo-docs-revision" => {
+                    ensure!(
+                        args.len() == 4,
+                        "submit-linked-cargo-docs-revision requires AUTHOR RELEASE_JSON"
+                    );
+                    let bytes = fs::read(&args[3])?;
+                    ensure!(
+                        bytes.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                        "linked Cargo release exceeds limit"
+                    );
+                    let release: LinkedCargoRelease = serde_json::from_slice(&bytes)?;
+                    let id =
+                        directory.submit_linked_cargo_document_revision(&args[2], &release, now)?;
+                    let (_, proposal_digest, state) =
+                        directory.inspect_linked_cargo_document_revision(&args[2], id)?;
+                    serde_json::json!({"revision_id":id,"proposal_digest":proposal_digest,"state":state})
+                }
+                "inspect-linked-cargo-docs-revision" => {
+                    ensure!(
+                        args.len() == 4,
+                        "inspect-linked-cargo-docs-revision requires ACTOR REVISION_ID"
+                    );
+                    let (release, proposal_digest, state) = directory
+                        .inspect_linked_cargo_document_revision(&args[2], args[3].parse()?)?;
+                    serde_json::json!({"release":release,"proposal_digest":proposal_digest,"state":state})
+                }
+                "approve-linked-cargo-docs-revision" => {
+                    ensure!(
+                        args.len() == 6,
+                        "approve-linked-cargo-docs-revision requires REVIEWER REVISION_ID EXPECTED_DIGEST POLICY"
+                    );
+                    directory.approve_linked_cargo_document_revision(
+                        &args[2],
+                        args[3].parse()?,
+                        &args[4],
+                        &args[5],
+                        now,
+                    )?;
+                    serde_json::json!({"status":"approved","revision_id":args[3]})
                 }
                 _ => unreachable!(),
             };

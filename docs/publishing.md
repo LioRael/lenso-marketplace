@@ -146,3 +146,11 @@ Bundle. The development CLI can adopt an exact signed linked snapshot with
 this requires a matching published `.crate` and a subsequent Host build.
 `host_provided` integrations require a product-specific Host adapter and are not
 generic `app add` candidates. No author command signs or publishes a release.
+
+Initial versioned Markdown references belong in `documentation` before
+`prepare-linked-cargo`. After publication, the author can propose a complete
+`LinkedCargoRelease` JSON with new documentation identities added and all
+previous release fields and documents unchanged. The operator reviews it with
+`submit-linked-cargo-docs-revision`; this does not republish the `.crate`, fetch
+the Markdown, or rewrite an earlier signed snapshot. See the
+[operator guide](../tools/publisher/docs/operator.md) for the guarded commands.

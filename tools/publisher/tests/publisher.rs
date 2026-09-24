@@ -384,6 +384,12 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
     let crate_path = root.path().join("example-web-plugin-0.4.5.crate");
     let candidate = root.path().join("linked-candidate");
     let key = [29u8; 32];
+    let document = serde_json::json!({
+        "id":"getting-started","revision":"r1","language":"en","topic":"start",
+        "url":"https://example.test/docs/example.web/0.4.5/getting-started/r1.md",
+        "digest":lenso_plugin_catalog::digest(b"# Linked Web"),
+        "size":b"# Linked Web".len(),"media_type":"text/markdown"
+    });
     fs::write(&config, serde_json::to_vec(&serde_json::json!({
         "database":root.path().join("publisher.sqlite3"),"catalog_id":"linked-test","reviewers":["reviewer"],
         "key_id":"operator-key","public_key_hex":hex::encode(SigningKey::from_bytes(&key).verifying_key().as_bytes())
@@ -396,9 +402,16 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         "source_revision":"a".repeat(40),"license":"MIT",
         "registry_url":"https://crates.io",
         "integration":"linked_plugin",
-        "targets":["aarch64-apple-darwin"]
+        "targets":["aarch64-apple-darwin"],
+        "documentation":[document.clone()]
     })).unwrap()).unwrap();
-    lenso_marketplace_publisher::prepare_linked_cargo(&crate_path, &metadata, &candidate).unwrap();
+    let prepared =
+        lenso_marketplace_publisher::prepare_linked_cargo(&crate_path, &metadata, &candidate)
+            .unwrap();
+    assert_eq!(
+        prepared.documentation,
+        vec![serde_json::from_value(document.clone()).unwrap()]
+    );
     lenso_marketplace_publisher::check_linked_cargo(&candidate).unwrap();
     assert!(invoke(&config, &["initialize"], None).status.success());
     assert!(
@@ -452,12 +465,129 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         invoke(&config, &["export-linked-cargo"], None).stdout
     );
     let envelope: serde_json::Value = serde_json::from_slice(&published.stdout).unwrap();
+    let trust = lenso_plugin_catalog::Trust {
+        catalog_id: "linked-test".into(),
+        keys: std::collections::BTreeMap::from([(
+            "operator-key".into(),
+            SigningKey::from_bytes(&key).verifying_key(),
+        )]),
+    };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let signed = lenso_plugin_catalog::linked_cargo::verify(
+        envelope["envelope"].as_str().unwrap().as_bytes(),
+        &trust,
+        None,
+        now,
+    )
+    .unwrap();
+    assert_eq!(
+        signed
+            .select("example.web", "0.4.5", now)
+            .unwrap()
+            .documentation,
+        vec![serde_json::from_value(document).unwrap()]
+    );
+    assert!(signed.select("example.web", "0.4.4", now).is_err());
     let verified = invoke(
         &config,
         &["verify-linked-cargo"],
         Some(envelope["envelope"].as_str().unwrap().as_bytes()),
     );
     assert!(verified.status.success());
+    let mut revised = prepared;
+    revised.documentation.push(
+        serde_json::from_value(serde_json::json!({
+            "id":"getting-started","revision":"r2","language":"en","topic":"start",
+            "url":"https://example.test/docs/example.web/0.4.5/getting-started/r2.md",
+            "digest":lenso_plugin_catalog::digest(b"# Linked Web revised"),
+            "size":b"# Linked Web revised".len(),"media_type":"text/markdown"
+        }))
+        .unwrap(),
+    );
+    let revision_path = root.path().join("revised-linked-release.json");
+    fs::write(&revision_path, serde_json::to_vec(&revised).unwrap()).unwrap();
+    let submitted_revision = invoke(
+        &config,
+        &[
+            "submit-linked-cargo-docs-revision",
+            "author",
+            revision_path.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        submitted_revision.status.success(),
+        "{}",
+        String::from_utf8_lossy(&submitted_revision.stderr)
+    );
+    let revision: serde_json::Value = serde_json::from_slice(&submitted_revision.stdout).unwrap();
+    let revision_id = revision["revision_id"].as_i64().unwrap().to_string();
+    let inspected = invoke(
+        &config,
+        &[
+            "inspect-linked-cargo-docs-revision",
+            "reviewer",
+            &revision_id,
+        ],
+        None,
+    );
+    assert!(inspected.status.success());
+    let inspected: serde_json::Value = serde_json::from_slice(&inspected.stdout).unwrap();
+    assert_eq!(inspected["state"], "awaiting_review");
+    assert_eq!(
+        inspected["release"]["documentation"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(
+        invoke(
+            &config,
+            &[
+                "approve-linked-cargo-docs-revision",
+                "reviewer",
+                &revision_id,
+                revision["proposal_digest"].as_str().unwrap(),
+                "v1",
+            ],
+            None,
+        )
+        .status
+        .success()
+    );
+    let republished = invoke(
+        &config,
+        &["publish-linked-cargo", "reviewer", "1", "3600"],
+        Some(&key),
+    );
+    assert!(
+        republished.status.success(),
+        "{}",
+        String::from_utf8_lossy(&republished.stderr)
+    );
+    let next_envelope: serde_json::Value = serde_json::from_slice(&republished.stdout).unwrap();
+    let updated = lenso_plugin_catalog::linked_cargo::verify(
+        next_envelope["envelope"].as_str().unwrap().as_bytes(),
+        &trust,
+        Some(signed.checkpoint()),
+        now,
+    )
+    .unwrap();
+    assert_eq!(
+        updated
+            .select("example.web", "0.4.5", now)
+            .unwrap()
+            .documentation,
+        revised.documentation
+    );
+    assert_eq!(
+        republished.stdout,
+        invoke(&config, &["export-linked-cargo"], None).stdout
+    );
     assert!(
         !invoke(
             &config,
