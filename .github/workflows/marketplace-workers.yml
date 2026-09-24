@@ -25,5 +25,5 @@ jobs:
       - run: cargo clippy --locked -p lenso-marketplace-workers-host --target wasm32-unknown-unknown -- -D warnings
       - run: pnpm test:workers
       - run: cargo install wasm-bindgen-cli --version 0.2.127 --locked
-      - run: CARGO=cargo pnpm build:workers
+      - run: pnpm build:workers
       - run: pnpm exec wrangler deploy --dry-run --config apps/workers/wrangler.jsonc

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export RUSTUP_TOOLCHAIN="${RUSTUP_TOOLCHAIN:-1.94.0}"
-: "${CARGO:?Set CARGO to the repository Cargo wrapper, or cargo in CI}"
 marketplace_root="$(cd "$(dirname "$0")/.." && pwd)"
 workspace_root="$marketplace_root"
 proof_root="$(mktemp -d "${TMPDIR:-/tmp}/lenso-marketplace-browser.XXXXXX")"
@@ -14,7 +13,10 @@ trap cleanup EXIT
 cd "$workspace_root"
 pnpm build
 # CLI lock synchronization runs offline; fetch the isolated fixture graph first.
-"$CARGO" fetch --locked --manifest-path "$marketplace_root/tests/fixtures/echo/Cargo.toml"
+cargo fetch --locked --manifest-path "$marketplace_root/tests/fixtures/echo/Cargo.toml"
+lenso plugin check --repo-root "$marketplace_root/tests/fixtures/echo"
+lenso plugin dev --repo-root "$marketplace_root/tests/fixtures/echo" --operation execute \
+  --request-json '{"name":"lenso.marketplace.echo","arguments_json":"{\"text\":\"marketplace proof\"}"}'
 lenso plugin pack --repo-root "$marketplace_root/tests/fixtures/echo" --output "$proof_root/echo.lenso-plugin" --json
 # Only the locally built test fixture is extracted here. Production archive
 # ingestion remains gated on the released bounded archive API.
@@ -26,8 +28,15 @@ root = Path(sys.argv[1])
 with ZipFile(root / 'echo.lenso-plugin') as archive:
     archive.extractall(root / 'bundle')
 PY
-public_key="$(MARKETPLACE_BUNDLE_DIRECTORY="$proof_root/bundle" MARKETPLACE_BUNDLE_ARCHIVE="$proof_root/echo.lenso-plugin" "$CARGO" run --locked --manifest-path "$marketplace_root/tests/support/Cargo.toml" --example seed_fixture -- "$proof_root/directory.sqlite3")"
-"$CARGO" build --locked --manifest-path "$marketplace_root/apps/native/Cargo.toml" --message-format=json-render-diagnostics > "$proof_root/build.jsonl"
+MARKETPLACE_BUNDLE_DIRECTORY="$proof_root/bundle" \
+MARKETPLACE_BUNDLE_ARCHIVE="$proof_root/echo.lenso-plugin" \
+cargo test --locked --manifest-path "$marketplace_root/tests/support/Cargo.toml" \
+  --test real_bundle -- --ignored
+public_key="$(MARKETPLACE_BUNDLE_DIRECTORY="$proof_root/bundle" \
+  MARKETPLACE_BUNDLE_ARCHIVE="$proof_root/echo.lenso-plugin" \
+  cargo run --locked --manifest-path "$marketplace_root/tests/support/Cargo.toml" \
+    --example seed_fixture -- "$proof_root/directory.sqlite3")"
+cargo build --locked --manifest-path "$marketplace_root/apps/native/Cargo.toml" --message-format=json-render-diagnostics > "$proof_root/build.jsonl"
 server_binary="$(python3 - "$proof_root/build.jsonl" <<'PY'
 import json,sys
 for line in open(sys.argv[1]):

@@ -37,14 +37,17 @@ their own authoring workspaces. No Console source checkout is needed.
 ```sh
 pnpm install --frozen-lockfile
 pnpm build
-CARGO=cargo pnpm test:native
-CARGO=cargo pnpm test:browser
+pnpm test:native
+pnpm test:browser
 pnpm test:workers
-CARGO=cargo pnpm build:workers
+pnpm build:workers
 ```
 
 Browser acceptance needs `lenso-cli` and Playwright Chromium. Workers builds need
 `wasm32-unknown-unknown` and wasm-bindgen-cli 0.2.127.
+The browser check also verifies the test Plugin's CLI check, execution and
+archive, then exercises real archive review and signed discovery after a
+Directory restart.
 
 ## Run
 
@@ -88,7 +91,7 @@ Install the pinned build tool once, then run its complete local proof:
 
 ```sh
 cargo install worker-build --version 0.8.5 --locked
-CARGO=cargo pnpm test:workers:sdk
+pnpm test:workers:sdk
 ```
 
 That command builds the UI, runs the Rust SDK host against local Miniflare
