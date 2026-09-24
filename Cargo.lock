@@ -1443,6 +1443,7 @@ dependencies = [
  "lenso-app-plan 0.4.1",
  "lenso-capability-http-endpoint",
  "lenso-capability-marketplace-directory",
+ "lenso-capability-marketplace-linked-directory",
  "lenso-kernel",
  "lenso-marketplace-directory-plugin",
  "lenso-marketplace-web-plugin",

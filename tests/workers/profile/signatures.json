@@ -1,0 +1,70 @@
+{
+  "publicKeyDerBase64": "MCowBQYDK2VwAyEAEvhhMcgHU9Y5RWv+kMIRWhTWewgeSPgKHGiA4T/YJCU=",
+  "publicKeyHex": "12f86131c80753d639456bfe90c2115a14d67b081e48f80a1c6880e13fd82425",
+  "envelopes": {
+    "small-prior": {
+      "size": "small",
+      "revision": 1,
+      "issued": 100,
+      "signatureBase64": "Ybhe5JHoCWNMeTAzxZHO0TvGbNgk67zjbEshQXFQmHBPxjVrhtcKNYnVASJOvLAHZO0nOmXotIIAqTztJJcrCQ==",
+      "sha256": "9423953e3027ec92c6f3dabf5f11c12daca6b80b901c1baf8712306a311a242c",
+      "bytes": 1045
+    },
+    "small-target": {
+      "size": "small",
+      "revision": 2,
+      "issued": 100,
+      "signatureBase64": "IEpLyFuG4lEVWOv+Fa4bONnXW0dp/crasOBxrBDVSOmW5PMoFuem35YPhPiTF4LpiCchZpFL6Gcd93Y4L1gjAA==",
+      "sha256": "94ac83ed1f0c164451997b16ec28242c9fcfc68c49e11e573640ad7b21644eae",
+      "bytes": 1045
+    },
+    "small-newer": {
+      "size": "small",
+      "revision": 3,
+      "issued": 100,
+      "signatureBase64": "+fhCApaB+aPbEkBa/aOrqWeLy1wWk2hI5SCkQ9O8qrGI3bWDtChUNOnnLA2fVxSlDJ1qUSlhVl5AKJyDLIDRDw==",
+      "sha256": "70127ab818bd2380c5536fdf6c85608660a99bec5ded105c86cd844ae08cc12a",
+      "bytes": 1045
+    },
+    "small-equivocation": {
+      "size": "small",
+      "revision": 2,
+      "issued": 101,
+      "signatureBase64": "xwR8DPvG+1Ws606SLpHbAJrxbDLnH050MBwOqnEXngR00i/2LPpaergwY0dkHUVXOhh7Pabk8Ql9IDEvJF8VBg==",
+      "sha256": "b5d4fce67eef304d605c72da95d57a0bc8fd160d4d2b8bc62bb563266032742f",
+      "bytes": 1045
+    },
+    "large-prior": {
+      "size": "large",
+      "revision": 1,
+      "issued": 100,
+      "signatureBase64": "4arlXKP7Hvi50EgGUPMSwXFy+ydBRcmS38z4hf8KCO920hCZ6qQmJULQisiDQgQLGAVdiOoiPhfBtAS1t9PBAA==",
+      "sha256": "18def27ee46c9e31c4272ab7c04c5b215d9bca6dc00a922cfe56aabb8e3b63fd",
+      "bytes": 3611713
+    },
+    "large-target": {
+      "size": "large",
+      "revision": 2,
+      "issued": 100,
+      "signatureBase64": "h6qqngjz+FMqqzx2E+ZuMu21qCDR/A36DnU5oAEqihs2JkgWMettpxCy5abcu63SNIGHwGdcq8cSx7s38EKdCw==",
+      "sha256": "ca4e939e8b22a7760ba7824c84ccae4cb83456d5b4a0a9b3f50e86cdfc36be15",
+      "bytes": 3611713
+    },
+    "large-newer": {
+      "size": "large",
+      "revision": 3,
+      "issued": 100,
+      "signatureBase64": "0CWNaa6jF66QkRVBCfPCkUGuXhMymS9yRdI/Vw2W5mdQbBpA8F3DPD6bpJWB6ZWyfhnHkhSrnwQohZKO6mKSAg==",
+      "sha256": "a1799e02d4804fe05cb4373596a61699fe82d9a27bd45236c61eb230bb86ed89",
+      "bytes": 3611713
+    },
+    "large-equivocation": {
+      "size": "large",
+      "revision": 2,
+      "issued": 101,
+      "signatureBase64": "dTXoLZnngN0leKDgUXsWCRhPVsjKdPYaC/SFVF1WdhvNoi7PYqxZWHvtSw0mOC150eXFXhBBU55DE05pXjyIBw==",
+      "sha256": "b3b482591fcc6da27d7ec9e9d7bed2524ec419b62fdf599348150eda20cab9e9",
+      "bytes": 3611713
+    }
+  }
+}

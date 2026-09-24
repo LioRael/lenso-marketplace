@@ -49,7 +49,8 @@ Wrangler's custom build watches the source subdirectories (not generated
 - `apps/workers-sdk-prototype`;
 - `plugins/directory`;
 - `plugins/web`; and
-- `contracts/directory`.
+- `contracts/directory`; and
+- `contracts/linked-directory`.
 
 ## Local proof
 
