@@ -1,12 +1,21 @@
 use super::digest;
 use anyhow::{Context, Result, ensure};
+use flate2::bufread::GzDecoder;
 use serde::Deserialize;
-use std::{collections::BTreeSet, io::Read as _};
+use std::{
+    collections::BTreeSet,
+    io::{Cursor, Read as _},
+};
 
 pub const MAX_NPM_ARCHIVE_BYTES: usize = 32 * 1024 * 1024;
 const MAX_UNPACKED_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRIES: usize = 4096;
 const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
+const MAX_TAR_PADDING_BYTES: u64 = 1024 * 1024;
+const MAX_TAR_BYTES: u64 =
+    MAX_UNPACKED_BYTES + (MAX_ARCHIVE_ENTRIES as u64) * 1024 + MAX_TAR_PADDING_BYTES;
+const SOURCE_LOCK: &str = ".lenso-npm-source.json";
+const SOURCE_ARCHIVE: &str = ".lenso-npm-archive.tgz";
 
 #[derive(Deserialize)]
 struct NpmManifest {
@@ -40,7 +49,21 @@ pub(super) fn verify_npm_archive(
         digest(bytes) == integrity,
         "npm archive digest does not match release"
     );
-    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
+    let mut decoder = GzDecoder::new(Cursor::new(bytes));
+    let mut tar_bytes = Vec::new();
+    decoder
+        .by_ref()
+        .take(MAX_TAR_BYTES + 1)
+        .read_to_end(&mut tar_bytes)?;
+    ensure!(
+        u64::try_from(tar_bytes.len())? <= MAX_TAR_BYTES,
+        "npm archive exceeds total decompressed tar size limit"
+    );
+    ensure!(
+        decoder.into_inner().position() == bytes.len() as u64,
+        "npm archive has trailing compressed data"
+    );
+    let mut archive = tar::Archive::new(tar_bytes.as_slice());
     let mut manifest = None;
     let mut has_bun_lock = false;
     let mut unpacked = 0u64;
@@ -66,10 +89,13 @@ pub(super) fn verify_npm_archive(
             .context("npm archive path is outside its package root")?;
         ensure!(
             !relative.contains('\\')
+                && !relative.chars().any(char::is_control)
                 && relative
                     .split('/')
-                    .all(|component| !matches!(component, "" | "." | "..")),
-            "npm archive path is outside its package root"
+                    .all(|component| !matches!(component, "" | "." | ".." | "node_modules"))
+                && relative != SOURCE_LOCK
+                && relative != SOURCE_ARCHIVE,
+            "npm archive has an invalid or reserved path"
         );
         ensure!(
             paths.insert(path.clone()),
@@ -93,6 +119,12 @@ pub(super) fn verify_npm_archive(
             has_bun_lock = true;
         }
     }
+    let padding = archive.into_inner();
+    ensure!(
+        u64::try_from(padding.len())? <= MAX_TAR_PADDING_BYTES
+            && padding.iter().all(|byte| *byte == 0),
+        "npm archive has nonzero or excessive tar data after end marker"
+    );
     let manifest = manifest.context("npm archive is missing package.json")?;
     ensure!(
         manifest.name == package,
@@ -114,4 +146,84 @@ pub(super) fn verify_npm_archive(
         "npm Bun Plugin archive is missing root bun.lock"
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write as _;
+
+    fn tar_bytes(extra_path: Option<&str>) -> Vec<u8> {
+        let mut builder = tar::Builder::new(Vec::new());
+        let manifest = serde_json::to_vec(&serde_json::json!({
+            "name":"@example/linked", "version":"1.2.3",
+            "lenso":{
+                "pluginId":"example.linked", "releaseVersion":"1.2.3",
+                "runtime":"bun", "rootSlot":"tools"
+            }
+        }))
+        .unwrap();
+        for (path, contents) in [
+            ("package/package.json", manifest.as_slice()),
+            ("package/bun.lock", b"{}\n".as_slice()),
+        ] {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(contents.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, path, Cursor::new(contents))
+                .unwrap();
+        }
+        if let Some(path) = extra_path {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(1);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, path, Cursor::new(b"x"))
+                .unwrap();
+        }
+        builder.into_inner().unwrap()
+    }
+
+    fn gzip(bytes: &[u8]) -> Vec<u8> {
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(bytes).unwrap();
+        encoder.finish().unwrap()
+    }
+
+    fn accepted(bytes: &[u8]) -> bool {
+        verify_npm_archive(
+            bytes,
+            "@example/linked",
+            "1.2.3",
+            "example.linked",
+            "1.2.3",
+            &digest(bytes),
+        )
+        .is_ok()
+    }
+
+    #[test]
+    fn rejects_archive_tails_and_engine_reserved_paths() {
+        let tar = tar_bytes(None);
+        let mut archive = gzip(&tar);
+        assert!(accepted(&archive));
+
+        archive.extend_from_slice(b"hidden gzip tail");
+        assert!(!accepted(&archive));
+        let mut nonzero_tar_tail = tar;
+        nonzero_tar_tail.push(b'x');
+        assert!(!accepted(&gzip(&nonzero_tar_tail)));
+
+        for path in [
+            "package/node_modules/hidden.js",
+            "package/.lenso-npm-source.json",
+            "package/.lenso-npm-archive.tgz",
+            "package/bad\nname.js",
+        ] {
+            assert!(!accepted(&gzip(&tar_bytes(Some(path)))), "{path:?}");
+        }
+    }
 }
