@@ -2,16 +2,18 @@
 //! controlled by the OS or an approved CI environment, never a public request.
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
+#[cfg(feature = "package-publication")]
+use lenso_marketplace_directory_plugin::publishing::MAX_NPM_ARCHIVE_BYTES;
 use lenso_marketplace_directory_plugin::publishing::release_content::{self, ReleaseContent};
-use lenso_marketplace_directory_plugin::publishing::{
-    Directory, MAX_NPM_ARCHIVE_BYTES, PublishedDirectory,
-};
-use lenso_plugin_catalog::{
-    ReleaseDetails, digest, linked_cargo::LinkedCargoRelease, package::PackageRelease,
-};
+use lenso_marketplace_directory_plugin::publishing::{Directory, PublishedDirectory};
+#[cfg(feature = "package-publication")]
+use lenso_plugin_catalog::package::PackageRelease;
+use lenso_plugin_catalog::{ReleaseDetails, digest, linked_cargo::LinkedCargoRelease};
 use serde::Deserialize;
+#[cfg(feature = "package-publication")]
+use std::collections::BTreeMap;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeSet,
     fs,
     io::{self, Read, Write},
     path::PathBuf,
@@ -32,7 +34,20 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|submit-details-revision|inspect-details-revision|approve-details-revision|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|submit-linked-cargo-docs-revision|inspect-linked-cargo-docs-revision|approve-linked-cargo-docs-revision|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|submit-package|inspect-package|approve-package|publish-package|export-package|verify-package|release-content-base|submit-release-content|inspect-release-content|approve-release-content|publish-release-content|export-release-content|verify-release-content|backup [...]"
+        "usage: lenso-marketplace-publisher CONFIG OPERATION [...]; package-only operations require --features package-publication"
+    );
+    ensure!(
+        cfg!(feature = "package-publication")
+            || !matches!(
+                args[1].as_str(),
+                "submit-package"
+                    | "inspect-package"
+                    | "approve-package"
+                    | "publish-package"
+                    | "export-package"
+                    | "verify-package"
+            ),
+        "package-only publication is not available in this build; the package-publication feature requires the newer signed package protocol"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -237,6 +252,7 @@ fn run() -> Result<()> {
                         directory.inspect_linked_cargo_submission(&args[2], id)?;
                     serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
                 }
+                #[cfg(feature = "package-publication")]
                 "submit-package" => {
                     ensure!(
                         args.len() >= 6 && (args.len() - 4) % 2 == 0,
@@ -273,6 +289,7 @@ fn run() -> Result<()> {
                         directory.inspect_package_submission(&args[2], id)?;
                     serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
                 }
+                #[cfg(feature = "package-publication")]
                 "inspect-package" => {
                     ensure!(
                         args.len() == 4,
@@ -282,6 +299,7 @@ fn run() -> Result<()> {
                         directory.inspect_package_submission(&args[2], args[3].parse()?)?;
                     serde_json::json!({"release":release,"proposal_digest":proposal_digest,"state":state})
                 }
+                #[cfg(feature = "package-publication")]
                 "approve-package" => {
                     ensure!(
                         args.len() == 6,
@@ -493,6 +511,7 @@ fn run() -> Result<()> {
             let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
+        #[cfg(feature = "package-publication")]
         "verify-package" => {
             ensure!(args.len() == 2, "verify-package accepts no extra arguments");
             let mut envelope = Vec::new();
@@ -603,6 +622,7 @@ fn run() -> Result<()> {
                 .context("no linked Cargo publication exists")?;
             emit(envelope.as_bytes())?;
         }
+        #[cfg(feature = "package-publication")]
         "export-package" => {
             ensure!(args.len() == 2, "export-package accepts no extra arguments");
             let view = PublishedDirectory::open(&config.database, &config.catalog_id)?;
@@ -688,14 +708,21 @@ fn run() -> Result<()> {
                     &key,
                 )?
             } else if args[1] == "publish-package" {
-                directory.publish_package(
-                    &args[2],
-                    expected,
-                    now,
-                    expires_at,
-                    &config.key_id,
-                    &key,
-                )?
+                #[cfg(feature = "package-publication")]
+                {
+                    directory.publish_package(
+                        &args[2],
+                        expected,
+                        now,
+                        expires_at,
+                        &config.key_id,
+                        &key,
+                    )?
+                }
+                #[cfg(not(feature = "package-publication"))]
+                {
+                    anyhow::bail!("package-only publication is not available in this build")
+                }
             } else {
                 directory.publish(&args[2], expected, now, expires_at, &config.key_id, &key)?
             };

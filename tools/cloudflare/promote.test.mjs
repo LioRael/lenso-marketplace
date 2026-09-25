@@ -5,6 +5,7 @@ import {
   promotePublication,
   promoteReleaseDetails,
   promoteLinkedCargo,
+  promotePackage,
   promoteReleaseContent,
 } from "./promote.mjs";
 
@@ -174,6 +175,14 @@ test("linked Cargo releases use a separate pointer and object namespace", async 
   const receipt = await promoteLinkedCargo(input(1));
   assert.equal(receipt.status, "published");
   assert.match(receipt.object_key, /^linked-cargo\//u);
+  assert.equal(state.pointer.revision, 1);
+});
+
+test("package releases use a separate pointer and object namespace", async () => {
+  const { state, input } = storage("marketplace_packages");
+  const receipt = await promotePackage(input(1));
+  assert.equal(receipt.status, "published");
+  assert.match(receipt.object_key, /^packages\//u);
   assert.equal(state.pointer.revision, 1);
 });
 

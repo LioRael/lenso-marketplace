@@ -8,6 +8,7 @@ import {
   promotePublication,
   promoteReleaseDetails,
   promoteLinkedCargo,
+  promotePackage,
   promoteReleaseContent,
 } from "./promote.mjs";
 
@@ -40,10 +41,11 @@ const main = async () => {
   // authoritative durable database, not a user-supplied envelope file.
   const details = config.kind === "release-details";
   const linked = config.kind === "linked-cargo";
+  const packaged = config.kind === "package";
   const content = config.kind === "release-content";
   assert.ok(
-    config.kind === undefined || details || linked || content,
-    "kind must be omitted, release-details, linked-cargo or release-content"
+    config.kind === undefined || details || linked || packaged || content,
+    "kind must be omitted, release-details, linked-cargo, package or release-content"
   );
   let exportOperation = "export";
   let verifyOperation = "verify";
@@ -56,6 +58,10 @@ const main = async () => {
     exportOperation = "export-linked-cargo";
     verifyOperation = "verify-linked-cargo";
     promote = promoteLinkedCargo;
+  } else if (packaged) {
+    exportOperation = "export-package";
+    verifyOperation = "verify-package";
+    promote = promotePackage;
   } else if (content) {
     exportOperation = "export-release-content";
     verifyOperation = "verify-release-content";

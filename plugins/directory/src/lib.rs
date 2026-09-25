@@ -8,6 +8,7 @@ use crate::publishing::PublishedDirectory;
 use crate::storage::PublishedStorage;
 use lenso_capability_marketplace_directory as contract;
 use lenso_capability_marketplace_linked_directory as linked_contract;
+use lenso_capability_marketplace_package_directory as package_contract;
 use lenso_capability_marketplace_release_content_directory as content_contract;
 use lenso_kernel::{
     DeactivateContext, InvocationContext, NativeRequestFuture, PrepareContext, RuntimeFailure,
@@ -103,9 +104,54 @@ impl lenso::Lifecycle for MarketplaceDirectory {
 #[lenso::provides(
     contract::Directory,
     linked_contract::LinkedDirectory,
+    package_contract::PackageDirectory,
     content_contract::ReleaseContentDirectory
 )]
 impl MarketplaceDirectory {
+    fn read_package(
+        &self,
+        _context: InvocationContext,
+        _request: package_contract::ReadPackageRequest,
+    ) -> NativeRequestFuture<package_contract::PackageDirectory> {
+        if !self.ready.get() {
+            return Box::pin(async {
+                Err(RuntimeFailure::Unavailable {
+                    capability: package_contract::CAPABILITY_ID,
+                })
+            });
+        }
+        if let Some(storage) = &self.storage {
+            let storage = storage.clone();
+            let catalog = self.config.catalog_id.clone();
+            return Box::pin(async move {
+                match storage.published_package(&catalog).await.map_err(failure)? {
+                    Some(envelope) => Ok(Ok(package_contract::ReadPackageResponse {
+                        envelope_json: envelope.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(package_contract::ReadPackageError::NotPublished)),
+                }
+            });
+        }
+        #[cfg(feature = "native")]
+        let result = match self.reader.borrow().as_ref() {
+            None => Err(RuntimeFailure::Unavailable {
+                capability: package_contract::CAPABILITY_ID,
+            }),
+            Some(reader) => reader
+                .latest_package()
+                .map_err(failure)
+                .and_then(|snapshot| match snapshot {
+                    Some(envelope_json) => Ok(Ok(package_contract::ReadPackageResponse {
+                        envelope_json: envelope_json.try_into().map_err(failure)?,
+                    })),
+                    None => Ok(Err(package_contract::ReadPackageError::NotPublished)),
+                }),
+        };
+        #[cfg(not(feature = "native"))]
+        let result = Err(failure("event storage unavailable"));
+        Box::pin(async move { result })
+    }
+
     fn read_release_content(
         &self,
         _context: InvocationContext,

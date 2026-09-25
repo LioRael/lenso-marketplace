@@ -244,6 +244,13 @@ export const promoteLinkedCargo = (input) =>
     table: "marketplace_linked_cargo",
   });
 
+export const promotePackage = (input) =>
+  promoteWithTarget({
+    ...input,
+    objectPrefix: "packages",
+    table: "marketplace_packages",
+  });
+
 export const promoteReleaseContent = (input) =>
   promoteWithTarget({
     ...input,

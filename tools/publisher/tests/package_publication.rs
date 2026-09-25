@@ -1,3 +1,5 @@
+#![cfg(feature = "package-publication")]
+
 use ed25519_dalek::SigningKey;
 use lenso_plugin_catalog::{
     Availability, Distribution, DistributionKind, Trust, digest,
@@ -26,19 +28,39 @@ fn invoke(config: &Path, args: &[&str], input: Option<&[u8]>) -> Output {
     child.wait_with_output().unwrap()
 }
 
-fn archive(name: &str, version: &str) -> Vec<u8> {
+fn archive_with_manifest(manifest: serde_json::Value) -> Vec<u8> {
     let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(
         Vec::new(),
         flate2::Compression::default(),
     ));
-    let manifest = serde_json::to_vec(&serde_json::json!({"name":name,"version":version})).unwrap();
+    let manifest = serde_json::to_vec(&manifest).unwrap();
     let mut header = tar::Header::new_gnu();
     header.set_size(manifest.len() as u64);
     header.set_mode(0o644);
     header.set_cksum();
     tar.append_data(&mut header, "package/package.json", Cursor::new(manifest))
         .unwrap();
+    let lock = b"{}\n";
+    let mut header = tar::Header::new_gnu();
+    header.set_size(lock.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append_data(&mut header, "package/bun.lock", Cursor::new(lock))
+        .unwrap();
     tar.into_inner().unwrap().finish().unwrap()
+}
+
+fn archive(name: &str, version: &str) -> Vec<u8> {
+    archive_with_manifest(serde_json::json!({
+        "name":name,
+        "version":version,
+        "lenso":{
+            "pluginId":"example.notes",
+            "releaseVersion":"1.2.3",
+            "runtime":"bun",
+            "rootSlot":"tools"
+        }
+    }))
 }
 
 fn release(integrity: &str) -> PackageRelease {
@@ -123,6 +145,33 @@ fn operator_reviews_and_signs_exact_npm_only_release() {
     );
     let path = archive_path.to_str().unwrap();
     let release_file = release_path.to_str().unwrap();
+    let non_plugin_archive = home.path().join("non-plugin.tgz");
+    let non_plugin_bytes = archive_with_manifest(serde_json::json!({
+        "name":"@example/notes",
+        "version":"4.5.6"
+    }));
+    fs::write(&non_plugin_archive, &non_plugin_bytes).unwrap();
+    fs::write(
+        &release_path,
+        serde_json::to_vec(&release(&digest(&non_plugin_bytes))).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        !invoke(
+            &config,
+            &[
+                "submit-package",
+                "author",
+                release_file,
+                "npm",
+                non_plugin_archive.to_str().unwrap()
+            ],
+            None,
+        )
+        .status
+        .success()
+    );
+    fs::write(&release_path, serde_json::to_vec(&candidate).unwrap()).unwrap();
     assert!(
         !invoke(
             &config,

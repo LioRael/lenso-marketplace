@@ -218,9 +218,11 @@ the `PackageRelease` schema from the new `lenso-plugin-catalog::package` module:
 one exact Plugin ID/version, publisher, source commit, and one to sixteen npm
 distributions. Each distribution has an ID, exact npm name and version,
 credential-free HTTPS registry URL, and SHA-256 `.tgz` digest. The current
-Marketplace dependency pin predates this protocol. This operator path is a
-local candidate until that Rust commit is available remotely and the Market
-manifest and lock are advanced together.
+Marketplace dependency pin predates this protocol. Package-only operator
+commands are disabled in the default build. After the signed package protocol
+is remotely available, update the Market manifest and lock together, then
+build the publisher with `--features package-publication`. No local path
+override belongs in either committed dependency file.
 
 ```sh
 lenso-marketplace-publisher operator.json submit-package AUTHOR /absolute/release.json npm /absolute/package.tgz
@@ -231,15 +233,20 @@ lenso-marketplace-publisher operator.json export-package
 ```
 
 For multiple distributions, append one `ID ARCHIVE` pair per distribution.
-Submission checks each bounded archive's SHA-256 and `package/package.json`
-name/version before any database write. The reviewer must independently check
+Submission checks each bounded archive's SHA-256, `package/package.json`
+name/version, `lenso.pluginId`, `lenso.releaseVersion`, `lenso.runtime=bun`,
+nonempty `lenso.rootSlot`, and root `bun.lock` before any database write. The reviewer must independently check
 that the named registry serves those same bytes: local archive inspection does
 not establish registry provenance or availability. The signed snapshot has its
 own revision and signature domain; `verify-package` reads an exact envelope
 from stdin with configured public trust. The publisher rejects reuse of any
 Plugin ID/version already recorded in Portable, linked Cargo, or package-only
-submission history. Package publication remains local here: no public
-directory read route, App installation, upload, or deployment is implied.
+submission history. The independent public read path is
+`/api/marketplace/v1/package`; it serves the exact signed envelope through
+`lenso.marketplace.package-directory@1` even when the operator feature is
+disabled. It returns unpublished until an authorized snapshot exists. App
+adoption, registry availability, remote promotion, and deployment require
+separate evidence.
 
 ## Optional signed release content
 

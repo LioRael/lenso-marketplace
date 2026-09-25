@@ -62,6 +62,11 @@ pub async fn start(config: &Config) -> anyhow::Result<(NativeApp, SocketAddr)> {
         ),
         HostBinding::new(
             PluginInstanceId::new("lenso.marketplace.web", "default"),
+            lenso_capability_marketplace_package_directory::CAPABILITY_ID,
+            "marketplace-directories",
+        ),
+        HostBinding::new(
+            PluginInstanceId::new("lenso.marketplace.web", "default"),
             lenso_capability_marketplace_release_content_directory::CAPABILITY_ID,
             "marketplace-directories",
         ),

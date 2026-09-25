@@ -100,6 +100,13 @@ impl lenso_marketplace_directory_plugin::storage::PublishedStorage for Storage {
         ))
     }
 
+    fn published_package<'a>(
+        &'a self,
+        catalog: &'a str,
+    ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
+        Box::pin(self.invoke("published_package", serde_json::json!({"catalog":catalog})))
+    }
+
     fn published_release_content<'a>(
         &'a self,
         catalog: &'a str,
@@ -246,6 +253,11 @@ pub async fn handle_http(input: String, scope: JsValue) -> Result<String, JsValu
         HostBinding::new(
             PluginInstanceId::new("lenso.marketplace.web", "default"),
             lenso_capability_marketplace_linked_directory::CAPABILITY_ID,
+            "marketplace-directories",
+        ),
+        HostBinding::new(
+            PluginInstanceId::new("lenso.marketplace.web", "default"),
+            lenso_capability_marketplace_package_directory::CAPABILITY_ID,
             "marketplace-directories",
         ),
         HostBinding::new(

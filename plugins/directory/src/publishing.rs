@@ -14,11 +14,13 @@ use std::{
 
 mod details_revision;
 mod linked_cargo;
+#[cfg(feature = "package-publication")]
 mod package;
 pub mod release_content;
 mod release_content_source;
 use details_revision::ensure_additive_documents;
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
+#[cfg(feature = "package-publication")]
 pub use package::MAX_NPM_ARCHIVE_BYTES;
 
 pub struct Directory {

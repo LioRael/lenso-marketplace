@@ -12,9 +12,26 @@ const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
 struct NpmManifest {
     name: String,
     version: String,
+    lenso: NpmPluginMetadata,
 }
 
-fn verify_npm_archive(bytes: &[u8], package: &str, version: &str, integrity: &str) -> Result<()> {
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NpmPluginMetadata {
+    plugin_id: String,
+    release_version: String,
+    runtime: String,
+    root_slot: String,
+}
+
+fn verify_npm_archive(
+    bytes: &[u8],
+    package: &str,
+    version: &str,
+    plugin_id: &str,
+    release_version: &str,
+    integrity: &str,
+) -> Result<()> {
     ensure!(
         !bytes.is_empty() && bytes.len() <= MAX_NPM_ARCHIVE_BYTES,
         "npm archive size exceeds limit"
@@ -25,6 +42,7 @@ fn verify_npm_archive(bytes: &[u8], package: &str, version: &str, integrity: &st
     );
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
     let mut manifest = None;
+    let mut has_bun_lock = false;
     let mut unpacked = 0u64;
     let mut count = 0usize;
     let mut paths = BTreeSet::new();
@@ -71,6 +89,8 @@ fn verify_npm_archive(bytes: &[u8], package: &str, version: &str, integrity: &st
             let parsed: NpmManifest =
                 serde_json::from_slice(&contents).context("invalid npm package.json")?;
             manifest = Some(parsed);
+        } else if relative == "bun.lock" {
+            has_bun_lock = true;
         }
     }
     let manifest = manifest.context("npm archive is missing package.json")?;
@@ -81,6 +101,17 @@ fn verify_npm_archive(bytes: &[u8], package: &str, version: &str, integrity: &st
     ensure!(
         manifest.version == version,
         "npm archive package version does not match release"
+    );
+    ensure!(
+        manifest.lenso.plugin_id == plugin_id
+            && manifest.lenso.release_version == release_version
+            && manifest.lenso.runtime == "bun"
+            && !manifest.lenso.root_slot.trim().is_empty(),
+        "npm archive Lenso Bun Plugin identity does not match release"
+    );
+    ensure!(
+        has_bun_lock,
+        "npm Bun Plugin archive is missing root bun.lock"
     );
     Ok(())
 }
@@ -112,6 +143,8 @@ impl Directory {
                 bytes,
                 &distribution.package,
                 &distribution.version,
+                &release.plugin_id,
+                &release.version,
                 distribution
                     .integrity
                     .as_deref()

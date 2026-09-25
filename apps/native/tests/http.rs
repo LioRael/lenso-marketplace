@@ -120,6 +120,26 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
                     .revision,
                 1
             );
+            // This route exposes exact operator-owned bytes. Consumer signature
+            // verification remains a separate trust boundary.
+            let package_bytes = b"{\"package\":\"exact\"}";
+            rusqlite::Connection::open(&config.directory_database)
+                .unwrap()
+                .execute(
+                    "INSERT INTO package_snapshots(revision,envelope) VALUES(1,?1)",
+                    [package_bytes.as_slice()],
+                )
+                .unwrap();
+            let package_response = client
+                .get(format!("http://{address}/api/marketplace/v1/package"))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(package_response.status(), 200);
+            assert_eq!(
+                package_response.bytes().await.unwrap().as_ref(),
+                package_bytes
+            );
             publisher
                 .claim_namespace("reviewer", "example", "publisher", "author", now)
                 .unwrap();

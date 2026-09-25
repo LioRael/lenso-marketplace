@@ -61,7 +61,7 @@ same binary and configured trust, then invokes conditional promotion against D1
 REST and R2 S3. Run this command on the protected operator host, outside the
 public Worker. It never initializes a database, signs a new revision or accepts
 an arbitrary envelope file. First use the matching Rust `publish`,
-`publish-details`, `publish-linked-cargo` or `publish-release-content` operation
+`publish-details`, `publish-linked-cargo`, `publish-package` or `publish-release-content` operation
 to commit an authorized publication; after a network failure, reconcile before
 repeating promotion. Do not publish another revision just to retry transport.
 
@@ -98,6 +98,15 @@ this JavaScript adapter does not reinterpret or re-sign the envelope. Existing
 portable (`kind` omitted), `release-details` and `linked-cargo` kinds retain
 their own pointers and object namespaces. A successful v2 promotion does not
 update them or `marketplace_accepted`.
+
+For npm-only package releases, set `"kind": "package"` and use a publisher
+built with `--features package-publication` after the signed Rust package
+protocol is available in the Market lock. The protected adapter exports and
+verifies the exact signed package envelope before conditionally promoting it
+under `packages/` through `marketplace_packages`. Apply
+`apps/workers/migrations/d1/0005_packages.sql` explicitly first, and review
+the full prior pointer or confirmed empty slot. This adds no public writer
+route; the read-only Worker serves `/api/marketplace/v1/package`.
 
 Apply `apps/workers/migrations/d1/0004_release_content.sql` explicitly to the
 selected D1 database before first v2 promotion. The promoter deliberately does

@@ -8,6 +8,7 @@ members = [
   "plugins/web",
   "contracts/directory",
   "contracts/linked-directory",
+  "contracts/package-directory",
   "contracts/release-content-directory",
   "tools/publisher",
   "tests/support",
