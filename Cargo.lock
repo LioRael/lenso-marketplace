@@ -1123,9 +1123,9 @@ dependencies = [
 
 [[package]]
 name = "lenso-app-plan"
-version = "0.4.1"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bae6e028eab9a55cd6562e332867c3378a0d97a68cd33d3d28e4a67db100adc3"
+checksum = "ad6ffe6d1ffffa3a66b47f02506578cc6a8d25ff35d8bb3768bbbf5ffcd42f99"
 dependencies = [
  "serde",
  "serde_json",
@@ -1134,8 +1134,8 @@ dependencies = [
 
 [[package]]
 name = "lenso-app-plan"
-version = "0.4.5"
-source = "git+https://github.com/LioRael/lenso.git?rev=8e6eb5eb9f468959eea713eab5f20592dfe65a71#8e6eb5eb9f468959eea713eab5f20592dfe65a71"
+version = "0.4.6"
+source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
 dependencies = [
  "serde",
  "serde_json",
@@ -1252,7 +1252,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "jsonschema",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-plugin-bundle 0.4.2",
  "rustix",
  "semver",
@@ -1322,7 +1322,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c536ea88ba9579dfd31d7074b8758b8a4d90e760cfecf4db22dea2c85425147"
 dependencies = [
  "futures",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1333,7 +1333,7 @@ dependencies = [
  "clap",
  "ed25519-dalek",
  "flate2",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-capability-http-endpoint",
  "lenso-capability-marketplace-directory",
  "lenso-capability-marketplace-linked-directory",
@@ -1432,7 +1432,7 @@ dependencies = [
  "futures",
  "http",
  "js-sys",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-capability-http-endpoint",
  "lenso-capability-marketplace-directory",
  "lenso-capability-marketplace-linked-directory",
@@ -1459,7 +1459,7 @@ dependencies = [
  "futures",
  "http",
  "js-sys",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-capability-http-endpoint",
  "lenso-capability-marketplace-directory",
  "lenso-capability-marketplace-linked-directory",
@@ -1485,7 +1485,7 @@ checksum = "5a16bb1fd1e5da236fb6361b026b79ac11d0674254ef1ff4dfda811aa75c0e8c"
 dependencies = [
  "futures",
  "inventory",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-kernel",
  "lenso-native-adapter-macros",
  "lenso-plugin-authoring",
@@ -1520,7 +1520,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24d188a7be42e1ee73f44444cfb0042eb468877d36ee4ec55149502a526cc5b3"
 dependencies = [
  "hex",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver",
  "serde",
  "serde_json",
@@ -1533,16 +1533,18 @@ dependencies = [
 
 [[package]]
 name = "lenso-plugin-bundle"
-version = "0.5.1"
-source = "git+https://github.com/LioRael/lenso.git?rev=8e6eb5eb9f468959eea713eab5f20592dfe65a71#8e6eb5eb9f468959eea713eab5f20592dfe65a71"
+version = "0.6.1"
+source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
 dependencies = [
+ "flate2",
  "hex",
- "lenso-app-plan 0.4.5",
+ "lenso-app-plan 0.4.6 (git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b)",
  "lenso-process-protocol",
  "semver",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "tar",
  "tempfile",
  "toml",
  "wasmparser",
@@ -1552,13 +1554,13 @@ dependencies = [
 [[package]]
 name = "lenso-plugin-catalog"
 version = "0.1.2"
-source = "git+https://github.com/LioRael/lenso.git?rev=8e6eb5eb9f468959eea713eab5f20592dfe65a71#8e6eb5eb9f468959eea713eab5f20592dfe65a71"
+source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
 dependencies = [
  "anyhow",
  "base64",
  "ed25519-dalek",
  "hex",
- "lenso-plugin-bundle 0.5.1",
+ "lenso-plugin-bundle 0.6.1",
  "semver",
  "serde",
  "serde_json",
@@ -1569,7 +1571,7 @@ dependencies = [
 [[package]]
 name = "lenso-process-protocol"
 version = "0.2.3"
-source = "git+https://github.com/LioRael/lenso.git?rev=8e6eb5eb9f468959eea713eab5f20592dfe65a71#8e6eb5eb9f468959eea713eab5f20592dfe65a71"
+source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
 dependencies = [
  "base64",
  "serde",
@@ -1585,7 +1587,7 @@ checksum = "0d205c5672e7916b95caa4ac36c730005a7baf04e0c224ba4279efa3d04ea572"
 dependencies = [
  "cpu-time",
  "futures",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-kernel",
  "tokio",
 ]
@@ -1598,7 +1600,7 @@ checksum = "1890cbb0b2cd544d4d412fc1330ad6a0760bb2b16b6ac46e26a50f6a98c910b7"
 dependencies = [
  "futures",
  "hex",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-kernel",
  "serde",
  "serde_json",
@@ -1620,7 +1622,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "lenso",
- "lenso-app-plan 0.4.1",
+ "lenso-app-plan 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lenso-capability-http-endpoint",
  "lenso-capability-http-stream-endpoint",
  "lenso-capability-websocket-endpoint",
