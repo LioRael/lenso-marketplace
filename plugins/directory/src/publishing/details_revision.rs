@@ -1,6 +1,6 @@
 //! Append-only documentation metadata amendments for an exact published release.
 //! The initial release-details submission and every signed snapshot remain intact.
-use super::{Directory, Release, ReleaseDetails, digest};
+use super::{Directory, Release, ReleaseDetails, digest, owns_plugin_namespace};
 use anyhow::{Result, bail, ensure};
 use lenso_plugin_catalog::linked_cargo::LinkedCargoRelease;
 use rusqlite::{OptionalExtension as _, Transaction, TransactionBehavior, params};
@@ -88,11 +88,8 @@ impl Directory {
             base_state == "published",
             "release details are not published"
         );
-        let owns_namespace: bool = transaction.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
-            |row| row.get(0),
-        )?;
+        let owns_namespace =
+            owns_plugin_namespace(&transaction, &publisher, actor, &details.plugin_id)?;
         ensure!(owns_namespace, "publisher does not own this namespace");
         let latest: Option<(i64, String, String, String)> = transaction
             .query_row(
@@ -151,16 +148,13 @@ impl Directory {
                 [amendment],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )?;
-        let owner: bool = self.connection.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
-            |row| row.get(0),
-        )?;
+        let details: ReleaseDetails = serde_json::from_str(&body)?;
+        let owner = owns_plugin_namespace(&self.connection, &publisher, actor, &details.plugin_id)?;
         ensure!(
             owner || self.reviewers.contains(actor),
             "revision access denied"
         );
-        Ok((serde_json::from_str(&body)?, digest, state))
+        Ok((details, digest, state))
     }
 
     pub fn approve_details_revision(

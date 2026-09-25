@@ -29,6 +29,21 @@ pub struct Directory {
     catalog_id: String,
 }
 
+fn owns_plugin_namespace(
+    connection: &Connection,
+    publisher: &str,
+    actor: &str,
+    plugin_id: &str,
+) -> Result<bool> {
+    let claims: Vec<String> = connection
+        .prepare("SELECT namespace FROM namespaces WHERE publisher=?1 AND actor=?2")?
+        .query_map(params![publisher, actor], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(claims
+        .iter()
+        .any(|namespace| plugin_id.starts_with(&format!("{namespace}."))))
+}
+
 /// Read-only projection for the public directory Plugin. Opening this handle never
 /// creates a database, schema, namespace, submission or signing key.
 #[derive(Debug)]
@@ -405,11 +420,8 @@ impl Directory {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let publisher = published_base_publisher(&transaction, details)?;
-        let owns_namespace: bool = transaction.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
-            |row| row.get(0),
-        )?;
+        let owns_namespace =
+            owns_plugin_namespace(&transaction, &publisher, actor, &details.plugin_id)?;
         ensure!(owns_namespace, "publisher does not own this namespace");
         let body = serde_json::to_string(details)?;
         let body_digest = digest(body.as_bytes());
@@ -451,16 +463,13 @@ impl Directory {
                 [submission],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )?;
-        let owner: bool = self.connection.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
-            |row| row.get(0),
-        )?;
+        let details: ReleaseDetails = serde_json::from_str(&body)?;
+        let owner = owns_plugin_namespace(&self.connection, &publisher, actor, &details.plugin_id)?;
         ensure!(
             owner || self.reviewers.contains(actor),
             "release details access denied"
         );
-        Ok((serde_json::from_str(&body)?, digest, state))
+        Ok((details, digest, state))
     }
 
     pub fn approve_details(
@@ -775,6 +784,64 @@ mod tests {
             directory
                 .insert_verified("author", &release(), 101)
                 .is_err()
+        );
+    }
+    #[test]
+    fn release_details_reads_and_writes_require_the_plugins_namespace() {
+        let home = tempfile::tempdir().unwrap();
+        let mut directory = Directory::open(
+            &home.path().join("directory.db"),
+            "test",
+            BTreeSet::from(["reviewer".into()]),
+        )
+        .unwrap();
+        directory
+            .claim_namespace("reviewer", "example.alpha", "publisher", "alice", 100)
+            .unwrap();
+        directory
+            .claim_namespace("reviewer", "example.beta", "publisher", "bob", 100)
+            .unwrap();
+        let mut base = release();
+        base.plugin_id = "example.alpha.echo".into();
+        let base_id = directory.insert_verified("alice", &base, 101).unwrap();
+        let (_, base_digest, _) = directory.inspect_submission("reviewer", base_id).unwrap();
+        directory
+            .approve("reviewer", base_id, &base_digest, "v1", 102)
+            .unwrap();
+        let key = SigningKey::from_bytes(&[17; 32]);
+        directory
+            .publish("reviewer", 0, 103, 200, "test-key", &key)
+            .unwrap();
+
+        let details = details(&base);
+        assert!(directory.submit_details("bob", &details, 104).is_err());
+        let id = directory.submit_details("alice", &details, 104).unwrap();
+        assert!(directory.inspect_details_submission("bob", id).is_err());
+        let (_, details_digest, _) = directory
+            .inspect_details_submission("reviewer", id)
+            .unwrap();
+        directory
+            .approve_details("reviewer", id, &details_digest, "v1", 105)
+            .unwrap();
+        directory
+            .publish_details("reviewer", 0, 106, 200, "test-key", &key)
+            .unwrap();
+
+        let mut amendment = details;
+        amendment.documentation.push(document("r1"));
+        assert!(
+            directory
+                .submit_details_revision("bob", &amendment, 107)
+                .is_err()
+        );
+        let revision = directory
+            .submit_details_revision("alice", &amendment, 107)
+            .unwrap();
+        assert!(directory.inspect_details_revision("bob", revision).is_err());
+        assert!(
+            directory
+                .inspect_details_revision("reviewer", revision)
+                .is_ok()
         );
     }
     #[test]
