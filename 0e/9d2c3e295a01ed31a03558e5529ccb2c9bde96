@@ -1,0 +1,22 @@
+plugins/directory/src/publishing.rs
+  s_7d146975368699::t_20dd7ecd4e529c 790-847
+  s_7d146975368699::t_07709105a62b35 32-46,423-424,466-467,472
+plugins/directory/src/publishing/details_revision.rs
+  s_7d146975368699::t_07709105a62b35 3,91-92,151-152,157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e9d2c3e295a01ed31a03558e5529ccb2c9bde96",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
