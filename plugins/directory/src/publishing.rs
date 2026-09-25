@@ -18,7 +18,7 @@ mod linked_cargo;
 mod package;
 pub mod release_content;
 mod release_content_source;
-use details_revision::ensure_additive_documents;
+use details_revision::{ensure_additive_documents, published_base_publisher};
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
 #[cfg(feature = "package-publication")]
 pub use package::MAX_NPM_ARCHIVE_BYTES;
@@ -404,17 +404,7 @@ impl Directory {
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let (base_body, publisher, base_state): (String, String, String) = transaction.query_row(
-            "SELECT body,publisher,state FROM submissions WHERE identity=?1",
-            [&identity],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )?;
-        ensure!(
-            base_state == "published",
-            "release details require an already published base release"
-        );
-        let base: Release = serde_json::from_str(&base_body)?;
-        details.validate_against(&base)?;
+        let publisher = published_base_publisher(&transaction, details)?;
         let owns_namespace: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
             params![publisher, actor],
@@ -595,17 +585,21 @@ impl Directory {
             current == i64::try_from(expected_revision)?,
             "release details revision changed; read publication result"
         );
-        let bodies: Vec<(String, String)> = transaction
-            .prepare("SELECT body,digest FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
-            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        let bodies: Vec<(String, String, String)> = transaction
+            .prepare("SELECT body,digest,publisher FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
             .collect::<rusqlite::Result<_>>()?;
         let mut releases = BTreeMap::<String, (ReleaseDetails, String)>::new();
-        for (body, reviewed_digest) in &bodies {
+        for (body, reviewed_digest, publisher) in &bodies {
             ensure!(
                 digest(body.as_bytes()) == *reviewed_digest,
                 "reviewed release details digest mismatch"
             );
             let details: ReleaseDetails = serde_json::from_str(body)?;
+            ensure!(
+                &published_base_publisher(&transaction, &details)? == publisher,
+                "base publisher changed"
+            );
             let identity = format!("{}@{}", details.plugin_id, details.version);
             ensure!(
                 releases

@@ -1,8 +1,65 @@
 //! Append-only documentation metadata amendments for an exact published release.
 //! The initial release-details submission and every signed snapshot remain intact.
 use super::{Directory, Release, ReleaseDetails, digest};
-use anyhow::{Result, ensure};
-use rusqlite::{OptionalExtension as _, TransactionBehavior, params};
+use anyhow::{Result, bail, ensure};
+use lenso_plugin_catalog::linked_cargo::LinkedCargoRelease;
+use rusqlite::{OptionalExtension as _, Transaction, TransactionBehavior, params};
+
+/// Resolve the one published base channel and bind details to its immutable bytes.
+/// A package-only release is a separate base channel, not an additive distribution.
+pub(super) fn published_base_publisher(
+    transaction: &Transaction<'_>,
+    details: &ReleaseDetails,
+) -> Result<String> {
+    let identity = format!("{}@{}", details.plugin_id, details.version);
+    let portable: Option<(String, String, String, String)> = transaction
+        .query_row(
+            "SELECT body,digest,publisher,state FROM submissions WHERE identity=?1",
+            [&identity],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .optional()?;
+    let linked: Option<(String, String, String, String)> = transaction
+        .query_row(
+            "SELECT body,digest,publisher,state FROM linked_cargo_submissions WHERE identity=?1",
+            [&identity],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .optional()?;
+    let package_only: bool = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM package_submissions WHERE identity=?1)",
+        [&identity],
+        |row| row.get(0),
+    )?;
+    ensure!(
+        !package_only,
+        "package-only identity cannot have release details"
+    );
+    let (body, stored_digest, publisher, state, is_linked) = match (portable, linked) {
+        (Some((body, digest, publisher, state)), None) => (body, digest, publisher, state, false),
+        (None, Some((body, digest, publisher, state))) => (body, digest, publisher, state, true),
+        (None, None) => bail!("release details require a published base release"),
+        (Some(_), Some(_)) => bail!("release identity is owned by multiple base channels"),
+    };
+    ensure!(
+        state == "published",
+        "release details require an already published base release"
+    );
+    ensure!(
+        digest(body.as_bytes()) == stored_digest,
+        "stored base release digest mismatch"
+    );
+    if is_linked {
+        let release: LinkedCargoRelease = serde_json::from_str(&body)?;
+        ensure!(release.publisher_id == publisher, "base publisher changed");
+        details.validate_against_linked(&release)?;
+    } else {
+        let release: Release = serde_json::from_str(&body)?;
+        ensure!(release.publisher_id == publisher, "base publisher changed");
+        details.validate_against(&release)?;
+    }
+    Ok(publisher)
+}
 
 impl Directory {
     /// Stage a complete next view, never a partial patch or in-place rewrite.
@@ -65,13 +122,10 @@ impl Directory {
             .map_or(base_body.as_str(), |(_, body, _, _)| body.as_str());
         let previous: ReleaseDetails = serde_json::from_str(previous_body)?;
         ensure_additive_documents(&previous, details)?;
-        let base_release_body: String = transaction.query_row(
-            "SELECT body FROM submissions WHERE identity=?1 AND state='published'",
-            [&identity],
-            |row| row.get(0),
-        )?;
-        let base_release: Release = serde_json::from_str(&base_release_body)?;
-        details.validate_against(&base_release)?;
+        ensure!(
+            published_base_publisher(&transaction, details)? == publisher,
+            "base publisher changed"
+        );
         let body_digest = digest(body.as_bytes());
         transaction.execute(
             "INSERT INTO details_amendments(identity,publisher,body,digest,base_digest,state) VALUES(?1,?2,?3,?4,?5,'awaiting_review')",
