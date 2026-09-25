@@ -1,0 +1,25 @@
+plugins/directory/src/publishing/details_revision.rs
+  s_7d146975368699::t_54f2a9ffc82090 4-62,125-126
+  s_7d146975368699::t_45ea50c60d7fce 127-128
+plugins/directory/src/publishing.rs
+  s_7d146975368699::t_54f2a9ffc82090 21,407,588-590,593,599-602
+tools/publisher/tests/publisher.rs
+  s_7d146975368699::t_31611dff5c109f 379-519,532-533,536,547,556,573,608,610,613-614
+  s_7d146975368699::t_224065e5842f5e 520-531,534-535,537-546,548-555,557-572,574-607,609,611-612,615-627
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f4dd333e102e04c51cbbdf67f8cba9ae4780ca7",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
