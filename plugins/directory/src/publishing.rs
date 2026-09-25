@@ -3,8 +3,8 @@
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
 use lenso_plugin_catalog::{
-    Availability, Release, ReleaseDetails, ReleaseDetailsSnapshot, Snapshot, digest, sign,
-    sign_release_details,
+    Availability, DistributionKind, Release, ReleaseDetails, ReleaseDetailsSnapshot, Snapshot,
+    digest, sign, sign_release_details,
 };
 use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
 use std::{
@@ -14,14 +14,14 @@ use std::{
 
 mod details_revision;
 mod linked_cargo;
+mod npm_archive;
 #[cfg(feature = "package-publication")]
 mod package;
 pub mod release_content;
 mod release_content_source;
 use details_revision::{ensure_additive_documents, published_base_publisher};
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
-#[cfg(feature = "package-publication")]
-pub use package::MAX_NPM_ARCHIVE_BYTES;
+pub use npm_archive::MAX_NPM_ARCHIVE_BYTES;
 
 pub struct Directory {
     connection: Connection,
@@ -190,6 +190,7 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS details_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS details_npm_admissions (identity TEXT NOT NULL, details_digest TEXT NOT NULL, actor TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY(identity,details_digest));
             CREATE TABLE IF NOT EXISTS details_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE UNIQUE INDEX IF NOT EXISTS details_amendments_identity_digest ON details_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS details_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
@@ -414,7 +415,44 @@ impl Directory {
         details: &ReleaseDetails,
         now: u64,
     ) -> Result<i64> {
+        self.submit_details_with_archives(actor, details, &BTreeMap::new(), now)
+    }
+
+    /// Admit exact local npm bytes before any additive npm digest may be reviewed
+    /// or signed. This does not prove that the named registry serves those bytes.
+    pub fn submit_details_with_archives(
+        &mut self,
+        actor: &str,
+        details: &ReleaseDetails,
+        archives: &BTreeMap<String, Vec<u8>>,
+        now: u64,
+    ) -> Result<i64> {
         details.validate()?;
+        let npm: Vec<_> = details
+            .distributions
+            .iter()
+            .filter(|distribution| distribution.kind == DistributionKind::NpmPackage)
+            .collect();
+        let has_npm = !npm.is_empty();
+        ensure!(
+            archives.len() == npm.len(),
+            "one exact npm archive is required for each npm distribution"
+        );
+        for distribution in npm {
+            npm_archive::verify_npm_archive(
+                archives
+                    .get(&distribution.id)
+                    .context("npm archive is missing for distribution")?,
+                &distribution.package,
+                &distribution.version,
+                &details.plugin_id,
+                &details.version,
+                distribution
+                    .integrity
+                    .as_deref()
+                    .context("npm integrity missing")?,
+            )?;
+        }
         let identity = format!("{}@{}", details.plugin_id, details.version);
         let transaction = self
             .connection
@@ -437,6 +475,13 @@ impl Directory {
                 previous == body_digest,
                 "release details identity already submitted with different content"
             );
+            if has_npm {
+                transaction.execute(
+                    "INSERT OR IGNORE INTO details_npm_admissions(identity,details_digest,actor,at) VALUES(?1,?2,?3,?4)",
+                    params![identity, body_digest, actor, i64::try_from(now)?],
+                )?;
+            }
+            transaction.commit()?;
             return Ok(id);
         }
         transaction.execute(
@@ -444,6 +489,12 @@ impl Directory {
             params![identity, publisher, body, body_digest],
         )?;
         let id = transaction.last_insert_rowid();
+        if has_npm {
+            transaction.execute(
+                "INSERT INTO details_npm_admissions(identity,details_digest,actor,at) VALUES(?1,?2,?3,?4)",
+                params![identity, body_digest, actor, i64::try_from(now)?],
+            )?;
+        }
         transaction.execute(
             "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'submit_details',?2,?3)",
             params![actor, identity, i64::try_from(now)?],
@@ -610,6 +661,18 @@ impl Directory {
                 "base publisher changed"
             );
             let identity = format!("{}@{}", details.plugin_id, details.version);
+            if details
+                .distributions
+                .iter()
+                .any(|distribution| distribution.kind == DistributionKind::NpmPackage)
+            {
+                let admitted: bool = transaction.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM details_npm_admissions WHERE identity=?1 AND details_digest=?2)",
+                    params![identity, reviewed_digest],
+                    |row| row.get(0),
+                )?;
+                ensure!(admitted, "npm release details lack exact archive admission");
+            }
             ensure!(
                 releases
                     .insert(identity, (details, digest(body.as_bytes())))

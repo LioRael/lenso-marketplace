@@ -129,6 +129,27 @@ reporting publication complete. The same sequence handles each new version;
 namespace claims are not repeated. Preserve the submitted files until publication
 and backup are confirmed; the publisher database stores metadata, not archive bytes.
 
+## Add npm to a published release
+
+The first `ReleaseDetails` submission for an already published Portable or linked
+Cargo release must provide the exact local `.tgz` bytes for every npm distribution.
+Pass each distribution ID and archive path as a pair; omit pairs only when the
+details contain no npm distribution.
+
+```sh
+lenso-marketplace-publisher operator.json submit-details AUTHOR /absolute/details.json npm /absolute/plugin.tgz
+lenso-marketplace-publisher operator.json inspect-details REVIEWER SUBMISSION_ID
+lenso-marketplace-publisher operator.json approve-details REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY
+lenso-marketplace-publisher operator.json publish-details REVIEWER EXPECTED_REVISION 604800 < signing-key.bin
+lenso-marketplace-publisher operator.json export-details
+```
+
+Admission checks bounded archive bytes, SHA-256 integrity, the package manifest,
+Lenso Plugin identity and `bun.lock`. The database retains the reviewed metadata,
+not the archive. Local byte admission does not prove that the named npm registry
+serves those bytes; verify registry availability separately before claiming a
+publicly adoptable distribution.
+
 ## Add a documentation revision to published release details
 
 `submit-details` remains immutable for one Plugin ID and version. To add a new
@@ -136,7 +157,8 @@ documentation identity (`id` plus `revision`) to already published release
 details, submit the complete next `ReleaseDetails` JSON instead. Preserve the
 base-release identity, every distribution and every previously published
 documentation entry exactly; only append new documentation entries. The
-Directory rejects a second pending revision for the same release.
+Directory rejects a second pending revision for the same release. No archive
+reupload is required for this docs-only amendment.
 
 ```sh
 lenso-marketplace-publisher operator.json submit-details-revision AUTHOR /absolute/revised-details.json

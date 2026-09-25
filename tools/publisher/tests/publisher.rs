@@ -1,7 +1,7 @@
 use ed25519_dalek::SigningKey;
 use std::{
     fs,
-    io::Write,
+    io::{Cursor, Write},
     process::{Command, Output, Stdio},
 };
 
@@ -21,6 +21,35 @@ fn invoke(config: &std::path::Path, args: &[&str], key: Option<&[u8]>) -> Output
         child.stdin.take().unwrap().write_all(key).unwrap();
     }
     child.wait_with_output().unwrap()
+}
+
+fn linked_npm_archive(plugin_id: &str) -> Vec<u8> {
+    let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(
+        Vec::new(),
+        flate2::Compression::default(),
+    ));
+    let manifest = serde_json::to_vec(&serde_json::json!({
+        "name":"@example/linked", "version":"1.2.3",
+        "lenso":{
+            "pluginId":plugin_id, "releaseVersion":"1.2.3",
+            "runtime":"bun", "rootSlot":"tools"
+        }
+    }))
+    .unwrap();
+    let mut header = tar::Header::new_gnu();
+    header.set_size(manifest.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append_data(&mut header, "package/package.json", Cursor::new(manifest))
+        .unwrap();
+    let lock = b"{}\n";
+    let mut header = tar::Header::new_gnu();
+    header.set_size(lock.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append_data(&mut header, "package/bun.lock", Cursor::new(lock))
+        .unwrap();
+    tar.into_inner().unwrap().finish().unwrap()
 }
 
 #[test]
@@ -382,6 +411,7 @@ fn operator_publishes_linked_cargo_with_additive_npm_details() {
     let config = home.path().join("operator.json");
     let database = home.path().join("publisher.sqlite3");
     let details_path = home.path().join("release-details.json");
+    let archive_path = home.path().join("plugin.tgz");
     let key = [37u8; 32];
     fs::write(&config, serde_json::to_vec(&serde_json::json!({
         "database": database, "catalog_id": "linked-details-test", "reviewers": ["reviewer"],
@@ -428,6 +458,9 @@ fn operator_publishes_linked_cargo_with_additive_npm_details() {
         String::from_utf8_lossy(&linked_receipt.stderr)
     );
 
+    let archive = linked_npm_archive("example.linked");
+    fs::write(&archive_path, &archive).unwrap();
+
     let details = serde_json::json!({
         "plugin_id": "example.linked", "version": "1.2.3",
         "base_release_identity": linked.immutable_identity().unwrap(),
@@ -437,14 +470,29 @@ fn operator_publishes_linked_cargo_with_additive_npm_details() {
              "integrity":linked.crate_digest,"targets":linked.targets},
             {"id":"npm","kind":"npm_package","package":"@example/linked",
              "version":"1.2.3","registry_url":"https://registry.npmjs.org",
-             "integrity":lenso_plugin_catalog::digest(b"npm tarball"),"targets":[]}
+             "integrity":lenso_plugin_catalog::digest(&archive),"targets":[]}
         ],
         "documentation": []
     });
     fs::write(&details_path, serde_json::to_vec(&details).unwrap()).unwrap();
+    assert!(
+        !invoke(
+            &config,
+            &["submit-details", "author", details_path.to_str().unwrap()],
+            None
+        )
+        .status
+        .success()
+    );
     let submitted = invoke(
         &config,
-        &["submit-details", "author", details_path.to_str().unwrap()],
+        &[
+            "submit-details",
+            "author",
+            details_path.to_str().unwrap(),
+            "npm",
+            archive_path.to_str().unwrap(),
+        ],
         None,
     );
     assert!(
@@ -576,7 +624,7 @@ fn operator_publishes_linked_cargo_with_additive_npm_details() {
 }
 
 #[test]
-fn operator_rejects_details_that_mismatch_published_linked_cargo_base() {
+fn operator_rejects_mismatched_npm_archive_or_linked_cargo_base() {
     let home = tempfile::tempdir().unwrap();
     let database = home.path().join("publisher.sqlite3");
     let mut directory = lenso_marketplace_directory_plugin::publishing::Directory::open(
@@ -604,6 +652,8 @@ fn operator_rejects_details_that_mismatch_published_linked_cargo_base() {
         rusqlite::params!["example.linked@1.2.3", "publisher", body, lenso_plugin_catalog::digest(body.as_bytes())],
     ).unwrap();
     drop(connection);
+    let archive = linked_npm_archive("example.linked");
+    let archives = std::collections::BTreeMap::from([("npm".into(), archive.clone())]);
     let mut details: lenso_plugin_catalog::ReleaseDetails =
         serde_json::from_value(serde_json::json!({
             "plugin_id":"example.linked","version":"1.2.3",
@@ -615,14 +665,58 @@ fn operator_rejects_details_that_mismatch_published_linked_cargo_base() {
                  "targets":["aarch64-apple-darwin"]},
                 {"id":"npm","kind":"npm_package","package":"@example/linked",
                  "version":"1.2.3","registry_url":"https://registry.npmjs.org",
-                 "integrity":lenso_plugin_catalog::digest(b"npm tarball"),"targets":[]}
+                 "integrity":lenso_plugin_catalog::digest(&archive),"targets":[]}
             ]
         }))
         .unwrap();
-    assert!(directory.submit_details("author", &details, 101).is_err());
+    assert!(
+        directory
+            .submit_details_with_archives("author", &details, &archives, 101)
+            .is_err()
+    );
     details.distributions[0].integrity = Some(linked.crate_digest.clone());
     details.base_release_identity = lenso_plugin_catalog::digest(b"different base");
-    assert!(directory.submit_details("author", &details, 101).is_err());
+    assert!(
+        directory
+            .submit_details_with_archives("author", &details, &archives, 101)
+            .is_err()
+    );
+    details.base_release_identity = linked.immutable_identity().unwrap();
+    details.distributions[1].integrity = Some(lenso_plugin_catalog::digest(b"synthetic"));
+    assert!(
+        directory
+            .submit_details_with_archives("author", &details, &archives, 101)
+            .is_err()
+    );
+    let wrong_identity_archive = linked_npm_archive("example.other");
+    let wrong_archives =
+        std::collections::BTreeMap::from([("npm".into(), wrong_identity_archive.clone())]);
+    details.distributions[1].integrity =
+        Some(lenso_plugin_catalog::digest(&wrong_identity_archive));
+    let error = directory
+        .submit_details_with_archives("author", &details, &wrong_archives, 101)
+        .unwrap_err();
+    assert!(error.to_string().contains("Lenso Bun Plugin identity"));
+    // A legacy approved row without exact-archive admission cannot be signed.
+    details.distributions[1].integrity = Some(lenso_plugin_catalog::digest(&archive));
+    let body = serde_json::to_string(&details).unwrap();
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    connection.execute(
+        "INSERT INTO details_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'approved')",
+        rusqlite::params!["example.linked@1.2.3", "publisher", body, lenso_plugin_catalog::digest(body.as_bytes())],
+    ).unwrap();
+    drop(connection);
+    let error = directory
+        .publish_details(
+            "reviewer",
+            0,
+            110,
+            210,
+            "key",
+            &SigningKey::from_bytes(&[37; 32]),
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("lack exact archive admission"));
 }
 
 #[test]

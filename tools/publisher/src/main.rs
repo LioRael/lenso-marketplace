@@ -2,15 +2,15 @@
 //! controlled by the OS or an approved CI environment, never a public request.
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
-#[cfg(feature = "package-publication")]
 use lenso_marketplace_directory_plugin::publishing::MAX_NPM_ARCHIVE_BYTES;
 use lenso_marketplace_directory_plugin::publishing::release_content::{self, ReleaseContent};
 use lenso_marketplace_directory_plugin::publishing::{Directory, PublishedDirectory};
 #[cfg(feature = "package-publication")]
 use lenso_plugin_catalog::package::PackageRelease;
-use lenso_plugin_catalog::{ReleaseDetails, digest, linked_cargo::LinkedCargoRelease};
+use lenso_plugin_catalog::{
+    DistributionKind, ReleaseDetails, digest, linked_cargo::LinkedCargoRelease,
+};
 use serde::Deserialize;
-#[cfg(feature = "package-publication")]
 use std::collections::BTreeMap;
 use std::{
     collections::BTreeSet,
@@ -28,6 +28,29 @@ struct Config {
     reviewers: BTreeSet<String>,
     key_id: String,
     public_key_hex: String,
+}
+
+fn read_npm_archives(pairs: &[String], expected: usize) -> Result<BTreeMap<String, Vec<u8>>> {
+    ensure!(
+        pairs.len() == expected.checked_mul(2).context("too many npm archives")?,
+        "one exact npm archive is required for each npm distribution"
+    );
+    let mut archives = BTreeMap::new();
+    for pair in pairs.chunks_exact(2) {
+        let mut bytes = Vec::new();
+        fs::File::open(&pair[1])?
+            .take((MAX_NPM_ARCHIVE_BYTES + 1) as u64)
+            .read_to_end(&mut bytes)?;
+        ensure!(
+            bytes.len() <= MAX_NPM_ARCHIVE_BYTES,
+            "npm archive exceeds limit"
+        );
+        ensure!(
+            archives.insert(pair[0].clone(), bytes).is_none(),
+            "duplicate npm distribution ID"
+        );
+    }
+    Ok(archives)
 }
 
 fn run() -> Result<()> {
@@ -155,8 +178,8 @@ fn run() -> Result<()> {
                 }
                 "submit-details" => {
                     ensure!(
-                        args.len() == 4,
-                        "submit-details requires AUTHOR DETAILS_JSON"
+                        args.len() >= 4 && (args.len() - 4) % 2 == 0,
+                        "submit-details requires AUTHOR DETAILS_JSON [ID ARCHIVE...]"
                     );
                     let bytes = fs::read(&args[3])?;
                     ensure!(
@@ -164,7 +187,15 @@ fn run() -> Result<()> {
                         "release details exceed limit"
                     );
                     let details: ReleaseDetails = serde_json::from_slice(&bytes)?;
-                    let id = directory.submit_details(&args[2], &details, now)?;
+                    details.validate()?;
+                    let npm_count = details
+                        .distributions
+                        .iter()
+                        .filter(|distribution| distribution.kind == DistributionKind::NpmPackage)
+                        .count();
+                    let archives = read_npm_archives(&args[4..], npm_count)?;
+                    let id = directory
+                        .submit_details_with_archives(&args[2], &details, &archives, now)?;
                     let (_, proposal_digest, state) =
                         directory.inspect_details_submission(&args[2], id)?;
                     serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
@@ -265,25 +296,7 @@ fn run() -> Result<()> {
                     );
                     let release: PackageRelease = serde_json::from_slice(&release_bytes)?;
                     release.validate()?;
-                    ensure!(
-                        (args.len() - 4) / 2 == release.distributions.len(),
-                        "one exact npm archive is required for each distribution"
-                    );
-                    let mut archives = BTreeMap::new();
-                    for pair in args[4..].chunks_exact(2) {
-                        let mut bytes = Vec::new();
-                        fs::File::open(&pair[1])?
-                            .take((MAX_NPM_ARCHIVE_BYTES + 1) as u64)
-                            .read_to_end(&mut bytes)?;
-                        ensure!(
-                            bytes.len() <= MAX_NPM_ARCHIVE_BYTES,
-                            "npm archive exceeds limit"
-                        );
-                        ensure!(
-                            archives.insert(pair[0].clone(), bytes).is_none(),
-                            "duplicate npm distribution ID"
-                        );
-                    }
+                    let archives = read_npm_archives(&args[4..], release.distributions.len())?;
                     let id = directory.submit_package(&args[2], &release, &archives, now)?;
                     let (_, proposal_digest, state) =
                         directory.inspect_package_submission(&args[2], id)?;
