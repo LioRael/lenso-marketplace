@@ -1,0 +1,20 @@
+plugins/directory/src/publishing/npm_archive.rs
+  s_7d146975368699::t_be3c2214c06c3c 3,5-8,14-18,52-66,92,95-98,122-127
+  s_7d146975368699::t_1546d5d5afb4a2 150-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d0b49a7fc3f4b5f910107070ccb28eaf83887443",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
