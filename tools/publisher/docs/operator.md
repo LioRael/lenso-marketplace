@@ -211,6 +211,36 @@ through `lenso app add PLUGIN_ID@VERSION --linked-snapshot ... --trust ... --cra
 It does not fetch the archive or prove registry provenance automatically; reviewers
 must verify registry availability and the generated Host build separately.
 
+## npm-only signed package release (staged)
+
+The package-only channel has no fabricated Portable base. Its release JSON uses
+the `PackageRelease` schema from the new `lenso-plugin-catalog::package` module:
+one exact Plugin ID/version, publisher, source commit, and one to sixteen npm
+distributions. Each distribution has an ID, exact npm name and version,
+credential-free HTTPS registry URL, and SHA-256 `.tgz` digest. The current
+Marketplace dependency pin predates this protocol. This operator path is a
+local candidate until that Rust commit is available remotely and the Market
+manifest and lock are advanced together.
+
+```sh
+lenso-marketplace-publisher operator.json submit-package AUTHOR /absolute/release.json npm /absolute/package.tgz
+lenso-marketplace-publisher operator.json inspect-package REVIEWER SUBMISSION_ID
+lenso-marketplace-publisher operator.json approve-package REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY
+lenso-marketplace-publisher operator.json publish-package REVIEWER EXPECTED_REVISION 604800 < signing-key.bin
+lenso-marketplace-publisher operator.json export-package
+```
+
+For multiple distributions, append one `ID ARCHIVE` pair per distribution.
+Submission checks each bounded archive's SHA-256 and `package/package.json`
+name/version before any database write. The reviewer must independently check
+that the named registry serves those same bytes: local archive inspection does
+not establish registry provenance or availability. The signed snapshot has its
+own revision and signature domain; `verify-package` reads an exact envelope
+from stdin with configured public trust. The publisher rejects reuse of any
+Plugin ID/version already recorded in Portable, linked Cargo, or package-only
+submission history. Package publication remains local here: no public
+directory read route, App installation, upload, or deployment is implied.
+
 ## Optional signed release content
 
 Editable templates and development extensions use a separate

@@ -14,10 +14,12 @@ use std::{
 
 mod details_revision;
 mod linked_cargo;
+mod package;
 pub mod release_content;
 mod release_content_source;
 use details_revision::ensure_additive_documents;
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
+pub use package::MAX_NPM_ARCHIVE_BYTES;
 
 pub struct Directory {
     connection: Connection,
@@ -115,6 +117,27 @@ impl PublishedDirectory {
         }
     }
 
+    pub fn latest_package(&self) -> Result<Option<String>> {
+        // A read-only projection may open a database from before this channel existed.
+        let has_table: bool = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='package_snapshots')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_table {
+            return Ok(None);
+        }
+        let value: Option<Option<Vec<u8>>> = self.connection.query_row(
+            "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM package_snapshots ORDER BY revision DESC LIMIT 1",
+            [i64::try_from(lenso_plugin_catalog::MAX_ENVELOPE_BYTES)?], |row| row.get(0)
+        ).optional()?;
+        match value {
+            None => Ok(None),
+            Some(None) => anyhow::bail!("published package envelope exceeds size limit"),
+            Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+        }
+    }
+
     pub fn latest_release_content(&self) -> Result<Option<String>> {
         // Existing publisher databases predate this optional publication channel.
         // The read-only public projection must not run a migration on request.
@@ -157,6 +180,8 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS linked_cargo_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE UNIQUE INDEX IF NOT EXISTS linked_cargo_amendments_identity_digest ON linked_cargo_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS linked_cargo_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS package_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS package_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS release_content_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS release_content_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, subject TEXT NOT NULL, at INTEGER NOT NULL);
@@ -179,6 +204,21 @@ impl Directory {
         ensure!(
             self.reviewers.contains(actor),
             "reviewer authorization required"
+        );
+        Ok(())
+    }
+
+    fn ensure_exclusive_release_identities(transaction: &rusqlite::Transaction<'_>) -> Result<()> {
+        let collision: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM submissions p JOIN linked_cargo_submissions l ON p.identity=l.identity
+                UNION ALL SELECT 1 FROM submissions p JOIN package_submissions n ON p.identity=n.identity
+                UNION ALL SELECT 1 FROM linked_cargo_submissions l JOIN package_submissions n ON l.identity=n.identity)",
+            [],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            !collision,
+            "release identity is owned by multiple base channels"
         );
         Ok(())
     }
@@ -265,6 +305,15 @@ impl Directory {
         ensure!(
             !existing_linked,
             "a source-only linked Cargo release already owns this identity"
+        );
+        let existing_package: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM package_submissions WHERE identity=?1)",
+            [&identity],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            !existing_package,
+            "a package-only release already owns this identity"
         );
         let existing: Option<(i64, String)> = transaction
             .query_row(
@@ -466,6 +515,7 @@ impl Directory {
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        Self::ensure_exclusive_release_identities(&transaction)?;
         let current: i64 = transaction.query_row(
             "SELECT COALESCE(MAX(revision),0) FROM snapshots",
             [],

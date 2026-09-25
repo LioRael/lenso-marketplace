@@ -3,11 +3,15 @@
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
 use lenso_marketplace_directory_plugin::publishing::release_content::{self, ReleaseContent};
-use lenso_marketplace_directory_plugin::publishing::{Directory, PublishedDirectory};
-use lenso_plugin_catalog::{ReleaseDetails, digest, linked_cargo::LinkedCargoRelease};
+use lenso_marketplace_directory_plugin::publishing::{
+    Directory, MAX_NPM_ARCHIVE_BYTES, PublishedDirectory,
+};
+use lenso_plugin_catalog::{
+    ReleaseDetails, digest, linked_cargo::LinkedCargoRelease, package::PackageRelease,
+};
 use serde::Deserialize;
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     io::{self, Read, Write},
     path::PathBuf,
@@ -28,7 +32,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     ensure!(
         args.len() >= 2,
-        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|submit-details-revision|inspect-details-revision|approve-details-revision|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|submit-linked-cargo-docs-revision|inspect-linked-cargo-docs-revision|approve-linked-cargo-docs-revision|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|release-content-base|submit-release-content|inspect-release-content|approve-release-content|publish-release-content|export-release-content|verify-release-content|backup [...]"
+        "usage: lenso-marketplace-publisher CONFIG initialize|claim|submit|inspect|approve|publish|export|verify|submit-details|inspect-details|approve-details|submit-details-revision|inspect-details-revision|approve-details-revision|publish-details|export-details|verify-details|submit-linked-cargo|inspect-linked-cargo|approve-linked-cargo|submit-linked-cargo-docs-revision|inspect-linked-cargo-docs-revision|approve-linked-cargo-docs-revision|publish-linked-cargo|export-linked-cargo|verify-linked-cargo|submit-package|inspect-package|approve-package|publish-package|export-package|verify-package|release-content-base|submit-release-content|inspect-release-content|approve-release-content|publish-release-content|export-release-content|verify-release-content|backup [...]"
     );
     let config: Config = serde_json::from_slice(&fs::read(&args[0])?)?;
     ensure!(
@@ -86,6 +90,9 @@ fn run() -> Result<()> {
         | "submit-linked-cargo-docs-revision"
         | "inspect-linked-cargo-docs-revision"
         | "approve-linked-cargo-docs-revision"
+        | "submit-package"
+        | "inspect-package"
+        | "approve-package"
         | "submit-release-content"
         | "inspect-release-content"
         | "approve-release-content" => {
@@ -229,6 +236,65 @@ fn run() -> Result<()> {
                     let (_, proposal_digest, state) =
                         directory.inspect_linked_cargo_submission(&args[2], id)?;
                     serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
+                }
+                "submit-package" => {
+                    ensure!(
+                        args.len() >= 6 && (args.len() - 4) % 2 == 0,
+                        "submit-package requires AUTHOR RELEASE_JSON ID ARCHIVE [ID ARCHIVE...]"
+                    );
+                    let release_bytes = fs::read(&args[3])?;
+                    ensure!(
+                        release_bytes.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                        "package release exceeds limit"
+                    );
+                    let release: PackageRelease = serde_json::from_slice(&release_bytes)?;
+                    release.validate()?;
+                    ensure!(
+                        (args.len() - 4) / 2 == release.distributions.len(),
+                        "one exact npm archive is required for each distribution"
+                    );
+                    let mut archives = BTreeMap::new();
+                    for pair in args[4..].chunks_exact(2) {
+                        let mut bytes = Vec::new();
+                        fs::File::open(&pair[1])?
+                            .take((MAX_NPM_ARCHIVE_BYTES + 1) as u64)
+                            .read_to_end(&mut bytes)?;
+                        ensure!(
+                            bytes.len() <= MAX_NPM_ARCHIVE_BYTES,
+                            "npm archive exceeds limit"
+                        );
+                        ensure!(
+                            archives.insert(pair[0].clone(), bytes).is_none(),
+                            "duplicate npm distribution ID"
+                        );
+                    }
+                    let id = directory.submit_package(&args[2], &release, &archives, now)?;
+                    let (_, proposal_digest, state) =
+                        directory.inspect_package_submission(&args[2], id)?;
+                    serde_json::json!({"submission_id":id,"proposal_digest":proposal_digest,"state":state})
+                }
+                "inspect-package" => {
+                    ensure!(
+                        args.len() == 4,
+                        "inspect-package requires ACTOR SUBMISSION_ID"
+                    );
+                    let (release, proposal_digest, state) =
+                        directory.inspect_package_submission(&args[2], args[3].parse()?)?;
+                    serde_json::json!({"release":release,"proposal_digest":proposal_digest,"state":state})
+                }
+                "approve-package" => {
+                    ensure!(
+                        args.len() == 6,
+                        "approve-package requires REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY"
+                    );
+                    directory.approve_package(
+                        &args[2],
+                        args[3].parse()?,
+                        &args[4],
+                        &args[5],
+                        now,
+                    )?;
+                    serde_json::json!({"status":"approved","submission_id":args[3]})
                 }
                 "inspect-linked-cargo" => {
                     ensure!(
@@ -427,6 +493,30 @@ fn run() -> Result<()> {
             let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
+        "verify-package" => {
+            ensure!(args.len() == 2, "verify-package accepts no extra arguments");
+            let mut envelope = Vec::new();
+            io::stdin()
+                .lock()
+                .take((lenso_plugin_catalog::MAX_ENVELOPE_BYTES + 1) as u64)
+                .read_to_end(&mut envelope)?;
+            ensure!(
+                envelope.len() <= lenso_plugin_catalog::MAX_ENVELOPE_BYTES,
+                "envelope exceeds limit"
+            );
+            let trust = lenso_plugin_catalog::Trust {
+                catalog_id: config.catalog_id,
+                keys: std::collections::BTreeMap::from([(
+                    config.key_id,
+                    ed25519_dalek::VerifyingKey::from_bytes(&public_key.as_slice().try_into()?)?,
+                )]),
+            };
+            let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let verified = lenso_plugin_catalog::package::verify(&envelope, &trust, None, now)?;
+            let snapshot = verified.snapshot();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
+            serde_json::to_writer(io::stdout().lock(), &receipt)?;
+        }
         "verify-release-content" => {
             ensure!(
                 args.len() == 2,
@@ -475,12 +565,14 @@ fn run() -> Result<()> {
             let copied = PublishedDirectory::open(&destination, &config.catalog_id)?;
             let latest = copied.latest()?;
             let linked_cargo = copied.latest_linked_cargo()?;
+            let package = copied.latest_package()?;
             let release_content = copied.latest_release_content()?;
             let receipt = serde_json::json!({
                 "backup": destination,
                 "catalog_id": config.catalog_id,
                 "publication_digest": latest.as_ref().map(|bytes| digest(bytes.as_bytes())),
                 "linked_cargo_publication_digest": linked_cargo.as_ref().map(|bytes| digest(bytes.as_bytes())),
+                "package_publication_digest": package.as_ref().map(|bytes| digest(bytes.as_bytes())),
                 "release_content_publication_digest": release_content.as_ref().map(|bytes| digest(bytes.as_bytes()))
             });
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
@@ -511,6 +603,14 @@ fn run() -> Result<()> {
                 .context("no linked Cargo publication exists")?;
             emit(envelope.as_bytes())?;
         }
+        "export-package" => {
+            ensure!(args.len() == 2, "export-package accepts no extra arguments");
+            let view = PublishedDirectory::open(&config.database, &config.catalog_id)?;
+            let envelope = view
+                .latest_package()?
+                .context("no package publication exists")?;
+            emit(envelope.as_bytes())?;
+        }
         "export-release-content" => {
             ensure!(
                 args.len() == 2,
@@ -522,7 +622,11 @@ fn run() -> Result<()> {
                 .context("no release content publication exists")?;
             emit(envelope.as_bytes())?;
         }
-        "publish" | "publish-details" | "publish-linked-cargo" | "publish-release-content" => {
+        "publish"
+        | "publish-details"
+        | "publish-linked-cargo"
+        | "publish-package"
+        | "publish-release-content" => {
             ensure!(
                 args.len() == 5,
                 "publish operation requires actor, expected revision and validity seconds"
@@ -576,6 +680,15 @@ fn run() -> Result<()> {
                 )?
             } else if args[1] == "publish-linked-cargo" {
                 directory.publish_linked_cargo(
+                    &args[2],
+                    expected,
+                    now,
+                    expires_at,
+                    &config.key_id,
+                    &key,
+                )?
+            } else if args[1] == "publish-package" {
+                directory.publish_package(
                     &args[2],
                     expected,
                     now,
