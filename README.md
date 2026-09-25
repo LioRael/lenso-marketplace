@@ -48,6 +48,11 @@ Browser acceptance needs `lenso-cli` and Playwright Chromium. Workers builds nee
 The browser check also verifies the test Plugin's CLI check, execution and
 archive, then exercises real archive review and signed discovery after a
 Directory restart.
+To include the signed archive-to-Rust-App mutation proof in that same run, set
+`LENSO_RUST_WORKSPACE` to an absolute path to the exact Lenso Rust checkout.
+The proof reuses the browser check's Echo archive and does not build a second
+fixture. Marketplace CI does not run this cross-repository proof yet: its Rust
+candidate must be remotely readable and pinned to an exact commit first.
 
 ## Run
 

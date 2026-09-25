@@ -18,6 +18,16 @@ lenso plugin check --repo-root "$marketplace_root/tests/fixtures/echo"
 lenso plugin dev --repo-root "$marketplace_root/tests/fixtures/echo" --operation execute \
   --request-json '{"name":"lenso.marketplace.echo","arguments_json":"{\"text\":\"marketplace proof\"}"}'
 lenso plugin pack --repo-root "$marketplace_root/tests/fixtures/echo" --output "$proof_root/echo.lenso-plugin" --json
+if [[ -n "${LENSO_RUST_WORKSPACE:-}" ]]; then
+  if [[ "$LENSO_RUST_WORKSPACE" != /* || ! -f "$LENSO_RUST_WORKSPACE/crates/lenso-cli/Cargo.toml" ]]; then
+    echo "LENSO_RUST_WORKSPACE must be an absolute Lenso Rust checkout containing crates/lenso-cli" >&2
+    exit 1
+  fi
+  bash "$marketplace_root/scripts/verify-archive-handoff.sh" \
+    "$LENSO_RUST_WORKSPACE" "$proof_root/echo.lenso-plugin"
+else
+  echo "Skipping cross-repo archive-to-App proof (set LENSO_RUST_WORKSPACE to an exact Rust checkout)"
+fi
 # Only the locally built test fixture is extracted here. Production archive
 # ingestion remains gated on the released bounded archive API.
 python3 - "$proof_root" <<'PY'
