@@ -11,6 +11,7 @@ lenso-marketplace-web-plugin = { path = "../../plugins/web" }
 lenso-marketplace-directory-plugin = { path = "../../plugins/directory" }
 lenso-capability-marketplace-directory = { path = "../../contracts/directory" }
 lenso-capability-marketplace-linked-directory = { path = "../../contracts/linked-directory" }
+lenso-capability-marketplace-release-content-directory = { path = "../../contracts/release-content-directory" }
 lenso-app-authoring = { package = "lenso-cli", version = "0.5.3", default-features = false }
 lenso-app-plan = "0.4.1"
 lenso-capability-http-endpoint = "0.3.1"

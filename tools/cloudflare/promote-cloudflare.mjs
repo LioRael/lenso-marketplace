@@ -8,6 +8,7 @@ import {
   promotePublication,
   promoteReleaseDetails,
   promoteLinkedCargo,
+  promoteReleaseContent,
 } from "./promote.mjs";
 
 // Run only in the protected operator host. CONFIG contains public identifiers,
@@ -39,9 +40,10 @@ const main = async () => {
   // authoritative durable database, not a user-supplied envelope file.
   const details = config.kind === "release-details";
   const linked = config.kind === "linked-cargo";
+  const content = config.kind === "release-content";
   assert.ok(
-    config.kind === undefined || details || linked,
-    "kind must be omitted, release-details or linked-cargo"
+    config.kind === undefined || details || linked || content,
+    "kind must be omitted, release-details, linked-cargo or release-content"
   );
   let exportOperation = "export";
   let verifyOperation = "verify";
@@ -54,6 +56,10 @@ const main = async () => {
     exportOperation = "export-linked-cargo";
     verifyOperation = "verify-linked-cargo";
     promote = promoteLinkedCargo;
+  } else if (content) {
+    exportOperation = "export-release-content";
+    verifyOperation = "verify-release-content";
+    promote = promoteReleaseContent;
   }
   const publication = publisher(exportOperation);
   const receipt = await promote({

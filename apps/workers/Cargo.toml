@@ -25,5 +25,6 @@ lenso-marketplace-directory-plugin = { path = "../../plugins/directory", default
 lenso-marketplace-web-plugin = { path = "../../plugins/web", default-features = false }
 lenso-capability-marketplace-directory = { path = "../../contracts/directory" }
 lenso-capability-marketplace-linked-directory = { path = "../../contracts/linked-directory" }
+lenso-capability-marketplace-release-content-directory = { path = "../../contracts/release-content-directory" }
 lenso-capability-http-endpoint = "=0.3.1"
 lenso-web-ingress-plugin = { version = "0.4.3", default-features = false }

@@ -76,6 +76,14 @@ the `marketplace_linked_cargo` pointer. Verify the public
 promotion. Building the Worker or creating a local publication does not prove
 the migration, remote promotion, or public availability occurred.
 
+Optional signed release content uses the separate
+`apps/workers/migrations/d1/0004_release_content.sql` pointer. Apply it to the
+intended D1 database before promoting or serving this channel. The operator
+exports the exact v2 envelope; Cloudflare promotion must verify that envelope
+and conditionally advance only `marketplace_release_content`. Verify the public
+`/api/marketplace/v1/release-content` bytes and signature after promotion.
+Neither the D1 migration nor a local publisher result is deployment evidence.
+
 Expired verified catalogs remain browsable with a stale notice. New installation
 requires current metadata. Renew with a new signed revision; do not edit expiry
 inside a signed envelope. Monitor expiry before installations are interrupted.

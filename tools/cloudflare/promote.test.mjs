@@ -5,6 +5,7 @@ import {
   promotePublication,
   promoteReleaseDetails,
   promoteLinkedCargo,
+  promoteReleaseContent,
 } from "./promote.mjs";
 
 const storage = (table = "marketplace_publications") => {
@@ -174,4 +175,26 @@ test("linked Cargo releases use a separate pointer and object namespace", async 
   assert.equal(receipt.status, "published");
   assert.match(receipt.object_key, /^linked-cargo\//u);
   assert.equal(state.pointer.revision, 1);
+});
+
+test("release content uses its own immutable object and conditional pointer", async () => {
+  const { state, input } = storage("marketplace_release_content");
+  const first = await promoteReleaseContent(input(1));
+  assert.equal(first.status, "published");
+  assert.match(first.object_key, /^release-content\//u);
+  assert.equal(
+    new TextDecoder().decode(state.objects.get(first.object_key)),
+    input(1).envelope
+  );
+  const retry = await promoteReleaseContent(input(1));
+  assert.equal(retry.status, "already_published");
+  const expected = { ...state.pointer };
+  const next = await promoteReleaseContent(input(2, expected));
+  assert.equal(next.status, "published");
+  await assert.rejects(
+    promoteReleaseContent(input(3, expected)),
+    /pointer conflict/u
+  );
+  assert.equal(state.pointer.revision, 2);
+  assert.equal(state.writes, 2);
 });

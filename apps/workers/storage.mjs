@@ -86,6 +86,13 @@ const linkedCargoStatement = (database, catalog) =>
     )
     .bind(catalog);
 
+const releaseContentStatement = (database, catalog) =>
+  database
+    .prepare(
+      "SELECT object_key,digest FROM marketplace_release_content WHERE catalog_id=?"
+    )
+    .bind(catalog);
+
 const acceptedStatement = (database, catalog) =>
   database
     .prepare(
@@ -297,6 +304,9 @@ export const createStorage = (database, bucket, signal, scope) => {
       result = await readPublished(bucket, row, signal, track);
     } else if (operation === "published_linked_cargo") {
       const row = await linkedCargoStatement(database, catalog).first();
+      result = await readPublished(bucket, row, signal, track);
+    } else if (operation === "published_release_content") {
+      const row = await releaseContentStatement(database, catalog).first();
       result = await readPublished(bucket, row, signal, track);
     } else if (operation === "accepted") {
       const row = await acceptedStatement(database, catalog).first();

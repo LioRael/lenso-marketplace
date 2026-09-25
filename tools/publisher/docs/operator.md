@@ -211,6 +211,47 @@ through `lenso app add PLUGIN_ID@VERSION --linked-snapshot ... --trust ... --cra
 It does not fetch the archive or prove registry provenance automatically; reviewers
 must verify registry availability and the generated Host build separately.
 
+## Optional signed release content
+
+Editable templates and development extensions use a separate
+`lenso.marketplace.release-content.v2` snapshot. They attach to one already
+published `portable` or `linked_cargo` base with the same Plugin ID and exact
+version. Neither the portable nor linked Cargo v1 signed payload is changed.
+Each content entry identifies a credential-free HTTPS `.tar.gz`, compressed
+size and SHA-256. The operator checks the supplied exact archive bytes and
+rejects links, path traversal, duplicate paths and excessive expansion, but
+does not store the archive or prove its remote URL serves those bytes. Review
+the URL and hosting separately. A signed listing does not execute the archive.
+For `development_extension`, submission additionally requires exactly one root
+Bun or Cargo Plugin source with the signed ID/version and nonempty convention
+declarations. Composite/workspace discovery layouts are conservatively rejected
+by this channel; publish an adoptable simple root source archive instead.
+
+Use `release-content-base KIND RELEASE_JSON` to derive the immutable v1 base
+identity; do not hash a modified release or its current availability field.
+The content JSON has `plugin_id`, `version`, `base_kind`,
+`base_release_identity` and a `content` array of `id`, `kind`
+(`editable_template` or `development_extension`), `url`, `digest`, `size`.
+Pass archives in that array's order:
+
+```sh
+lenso-marketplace-publisher operator.json release-content-base linked_cargo /absolute/published-linked-release.json
+lenso-marketplace-publisher operator.json submit-release-content AUTHOR /absolute/release-content.json /absolute/template.tar.gz /absolute/extension.tar.gz
+lenso-marketplace-publisher operator.json inspect-release-content REVIEWER SUBMISSION_ID
+lenso-marketplace-publisher operator.json approve-release-content REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY
+lenso-marketplace-publisher operator.json publish-release-content REVIEWER EXPECTED_REVISION 604800 < signing-key.bin
+lenso-marketplace-publisher operator.json export-release-content
+```
+
+`verify-release-content` checks an exact envelope from stdin against configured
+trust. The content publication has independent reviewer approval, revision CAS,
+signature domain and read-only `/api/marketplace/v1/release-content` endpoint.
+The same ID/version cannot be resubmitted with changed content. App owners must
+explicitly preview and copy selected content from verified local bytes; copied
+templates become App-owned and later updates never overwrite user edits.
+Development extensions remain inert until separately selected as a local source;
+listing or copying one grants no runtime permission.
+
 ### Public submission tracking
 
 The GitHub plugin submission issue is the review conversation. Record the internal

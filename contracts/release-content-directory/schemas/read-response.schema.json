@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["envelope_json"],
+  "properties": { "envelope_json": { "type": "string", "maxLength": 4194304 } },
+  "additionalProperties": false
+}

@@ -22,6 +22,7 @@ lenso-app-plan.workspace = true
 lenso-capability-http-endpoint = "=0.3.1"
 lenso-capability-marketplace-directory = { path = "../../contracts/directory" }
 lenso-capability-marketplace-linked-directory = { path = "../../contracts/linked-directory" }
+lenso-capability-marketplace-release-content-directory = { path = "../../contracts/release-content-directory" }
 lenso-kernel.workspace = true
 lenso-marketplace-directory-plugin = { path = "../../plugins/directory", default-features = false }
 lenso-marketplace-web-plugin = { path = "../../plugins/web", default-features = false }

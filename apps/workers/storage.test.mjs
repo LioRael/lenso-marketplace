@@ -110,11 +110,13 @@ const fixture = (envelope = signedEnvelope) => {
     controller: new AbortController(),
     details: { digest: hash(envelope), object_key: "proof/details.json" },
     linked: { digest: hash(envelope), object_key: "proof/linked.json" },
+    content: { digest: hash(envelope), object_key: "proof/content.json" },
     objects: new Map([
       [key, raw],
       ["proof/first.json", envelope],
       ["proof/details.json", envelope],
       ["proof/linked.json", envelope],
+      ["proof/content.json", envelope],
     ]),
     pointer: { object_key: key, token: accepted.token },
     publication: { digest: hash(envelope), object_key: "proof/first.json" },
@@ -142,6 +144,8 @@ const fixture = (envelope = signedEnvelope) => {
             table = "details";
           } else if (sql.includes("marketplace_linked_cargo")) {
             table = "linked";
+          } else if (sql.includes("marketplace_release_content")) {
+            table = "content";
           } else if (sql.includes("marketplace_publications")) {
             table = "publication";
           }
@@ -156,6 +160,9 @@ const fixture = (envelope = signedEnvelope) => {
           } else if (table === "linked") {
             expected =
               "SELECT object_key,digest FROM marketplace_linked_cargo WHERE catalog_id=?";
+          } else if (table === "content") {
+            expected =
+              "SELECT object_key,digest FROM marketplace_release_content WHERE catalog_id=?";
           }
           assert.equal(sql, expected);
           return {
@@ -371,6 +378,15 @@ test("raw linked Cargo releases use their independent signed pointer", async () 
     signedEnvelope
   );
   assert.deepEqual(state.calls.get, ["proof/linked.json"]);
+});
+
+test("raw release content uses its independent signed pointer", async () => {
+  const { state, storage } = fixture();
+  assert.equal(
+    JSON.parse(await storage("published_release_content", input)),
+    signedEnvelope
+  );
+  assert.deepEqual(state.calls.get, ["proof/content.json"]);
 });
 
 test("failed or malformed D1 batch cannot become missing accepted state", async () => {

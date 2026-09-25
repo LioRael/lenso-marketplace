@@ -14,6 +14,8 @@ use std::{
 
 mod details_revision;
 mod linked_cargo;
+pub mod release_content;
+mod release_content_source;
 use details_revision::ensure_additive_documents;
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
 
@@ -112,6 +114,28 @@ impl PublishedDirectory {
             Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
         }
     }
+
+    pub fn latest_release_content(&self) -> Result<Option<String>> {
+        // Existing publisher databases predate this optional publication channel.
+        // The read-only public projection must not run a migration on request.
+        let has_table: bool = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='release_content_snapshots')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_table {
+            return Ok(None);
+        }
+        let value: Option<Option<Vec<u8>>> = self.connection.query_row(
+            "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM release_content_snapshots ORDER BY revision DESC LIMIT 1",
+            [i64::try_from(lenso_plugin_catalog::MAX_ENVELOPE_BYTES)?], |row| row.get(0)
+        ).optional()?;
+        match value {
+            None => Ok(None),
+            Some(None) => anyhow::bail!("published release content envelope exceeds size limit"),
+            Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+        }
+    }
 }
 
 impl Directory {
@@ -133,6 +157,8 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS linked_cargo_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE UNIQUE INDEX IF NOT EXISTS linked_cargo_amendments_identity_digest ON linked_cargo_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS linked_cargo_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS release_content_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS release_content_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, subject TEXT NOT NULL, at INTEGER NOT NULL);
         ")?;
         connection.execute("INSERT OR IGNORE INTO metadata VALUES(1, ?1)", [catalog_id])?;

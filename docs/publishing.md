@@ -154,3 +154,11 @@ previous release fields and documents unchanged. The operator reviews it with
 `submit-linked-cargo-docs-revision`; this does not republish the `.crate`, fetch
 the Markdown, or rewrite an earlier signed snapshot. See the
 [operator guide](../tools/publisher/docs/operator.md) for the guarded commands.
+
+Optional editable templates and development extensions are submitted through
+the separate signed release-content v2 channel only after their exact base
+release is published. The publisher checks the supplied bounded `.tar.gz`
+bytes, base identity, namespace ownership and reviewer approval; it does not
+execute the content or rewrite an existing v1 release. The App owner selects
+and previews the exact content before copying; the copied files are App-owned.
+See [optional signed release content](../tools/publisher/docs/operator.md#optional-signed-release-content).

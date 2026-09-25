@@ -497,6 +497,172 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         Some(envelope["envelope"].as_str().unwrap().as_bytes()),
     );
     assert!(verified.status.success());
+    let base = invoke(
+        &config,
+        &[
+            "release-content-base",
+            "linked_cargo",
+            candidate.join("release.json").to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(base.status.success());
+    let base: serde_json::Value = serde_json::from_slice(&base.stdout).unwrap();
+    assert_eq!(
+        base["base_release_identity"],
+        signed
+            .select("example.web", "0.4.5", now)
+            .unwrap()
+            .immutable_identity()
+            .unwrap()
+    );
+    let mut archive = Vec::new();
+    {
+        let encoder = flate2::write::GzEncoder::new(&mut archive, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let content = b"export const message = 'Hello';\n";
+        let mut header = tar::Header::new_gnu();
+        header.set_size(content.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "src/example.ts", &content[..])
+            .unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+    }
+    let archive_path = root.path().join("editable-template.tar.gz");
+    fs::write(&archive_path, &archive).unwrap();
+    let content_release = serde_json::json!({
+        "plugin_id":"example.web", "version":"0.4.5", "base_kind":"linked_cargo",
+        "base_release_identity":base["base_release_identity"],
+        "content":[{
+            "id":"editable-starter", "kind":"editable_template",
+            "url":"https://example.test/content/example.web/0.4.5/editable-starter.tar.gz",
+            "digest":lenso_plugin_catalog::digest(&archive), "size":archive.len()
+        }]
+    });
+    let content_path = root.path().join("release-content.json");
+    fs::write(&content_path, serde_json::to_vec(&content_release).unwrap()).unwrap();
+    let bad_archive_path = root.path().join("bad-template.tar.gz");
+    fs::write(&bad_archive_path, b"tampered").unwrap();
+    assert!(
+        !invoke(
+            &config,
+            &[
+                "submit-release-content",
+                "author",
+                content_path.to_str().unwrap(),
+                bad_archive_path.to_str().unwrap()
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    assert!(
+        !invoke(
+            &config,
+            &[
+                "submit-release-content",
+                "intruder",
+                content_path.to_str().unwrap(),
+                archive_path.to_str().unwrap()
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    let submitted_content = invoke(
+        &config,
+        &[
+            "submit-release-content",
+            "author",
+            content_path.to_str().unwrap(),
+            archive_path.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        submitted_content.status.success(),
+        "{}",
+        String::from_utf8_lossy(&submitted_content.stderr)
+    );
+    let submission: serde_json::Value = serde_json::from_slice(&submitted_content.stdout).unwrap();
+    let content_id = submission["submission_id"].as_i64().unwrap().to_string();
+    let inspected_content = invoke(
+        &config,
+        &["inspect-release-content", "reviewer", &content_id],
+        None,
+    );
+    assert!(inspected_content.status.success());
+    let inspected_content: serde_json::Value =
+        serde_json::from_slice(&inspected_content.stdout).unwrap();
+    assert_eq!(inspected_content["release_content"], content_release);
+    assert_eq!(inspected_content["state"], "awaiting_review");
+    assert!(
+        invoke(
+            &config,
+            &[
+                "approve-release-content",
+                "reviewer",
+                &content_id,
+                submission["proposal_digest"].as_str().unwrap(),
+                "v1"
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    let published_content = invoke(
+        &config,
+        &["publish-release-content", "reviewer", "0", "3600"],
+        Some(&key),
+    );
+    assert!(
+        published_content.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published_content.stderr)
+    );
+    assert_eq!(
+        published_content.stdout,
+        invoke(&config, &["export-release-content"], None).stdout
+    );
+    assert!(
+        !invoke(
+            &config,
+            &["publish-release-content", "reviewer", "0", "3600"],
+            Some(&key)
+        )
+        .status
+        .success()
+    );
+    let content_envelope: serde_json::Value =
+        serde_json::from_slice(&published_content.stdout).unwrap();
+    let verified_content = lenso_plugin_catalog::release_content::verify(
+        content_envelope["envelope"].as_str().unwrap().as_bytes(),
+        &trust,
+        None,
+        now,
+    )
+    .unwrap();
+    verified_content
+        .select_linked(&signed, "example.web", "0.4.5", now)
+        .unwrap()
+        .select("editable-starter")
+        .unwrap()
+        .verify_bytes(&archive)
+        .unwrap();
+    assert!(
+        invoke(
+            &config,
+            &["verify-release-content"],
+            Some(content_envelope["envelope"].as_str().unwrap().as_bytes())
+        )
+        .status
+        .success()
+    );
     let mut revised = prepared;
     revised.documentation.push(
         serde_json::from_value(serde_json::json!({
