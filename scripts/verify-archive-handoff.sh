@@ -30,6 +30,8 @@ ed25519-dalek = "2.2"
 serde_json = "1"
 [patch.crates-io]
 lenso-cli = {{ path = {q(cli)} }}
+[patch."https://github.com/LioRael/lenso.git"]
+lenso-plugin-catalog = {{ path = {q(lenso / 'crates/lenso-plugin-catalog')} }}
 ''')
 PY
 MARKETPLACE_BUNDLE_ARCHIVE="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")" \
