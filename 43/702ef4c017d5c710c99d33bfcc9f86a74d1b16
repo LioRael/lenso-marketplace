@@ -1,0 +1,106 @@
+contracts/package-directory/schemas/read-request.schema.json
+  s_7d146975368699::t_044f25391c8709 1-6
+tools/publisher/src/main.rs
+  s_7d146975368699::t_480344ce1eaabb 9-11,13-14,16,37-50,255,292,302,514,625,711-724
+  s_7d146975368699::t_c4651a6fdb9ac7 5-6,8,725
+apps/workers/Cargo.toml
+  s_7d146975368699::t_45dd8254964419 28
+plugins/web/src/lib.rs
+  s_7d146975368699::t_f62df9908031fa 12,46,343-360
+  s_7d146975368699::t_1b4e580dd76bba 361-362
+apps/workers-sdk-prototype/wrangler.jsonc
+  s_7d146975368699::t_545509f2205477 18
+contracts/package-directory/src/lib.rs
+  s_7d146975368699::t_044f25391c8709 1-2
+apps/workers-sdk-prototype/Cargo.toml
+  s_7d146975368699::t_545509f2205477 25
+contracts/package-directory/build.rs
+  s_7d146975368699::t_044f25391c8709 1-20
+tools/cloudflare/README.md
+  s_7d146975368699::t_9fe2aa3b7de674 64,102-109
+  s_7d146975368699::t_45a0939d39c00c 110
+contracts/package-directory/capability.json
+  s_7d146975368699::t_044f25391c8709 1-15
+plugins/directory/src/publishing.rs
+  s_7d146975368699::t_45dd8254964419 17,23
+tools/cloudflare/promote.mjs
+  s_7d146975368699::t_e10021e24decb5 247-253
+contracts/package-directory/schemas/read-response.schema.json
+  s_7d146975368699::t_044f25391c8709 1-7
+apps/native/Cargo.toml
+  s_7d146975368699::t_45dd8254964419 14
+apps/workers/src/lib.rs
+  s_7d146975368699::t_f62df9908031fa 103-109,258-260
+  s_7d146975368699::t_d3003f2359ac62 261-262
+apps/workers-sdk-prototype/src/lib.rs
+  s_7d146975368699::t_545509f2205477 571-573
+  s_7d146975368699::t_3fb4b6db174962 569-570
+plugins/directory/src/lib.rs
+  s_7d146975368699::t_f62df9908031fa 11,107,111-153
+  s_7d146975368699::t_c09f6adb5ca89d 154
+apps/native/tests/http.rs
+  s_7d146975368699::t_1a389b38b09bb1 125,139-142
+  s_7d146975368699::t_481adbf089b7ab 123-124,126-138
+Cargo.toml
+  s_7d146975368699::t_45dd8254964419 11
+plugins/directory/Cargo.toml
+  s_7d146975368699::t_45dd8254964419 16,43
+tools/publisher/tests/package_publication.rs
+  s_7d146975368699::t_da76a38e7a379e 148-174
+  s_7d146975368699::t_480344ce1eaabb 1-2
+  s_7d146975368699::t_8b9951d0360925 31,36,43-49,53-65
+contracts/package-directory/Cargo.toml
+  s_7d146975368699::t_044f25391c8709 1-18
+plugins/directory/src/publishing/package.rs
+  s_7d146975368699::t_954c5329156639 15,18-34,45,92-93,105-112,114
+  s_7d146975368699::t_04ba101ee63f15 113,115,146-147
+apps/workers/storage.test.mjs
+  s_7d146975368699::t_e10021e24decb5 113,120,149-150,167-169,390-398
+  s_7d146975368699::t_531c1d08a8fb3a 399-400
+contracts/package-directory/schemas/read-error.schema.json
+  s_7d146975368699::t_044f25391c8709 1-4
+plugins/web/Cargo.toml
+  s_7d146975368699::t_45dd8254964419 26
+plugins/directory/src/storage.rs
+  s_7d146975368699::t_f62df9908031fa 23-29
+tools/cloudflare/promote.test.mjs
+  s_7d146975368699::t_9fe2aa3b7de674 8
+  s_7d146975368699::t_e10021e24decb5 181-188
+apps/workers/migrations/d1/0005_packages.sql
+  s_7d146975368699::t_f62df9908031fa 1-7
+tools/cloudflare/promote-cloudflare.mjs
+  s_7d146975368699::t_e10021e24decb5 11,44,47-48,61-64
+apps/native/src/lib.rs
+  s_7d146975368699::t_f62df9908031fa 65-67
+  s_7d146975368699::t_3f2fe16cbad90b 63-64
+tools/publisher/Cargo.toml
+  s_7d146975368699::t_45dd8254964419 7-8
+tools/publisher/docs/operator.md
+  s_7d146975368699::t_9fe2aa3b7de674 221-225,244-249
+  s_7d146975368699::t_a9e1bf43bed0ff 236-238
+apps/workers/storage.mjs
+  s_7d146975368699::t_f62df9908031fa 89-95,315-316
+  s_7d146975368699::t_d61530cdc27b41 317
+Cargo.lock
+  s_7d146975368699::t_0b3cdb26a0d972 1216-1228,1353,1383,1428,1455,1483
+contracts/package-directory/generated/bindings.ts
+  s_7d146975368699::t_f0bc07ce10cba0 1-260
+contracts/package-directory/src/generated.rs
+  s_7d146975368699::t_67e98d52fdb0f1 1-389
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "43702ef4c017d5c710c99d33bfcc9f86a74d1b16",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
