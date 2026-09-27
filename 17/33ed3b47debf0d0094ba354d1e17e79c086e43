@@ -1,0 +1,33 @@
+tools/cloudflare/promote.mjs
+  s_7d146975368699::t_270d50c848c014 139,167-184,186-206,316,324,332
+apps/workers/document-route.test.mjs
+  s_7d146975368699::t_7c3d6bc9b3c630 17-20
+apps/workers/storage.test.mjs
+  s_7d146975368699::t_16dea1e20473af 122
+  s_7d146975368699::t_7c3d6bc9b3c630 110
+apps/workers/documents.mjs
+  s_7d146975368699::t_7c3d6bc9b3c630 28-30,44-46,48-50,79-81,92-94,96-98,113-165,168-170,187-189
+  s_7d146975368699::t_d6a7cd29bf77f1 190
+tools/cloudflare/promote-cloudflare.mjs
+  s_7d146975368699::t_7c3d6bc9b3c630 38-40,128
+candidates/linked-cargo/lenso.web-ingress/0.4.5/metadata.json
+  s_7d146975368699::t_1964ba09f36460 10
+tests/workers/sdk-flow.test.mjs
+  s_7d146975368699::t_c66f2473f33cef 38-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1733ed3b47debf0d0094ba354d1e17e79c086e43",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
