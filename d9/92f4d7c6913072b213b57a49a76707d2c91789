@@ -1,0 +1,22 @@
+candidates/linked-cargo/lenso.web-ingress/0.4.5/README.md
+  s_7d146975368699::t_89b6566ebae210 1-4,6-17
+  s_7d146975368699::t_9a5c5b7cf9ee4a 5
+candidates/linked-cargo/lenso.web-ingress/0.4.5/metadata.json
+  s_7d146975368699::t_89b6566ebae210 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d992f4d7c6913072b213b57a49a76707d2c91789",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
