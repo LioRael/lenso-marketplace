@@ -108,6 +108,34 @@ under `packages/` through `marketplace_packages`. Apply
 the full prior pointer or confirmed empty slot. This adds no public writer
 route; the read-only Worker serves `/api/marketplace/v1/package`.
 
+## Retain exact published Markdown bodies
+
+For `release-details`, `linked-cargo` and `package` promotions, the protected
+host requires every document in the Rust-verified snapshot to exist in the
+Marketplace R2 bucket before advancing the D1 publication pointer. Supply
+missing bodies as an optional `documentFiles` object in the same protected
+promotion config, keyed by signed `sha256:<hex>` digest with absolute local
+Markdown paths as values. Each file is bounded to 1 MiB and checked against
+the signed size and SHA-256 before a create-only upload to
+`documents/sha256/<hex>.md`. An already uploaded object is read back and
+verified, so renewals do not need to resupply its file. An unrelated file key,
+missing body, changed object or uncertain write fails before pointer promotion.
+Do not place private documents in this public signed-directory workflow.
+
+The public Worker serves `GET` and `HEAD /documents/sha256/<hex>.md` only when
+that digest appears in the exact envelope named by a current D1 publication
+pointer. It verifies the envelope object against the pointer digest, then the
+Markdown body against its signed size and digest. The response carries
+`X-Lenso-Document-Digest` and `text/markdown; charset=utf-8`; it is never an
+MDX/JS execution path. A published body's bytes remain readable after the
+envelope's freshness window expires, while catalog freshness and adoption are
+separate consumer decisions. A later publication that omits the document no
+longer authorizes this route; the R2 object remains retained but unserved.
+Existing external signed URLs are not automatically mirrored: the operator
+must provide their exact bytes once. Protect the bucket from lifecycle deletion
+and back it up independently of the publisher database; this code never
+deletes published document objects.
+
 Apply `apps/workers/migrations/d1/0004_release_content.sql` explicitly to the
 selected D1 database before first v2 promotion. The promoter deliberately does
 not create tables or infer an empty pointer from a missing migration. Review

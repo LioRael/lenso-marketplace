@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  closeSync,
+  fstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+} from "node:fs";
 import { isAbsolute } from "node:path";
 
 import { cloudflareStorage } from "./cloudflare.mjs";
@@ -11,6 +17,33 @@ import {
   promotePackage,
   promoteReleaseContent,
 } from "./promote.mjs";
+
+const readDocument = (path) => {
+  const descriptor = openSync(path, "r");
+  try {
+    assert.ok(
+      fstatSync(descriptor).isFile(),
+      "document must be a regular file"
+    );
+    const buffer = Buffer.alloc(1024 * 1024 + 1);
+    let size = 0;
+    while (size < buffer.byteLength) {
+      const read = readSync(
+        descriptor,
+        buffer,
+        size,
+        buffer.byteLength - size,
+        null
+      );
+      if (read === 0) break;
+      size += read;
+    }
+    assert.ok(size > 0 && size <= 1024 * 1024, "document size exceeds bound");
+    return buffer.subarray(0, size);
+  } finally {
+    closeSync(descriptor);
+  }
+};
 
 // Run only in the protected operator host. CONFIG contains public identifiers,
 // absolute publisher paths and the operator-reviewed expected remote pointer.
@@ -68,6 +101,20 @@ const main = async () => {
     promote = promoteReleaseContent;
   }
   const publication = publisher(exportOperation);
+  const documentBodies = new Map();
+  if (details || linked || packaged) {
+    for (const [digest, path] of Object.entries(config.documentFiles ?? {})) {
+      assert.match(digest, /^sha256:[a-f0-9]{64}$/u);
+      assert.ok(isAbsolute(path), "absolute document path required");
+      documentBodies.set(digest, () => readDocument(path));
+    }
+  } else {
+    assert.equal(
+      config.documentFiles,
+      undefined,
+      "this channel has no documents"
+    );
+  }
   const receipt = await promote({
     ...cloudflareStorage({
       ...config,
@@ -78,6 +125,7 @@ const main = async () => {
     catalogId: config.catalogId,
     envelope: publication.envelope,
     expected: config.expected,
+    documentBodies,
     verify: (envelope) => publisher(verifyOperation, envelope),
   });
   process.stdout.write(`${JSON.stringify(receipt)}\n`);

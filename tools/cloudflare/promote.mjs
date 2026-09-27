@@ -2,6 +2,9 @@
 // and primary D1/R2 bindings; no public route or JS signature policy lives here.
 const encoder = new TextEncoder();
 const limit = 4 * 1024 * 1024;
+const DOCUMENT_LIMIT = 1024 * 1024;
+const DOCUMENT_DIGEST = /^sha256:[a-f0-9]{64}$/u;
+const markdownDecoder = new TextDecoder("utf-8", { fatal: true });
 const same = (a, b) =>
   a === null
     ? b === null
@@ -133,6 +136,68 @@ const uploadPublication = async (bucket, target, bytes, fresh) => {
   fresh();
 };
 
+const uploadDocuments = async (bucket, documents, documentBodies, fresh) => {
+  if (!Array.isArray(documents) || !(documentBodies instanceof Map)) {
+    throw new Error("verified documents and local document bodies required");
+  }
+  const byDigest = new Map();
+  for (const document of documents) {
+    if (
+      !DOCUMENT_DIGEST.test(document?.digest) ||
+      !Number.isSafeInteger(document.size) ||
+      document.size < 1 ||
+      document.size > DOCUMENT_LIMIT ||
+      document.media_type !== "text/markdown"
+    ) {
+      throw new Error("invalid verified document metadata");
+    }
+    if (
+      byDigest.has(document.digest) &&
+      byDigest.get(document.digest) !== document.size
+    ) {
+      throw new Error("conflicting verified document sizes");
+    }
+    byDigest.set(document.digest, document.size);
+  }
+  for (const digest of documentBodies.keys()) {
+    if (!byDigest.has(digest)) {
+      throw new Error("local document is absent from verified publication");
+    }
+  }
+  const entries = [...byDigest].map(([digest, size]) => ({ digest, size }));
+  for (const { digest, size } of entries) {
+    const key = `documents/sha256/${digest.slice(7)}.md`;
+    const input = documentBodies.get(digest);
+    const supplied = typeof input === "function" ? input() : input;
+    if (
+      supplied !== undefined &&
+      (!(supplied instanceof Uint8Array) ||
+        supplied.byteLength !== size ||
+        (await sha256(supplied)) !== digest)
+    ) {
+      throw new Error("local document size or digest mismatch");
+    }
+    const existing = await objectBytes(bucket, key);
+    if (existing === null && supplied === undefined) {
+      throw new Error(`missing reviewed document body: ${digest}`);
+    }
+    if (
+      existing !== null &&
+      (existing.byteLength !== size || (await sha256(existing)) !== digest)
+    ) {
+      throw new Error("immutable document object conflict");
+    }
+    markdownDecoder.decode(supplied ?? existing);
+    await uploadPublication(
+      bucket,
+      { object_key: key },
+      supplied ?? existing,
+      fresh
+    );
+  }
+  return { document_count: entries.length };
+};
+
 const promoteWithTarget = async ({
   database,
   bucket,
@@ -142,6 +207,8 @@ const promoteWithTarget = async ({
   expected,
   table,
   objectPrefix,
+  retainDocuments = false,
+  documentBodies = new Map(),
   now = () => Math.floor(Date.now() / 1000),
 }) => {
   const { bytes, candidate, fresh } = await validatePublication({
@@ -165,15 +232,18 @@ const promoteWithTarget = async ({
       .bind(catalogId)
       .first()) ?? null;
   const current = await read();
+  if (!same(current, target) && !same(current, expected)) {
+    throw new Error("publication pointer conflict");
+  }
+  const documentReceipt = retainDocuments
+    ? await uploadDocuments(bucket, candidate.documents, documentBodies, fresh)
+    : {};
   if (same(current, target)) {
     if (!equalBytes(await objectBytes(bucket, target.object_key), bytes)) {
       throw new Error("published object integrity failure");
     }
     fresh();
-    return { status: "already_published", ...target };
-  }
-  if (!same(current, expected)) {
-    throw new Error("publication pointer conflict");
+    return { status: "already_published", ...target, ...documentReceipt };
   }
   await uploadPublication(bucket, target, bytes, fresh);
   const statement =
@@ -212,6 +282,7 @@ const promoteWithTarget = async ({
           ? "reconciled"
           : "published",
       ...target,
+      ...documentReceipt,
     };
   }
   if (uncertain || !result?.success) {
@@ -233,6 +304,7 @@ export const promotePublication = (input) =>
 export const promoteReleaseDetails = (input) =>
   promoteWithTarget({
     ...input,
+    retainDocuments: true,
     objectPrefix: "release-details",
     table: "marketplace_release_details",
   });
@@ -240,6 +312,7 @@ export const promoteReleaseDetails = (input) =>
 export const promoteLinkedCargo = (input) =>
   promoteWithTarget({
     ...input,
+    retainDocuments: true,
     objectPrefix: "linked-cargo",
     table: "marketplace_linked_cargo",
   });
@@ -247,6 +320,7 @@ export const promoteLinkedCargo = (input) =>
 export const promotePackage = (input) =>
   promoteWithTarget({
     ...input,
+    retainDocuments: true,
     objectPrefix: "packages",
     table: "marketplace_packages",
   });

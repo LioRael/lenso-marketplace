@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
@@ -93,7 +94,7 @@ const storage = (table = "marketplace_publications") => {
     expected,
     now: () => 50,
     // Storage tests inject trusted verification. Real trust is checked by Rust.
-    verify: (envelope) => JSON.parse(envelope),
+    verify: (envelope) => ({ ...JSON.parse(envelope), documents: [] }),
   });
   return { input, state };
 };
@@ -167,7 +168,94 @@ test("release details use a separate pointer and object namespace", async () => 
   const receipt = await promoteReleaseDetails(input(1));
   assert.equal(receipt.status, "published");
   assert.match(receipt.object_key, /^release-details\//u);
+  assert.equal(receipt.document_count, 0);
   assert.equal(state.pointer.revision, 1);
+});
+
+test("only Rust-verified Markdown bytes are retained before a details pointer advances", async () => {
+  const { state, input } = storage("marketplace_release_details");
+  const body = new TextEncoder().encode("# Exact guide\n");
+  const digest = `sha256:${createHash("sha256").update(body).digest("hex")}`;
+  const document = {
+    digest,
+    media_type: "text/markdown",
+    size: body.byteLength,
+  };
+  const candidate = (
+    revision,
+    expected = null,
+    documentBodies = new Map()
+  ) => ({
+    ...input(revision, expected),
+    documentBodies,
+    verify: (envelope) => ({ ...JSON.parse(envelope), documents: [document] }),
+  });
+  await assert.rejects(
+    promoteReleaseDetails(candidate(1)),
+    /missing reviewed document body/u
+  );
+  assert.equal(state.pointer, null);
+  await assert.rejects(
+    promoteReleaseDetails(
+      candidate(1, null, new Map([[digest, new TextEncoder().encode("wrong")]]))
+    ),
+    /size or digest mismatch/u
+  );
+  assert.equal(state.pointer, null);
+
+  const binary = new Uint8Array([0xff]);
+  const binaryDigest = `sha256:${createHash("sha256").update(binary).digest("hex")}`;
+  await assert.rejects(
+    promoteReleaseDetails({
+      ...candidate(1, null, new Map([[binaryDigest, binary]])),
+      verify: (envelope) => ({
+        ...JSON.parse(envelope),
+        documents: [
+          { digest: binaryDigest, media_type: "text/markdown", size: 1 },
+        ],
+      }),
+    }),
+    /encoded data was not valid/u
+  );
+  assert.equal(state.pointer, null);
+
+  let fileReads = 0;
+  const first = await promoteReleaseDetails(
+    candidate(
+      1,
+      null,
+      new Map([
+        [
+          digest,
+          () => {
+            fileReads += 1;
+            return body;
+          },
+        ],
+      ])
+    )
+  );
+  assert.equal(fileReads, 1);
+  assert.equal(first.document_count, 1);
+  assert.deepEqual(
+    state.objects.get(`documents/sha256/${digest.slice(7)}.md`),
+    body
+  );
+
+  const renewed = await promoteReleaseDetails(
+    candidate(2, { ...state.pointer })
+  );
+  assert.equal(renewed.document_count, 1);
+  assert.equal(state.pointer.revision, 2);
+  state.objects.set(
+    `documents/sha256/${digest.slice(7)}.md`,
+    new TextEncoder().encode("tampered")
+  );
+  await assert.rejects(
+    promoteReleaseDetails(candidate(3, { ...state.pointer })),
+    /immutable document object conflict/u
+  );
+  assert.equal(state.pointer.revision, 2);
 });
 
 test("linked Cargo releases use a separate pointer and object namespace", async () => {

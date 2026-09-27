@@ -318,6 +318,7 @@ fn operator_reviews_publishes_and_verifies_release_details() {
     let verified: serde_json::Value = serde_json::from_slice(&verified.stdout).unwrap();
     assert_eq!(verified["catalog_id"], "details-test");
     assert_eq!(verified["revision"], 1);
+    assert_eq!(verified["documents"], serde_json::json!([]));
     let mut revision: serde_json::Value =
         serde_json::from_slice(&fs::read(&details_path).unwrap()).unwrap();
     revision["documentation"] = serde_json::json!([{
@@ -394,6 +395,7 @@ fn operator_reviews_publishes_and_verifies_release_details() {
     assert!(checked.status.success());
     let checked: serde_json::Value = serde_json::from_slice(&checked.stdout).unwrap();
     assert_eq!(checked["revision"], 2);
+    assert_eq!(checked["documents"], revision["documentation"]);
     assert!(
         !invoke(
             &config,
@@ -840,6 +842,8 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         Some(envelope["envelope"].as_str().unwrap().as_bytes()),
     );
     assert!(verified.status.success());
+    let verified: serde_json::Value = serde_json::from_slice(&verified.stdout).unwrap();
+    assert_eq!(verified["documents"], serde_json::json!([document]));
     let base = invoke(
         &config,
         &[

@@ -344,11 +344,10 @@ fn operator_reviews_and_signs_exact_npm_only_release() {
             .as_deref(),
         Some(digest(&bytes).as_str())
     );
-    assert!(
-        invoke(&config, &["verify-package"], Some(envelope.as_bytes()))
-            .status
-            .success()
-    );
+    let receipt = invoke(&config, &["verify-package"], Some(envelope.as_bytes()));
+    assert!(receipt.status.success());
+    let receipt: serde_json::Value = serde_json::from_slice(&receipt.stdout).unwrap();
+    assert_eq!(receipt["documents"], serde_json::json!([]));
     assert!(
         !invoke(&config, &["verify-linked-cargo"], Some(envelope.as_bytes()))
             .status

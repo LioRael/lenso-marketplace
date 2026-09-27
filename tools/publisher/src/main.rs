@@ -493,7 +493,12 @@ fn run() -> Result<()> {
             let verified =
                 lenso_plugin_catalog::verify_release_details(&envelope, &trust, None, now)?;
             let snapshot = verified.snapshot();
-            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
+            let documents: Vec<_> = snapshot
+                .releases
+                .iter()
+                .flat_map(|release| &release.documentation)
+                .collect();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at,"documents":documents});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
         "verify-linked-cargo" => {
@@ -521,7 +526,12 @@ fn run() -> Result<()> {
             let verified =
                 lenso_plugin_catalog::linked_cargo::verify(&envelope, &trust, None, now)?;
             let snapshot = verified.snapshot();
-            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
+            let documents: Vec<_> = snapshot
+                .releases
+                .iter()
+                .flat_map(|release| &release.documentation)
+                .collect();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at,"documents":documents});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
         #[cfg(feature = "package-publication")]
@@ -546,7 +556,12 @@ fn run() -> Result<()> {
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let verified = lenso_plugin_catalog::package::verify(&envelope, &trust, None, now)?;
             let snapshot = verified.snapshot();
-            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
+            let documents: Vec<_> = snapshot
+                .releases
+                .iter()
+                .flat_map(|release| &release.documentation)
+                .collect();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at,"documents":documents});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
         "verify-release-content" => {
