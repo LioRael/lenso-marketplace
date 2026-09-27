@@ -107,11 +107,10 @@ const fixture = (envelope = signedEnvelope) => {
   const key = `accepted/${encodeURIComponent(catalog)}/${hash(raw).slice(7)}.json`;
   const state = {
     calls: { batch: 0, first: 0, get: [], put: 0, run: 0 },
+    content: { digest: hash(envelope), object_key: "proof/content.json" },
     controller: new AbortController(),
     details: { digest: hash(envelope), object_key: "proof/details.json" },
     linked: { digest: hash(envelope), object_key: "proof/linked.json" },
-    package: { digest: hash(envelope), object_key: "proof/package.json" },
-    content: { digest: hash(envelope), object_key: "proof/content.json" },
     objects: new Map([
       [key, raw],
       ["proof/first.json", envelope],
@@ -120,6 +119,7 @@ const fixture = (envelope = signedEnvelope) => {
       ["proof/package.json", envelope],
       ["proof/content.json", envelope],
     ]),
+    package: { digest: hash(envelope), object_key: "proof/package.json" },
     pointer: { object_key: key, token: accepted.token },
     publication: { digest: hash(envelope), object_key: "proof/first.json" },
   };

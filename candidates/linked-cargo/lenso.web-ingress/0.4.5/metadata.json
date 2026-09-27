@@ -7,9 +7,7 @@
   "license": "MIT",
   "registry_url": "https://crates.io/crates/lenso-web-ingress-plugin/0.4.5",
   "integration": "host_provided",
-  "targets": [
-    "aarch64-apple-darwin"
-  ],
+  "targets": ["aarch64-apple-darwin"],
   "documentation": [
     {
       "id": "upstream-readme",

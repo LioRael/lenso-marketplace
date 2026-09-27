@@ -9,15 +9,15 @@ const documentDigest = `sha256:${createHash("sha256").update(body).digest("hex")
 const path = `/documents/sha256/${documentDigest.slice(7)}.md`;
 
 const channels = {
-  "release-details": [
-    "marketplace_release_details",
-    "lenso.marketplace.release-details.v1",
-  ],
   "linked-cargo": [
     "marketplace_linked_cargo",
     "lenso.marketplace.linked-cargo-snapshot.v1",
   ],
   packages: ["marketplace_packages", "lenso.marketplace.package-snapshot.v1"],
+  "release-details": [
+    "marketplace_release_details",
+    "lenso.marketplace.release-details.v1",
+  ],
 };
 
 const fixture = (

@@ -35,7 +35,9 @@ const readDocument = (path) => {
         buffer.byteLength - size,
         null
       );
-      if (read === 0) break;
+      if (read === 0) {
+        break;
+      }
       size += read;
     }
     assert.ok(size > 0 && size <= 1024 * 1024, "document size exceeds bound");
@@ -123,9 +125,9 @@ const main = async () => {
       token: process.env.MARKETPLACE_D1_TOKEN,
     }),
     catalogId: config.catalogId,
+    documentBodies,
     envelope: publication.envelope,
     expected: config.expected,
-    documentBodies,
     verify: (envelope) => publisher(verifyOperation, envelope),
   });
   process.stdout.write(`${JSON.stringify(receipt)}\n`);

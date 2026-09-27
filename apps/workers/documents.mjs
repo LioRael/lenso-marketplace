@@ -25,7 +25,9 @@ const sha256 = async (bytes) =>
 
 const readBounded = async (bucket, key, limit) => {
   const object = await bucket.get(key);
-  if (!object) return null;
+  if (!object) {
+    return null;
+  }
   if (
     !object.body ||
     !Number.isSafeInteger(object.size) ||
@@ -39,9 +41,13 @@ const readBounded = async (bucket, key, limit) => {
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
       size += value.byteLength;
-      if (size > limit) throw new Error("document object exceeds bound");
+      if (size > limit) {
+        throw new Error("document object exceeds bound");
+      }
       chunks.push(value);
     }
   } finally {
@@ -70,7 +76,9 @@ const signedDocument = (bytes, catalogId, revision, schema, wanted) => {
   // digest became the current D1 pointer. This read only extracts an identity;
   // it does not add a second signature policy to the public Worker.
   const payload = JSON.parse(
-    decoder.decode(Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0)))
+    decoder.decode(
+      Uint8Array.from(atob(encoded), (char) => char.codePointAt(0))
+    )
   );
   if (
     payload?.schema !== schema ||
@@ -81,9 +89,13 @@ const signedDocument = (bytes, catalogId, revision, schema, wanted) => {
     throw new Error("published document snapshot mismatch");
   }
   for (const release of payload.releases) {
-    if (!Array.isArray(release?.documentation)) continue;
+    if (!Array.isArray(release?.documentation)) {
+      continue;
+    }
     for (const document of release.documentation) {
-      if (document?.digest !== wanted) continue;
+      if (document?.digest !== wanted) {
+        continue;
+      }
       if (
         document.media_type !== "text/markdown" ||
         !Number.isSafeInteger(document.size) ||
@@ -98,9 +110,64 @@ const signedDocument = (bytes, catalogId, revision, schema, wanted) => {
   return null;
 };
 
+const sourceDocument = async (env, source, wanted, digest) => {
+  const [channel, table, schema] = source;
+  const pointer = await env.MARKETPLACE_DB.prepare(
+    `SELECT revision,object_key,digest FROM ${table} WHERE catalog_id=?`
+  )
+    .bind(env.CATALOG_ID)
+    .first();
+  if (!pointer) {
+    return null;
+  }
+  if (
+    !Number.isSafeInteger(pointer.revision) ||
+    pointer.revision < 1 ||
+    !DIGEST.test(pointer.digest) ||
+    pointer.object_key !==
+      `${channel}/${encodeURIComponent(env.CATALOG_ID)}/${pointer.digest.slice(7)}.json`
+  ) {
+    throw new Error("invalid publication pointer");
+  }
+  const envelopeBytes = await readBounded(
+    env.MARKETPLACE_OBJECTS,
+    pointer.object_key,
+    MAX_ENVELOPE
+  );
+  if (!envelopeBytes || (await sha256(envelopeBytes)) !== pointer.digest) {
+    throw new Error("published envelope integrity failure");
+  }
+  const document = signedDocument(
+    envelopeBytes,
+    env.CATALOG_ID,
+    pointer.revision,
+    schema,
+    wanted
+  );
+  if (!document) {
+    return null;
+  }
+  const body = await readBounded(
+    env.MARKETPLACE_OBJECTS,
+    `documents/sha256/${digest}.md`,
+    MAX_DOCUMENT
+  );
+  if (
+    !body ||
+    body.byteLength !== document.size ||
+    (await sha256(body)) !== wanted
+  ) {
+    throw new Error("published document body integrity failure");
+  }
+  decoder.decode(body);
+  return body;
+};
+
 export const documentResponse = async (request, env) => {
   const match = new URL(request.url).pathname.match(DOCUMENT_PATH);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method Not Allowed", {
       headers: { allow: "GET, HEAD" },
@@ -117,51 +184,11 @@ export const documentResponse = async (request, env) => {
   }
   const wanted = `sha256:${match[1]}`;
   try {
-    for (const [channel, table, schema] of sources) {
-      const pointer = await env.MARKETPLACE_DB.prepare(
-        `SELECT revision,object_key,digest FROM ${table} WHERE catalog_id=?`
-      )
-        .bind(env.CATALOG_ID)
-        .first();
-      if (!pointer) continue;
-      if (
-        !Number.isSafeInteger(pointer.revision) ||
-        pointer.revision < 1 ||
-        !DIGEST.test(pointer.digest) ||
-        pointer.object_key !==
-          `${channel}/${encodeURIComponent(env.CATALOG_ID)}/${pointer.digest.slice(7)}.json`
-      ) {
-        throw new Error("invalid publication pointer");
+    for (const source of sources) {
+      const body = await sourceDocument(env, source, wanted, match[1]);
+      if (!body) {
+        continue;
       }
-      const envelopeBytes = await readBounded(
-        env.MARKETPLACE_OBJECTS,
-        pointer.object_key,
-        MAX_ENVELOPE
-      );
-      if (!envelopeBytes || (await sha256(envelopeBytes)) !== pointer.digest) {
-        throw new Error("published envelope integrity failure");
-      }
-      const document = signedDocument(
-        envelopeBytes,
-        env.CATALOG_ID,
-        pointer.revision,
-        schema,
-        wanted
-      );
-      if (!document) continue;
-      const body = await readBounded(
-        env.MARKETPLACE_OBJECTS,
-        `documents/sha256/${match[1]}.md`,
-        MAX_DOCUMENT
-      );
-      if (
-        !body ||
-        body.byteLength !== document.size ||
-        (await sha256(body)) !== wanted
-      ) {
-        throw new Error("published document body integrity failure");
-      }
-      decoder.decode(body);
       return new Response(request.method === "HEAD" ? null : body, {
         headers: {
           "cache-control": "no-store",

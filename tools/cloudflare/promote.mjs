@@ -136,7 +136,7 @@ const uploadPublication = async (bucket, target, bytes, fresh) => {
   fresh();
 };
 
-const uploadDocuments = async (bucket, documents, documentBodies, fresh) => {
+const documentSizes = (documents, documentBodies) => {
   if (!Array.isArray(documents) || !(documentBodies instanceof Map)) {
     throw new Error("verified documents and local document bodies required");
   }
@@ -164,38 +164,46 @@ const uploadDocuments = async (bucket, documents, documentBodies, fresh) => {
       throw new Error("local document is absent from verified publication");
     }
   }
-  const entries = [...byDigest].map(([digest, size]) => ({ digest, size }));
-  for (const { digest, size } of entries) {
-    const key = `documents/sha256/${digest.slice(7)}.md`;
-    const input = documentBodies.get(digest);
-    const supplied = typeof input === "function" ? input() : input;
-    if (
-      supplied !== undefined &&
-      (!(supplied instanceof Uint8Array) ||
-        supplied.byteLength !== size ||
-        (await sha256(supplied)) !== digest)
-    ) {
-      throw new Error("local document size or digest mismatch");
-    }
-    const existing = await objectBytes(bucket, key);
-    if (existing === null && supplied === undefined) {
-      throw new Error(`missing reviewed document body: ${digest}`);
-    }
-    if (
-      existing !== null &&
-      (existing.byteLength !== size || (await sha256(existing)) !== digest)
-    ) {
-      throw new Error("immutable document object conflict");
-    }
-    markdownDecoder.decode(supplied ?? existing);
-    await uploadPublication(
-      bucket,
-      { object_key: key },
-      supplied ?? existing,
-      fresh
-    );
+  return byDigest;
+};
+
+const uploadDocument = async (bucket, digest, size, documentBodies, fresh) => {
+  const key = `documents/sha256/${digest.slice(7)}.md`;
+  const input = documentBodies.get(digest);
+  const supplied = typeof input === "function" ? input() : input;
+  if (
+    supplied !== undefined &&
+    (!(supplied instanceof Uint8Array) ||
+      supplied.byteLength !== size ||
+      (await sha256(supplied)) !== digest)
+  ) {
+    throw new Error("local document size or digest mismatch");
   }
-  return { document_count: entries.length };
+  const existing = await objectBytes(bucket, key);
+  if (existing === null && supplied === undefined) {
+    throw new Error(`missing reviewed document body: ${digest}`);
+  }
+  if (
+    existing !== null &&
+    (existing.byteLength !== size || (await sha256(existing)) !== digest)
+  ) {
+    throw new Error("immutable document object conflict");
+  }
+  markdownDecoder.decode(supplied ?? existing);
+  await uploadPublication(
+    bucket,
+    { object_key: key },
+    supplied ?? existing,
+    fresh
+  );
+};
+
+const uploadDocuments = async (bucket, documents, documentBodies, fresh) => {
+  const byDigest = documentSizes(documents, documentBodies);
+  for (const [digest, size] of byDigest) {
+    await uploadDocument(bucket, digest, size, documentBodies, fresh);
+  }
+  return { document_count: byDigest.size };
 };
 
 const promoteWithTarget = async ({
@@ -304,24 +312,24 @@ export const promotePublication = (input) =>
 export const promoteReleaseDetails = (input) =>
   promoteWithTarget({
     ...input,
-    retainDocuments: true,
     objectPrefix: "release-details",
+    retainDocuments: true,
     table: "marketplace_release_details",
   });
 
 export const promoteLinkedCargo = (input) =>
   promoteWithTarget({
     ...input,
-    retainDocuments: true,
     objectPrefix: "linked-cargo",
+    retainDocuments: true,
     table: "marketplace_linked_cargo",
   });
 
 export const promotePackage = (input) =>
   promoteWithTarget({
     ...input,
-    retainDocuments: true,
     objectPrefix: "packages",
+    retainDocuments: true,
     table: "marketplace_packages",
   });
 

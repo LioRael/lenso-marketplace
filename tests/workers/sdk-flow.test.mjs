@@ -35,7 +35,10 @@ test("Workers SDK prototype pins its toolchain and source watch inputs", async (
   ]);
   assert.match(cargo, /worker\s*=\s*\{\s*version\s*=\s*"=0\.8\.5"/u);
   assert.match(cargo, /lenso-capability-marketplace-linked-directory/u);
-  assert.match(host, /lenso_capability_marketplace_linked_directory::CAPABILITY_ID/u);
+  assert.match(
+    host,
+    /lenso_capability_marketplace_linked_directory::CAPABILITY_ID/u
+  );
   assert.match(build, /--version/u);
   assert.match(build, /0\.8\.5/u);
   for (const path of [
