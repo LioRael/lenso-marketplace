@@ -1,0 +1,25 @@
+{
+  "publisher_id": "lenso",
+  "title": "Web Ingress",
+  "summary": "Linked Rust HTTP Ingress Plugin for Lenso backends. Requires a Host-specific adapter.",
+  "source_url": "https://github.com/LioRael/lenso-web/commit/0e93f1149ac1b0905a51d76692d369a028f3a532",
+  "source_revision": "0e93f1149ac1b0905a51d76692d369a028f3a532",
+  "license": "MIT",
+  "registry_url": "https://crates.io/crates/lenso-web-ingress-plugin/0.4.5",
+  "integration": "host_provided",
+  "targets": [
+    "aarch64-apple-darwin"
+  ],
+  "documentation": [
+    {
+      "id": "upstream-readme",
+      "revision": "0e93f1149ac1b0905a51d76692d369a028f3a532",
+      "language": "en",
+      "topic": "usage",
+      "url": "https://raw.githubusercontent.com/LioRael/lenso-web/0e93f1149ac1b0905a51d76692d369a028f3a532/README.md",
+      "digest": "sha256:769594fcba0b714c6d95aa998bbbf52feee57746d16ac922cd0a52728083135c",
+      "size": 28816,
+      "media_type": "text/markdown"
+    }
+  ]
+}
