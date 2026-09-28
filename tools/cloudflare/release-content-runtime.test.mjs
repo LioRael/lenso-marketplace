@@ -1,12 +1,27 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { Miniflare } from "miniflare";
 
+const documentBody = "# Getting started\n";
+const documentDigest = `sha256:${createHash("sha256").update(documentBody).digest("hex")}`;
 const envelope = (revision, extra = "") =>
-  JSON.stringify({ catalog_id: "catalog", expires_at: 100, extra, revision });
+  JSON.stringify({
+    catalog_id: "catalog",
+    documents: [
+      {
+        digest: documentDigest,
+        media_type: "text/markdown",
+        size: new TextEncoder().encode(documentBody).byteLength,
+      },
+    ],
+    expires_at: 100,
+    extra,
+    revision,
+  });
 
 test("workerd release content uses an independent D1 pointer and immutable R2 bytes", async () => {
   const runtime = new Miniflare({
@@ -15,11 +30,12 @@ test("workerd release content uses an independent D1 pointer and immutable R2 by
     modules: [
       {
         contents: `import { promoteReleaseContent } from "./promote.mjs";
+const documentBodies = new Map([[${JSON.stringify(documentDigest)}, new TextEncoder().encode(${JSON.stringify(documentBody)})]]);
 export default { async fetch(request, env) {
   const input = await request.json();
   try {
     return Response.json(await promoteReleaseContent({ ...input, database: env.DB,
-      bucket: env.BUCKET, verify: JSON.parse, now: () => 50 }));
+      bucket: env.BUCKET, documentBodies, verify: JSON.parse, now: () => 50 }));
   } catch (error) { return Response.json({ error: error.message }, { status: 409 }); }
 } };`,
         path: fileURLToPath(
@@ -66,11 +82,16 @@ export default { async fetch(request, env) {
       return { body: await response.json(), status: response.status };
     };
     const first = await promote(envelope(1), null);
-    assert.equal(first.status, 200);
+    assert.equal(first.status, 200, JSON.stringify(first.body));
     assert.equal(first.body.status, "published");
+    assert.equal(first.body.document_count, 1);
     assert.match(first.body.object_key, /^release-content\//u);
     const firstObject = await bucket.get(first.body.object_key);
     assert.equal(await firstObject.text(), envelope(1));
+    const documentObject = await bucket.get(
+      `documents/sha256/${documentDigest.slice(7)}.md`
+    );
+    assert.equal(await documentObject.text(), documentBody);
     const retry = await promote(envelope(1), null);
     assert.equal(retry.body.status, "already_published");
     const expected = {

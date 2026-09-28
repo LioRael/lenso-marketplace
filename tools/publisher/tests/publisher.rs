@@ -833,7 +833,7 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
             .select("example.web", "0.4.5", now)
             .unwrap()
             .documentation,
-        vec![serde_json::from_value(document).unwrap()]
+        vec![serde_json::from_value(document.clone()).unwrap()]
     );
     assert!(signed.select("example.web", "0.4.4", now).is_err());
     let verified = invoke(

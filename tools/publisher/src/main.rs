@@ -194,7 +194,7 @@ fn run() -> Result<()> {
                 }
                 "submit-details" => {
                     ensure!(
-                        args.len() >= 4 && (args.len() - 4) % 2 == 0,
+                        args.len() >= 4 && (args.len() - 4).is_multiple_of(2),
                         "submit-details requires AUTHOR DETAILS_JSON [ID ARCHIVE...]"
                     );
                     let bytes = fs::read(&args[3])?;
@@ -302,7 +302,7 @@ fn run() -> Result<()> {
                 #[cfg(feature = "package-publication")]
                 "submit-package" => {
                     ensure!(
-                        args.len() >= 6 && (args.len() - 4) % 2 == 0,
+                        args.len() >= 6 && (args.len() - 4).is_multiple_of(2),
                         "submit-package requires AUTHOR RELEASE_JSON ID ARCHIVE [ID ARCHIVE...]"
                     );
                     let release_bytes = fs::read(&args[3])?;
