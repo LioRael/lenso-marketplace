@@ -1,10 +1,14 @@
 //! Author-owned preparation; it requires neither operator configuration nor keys.
 use anyhow::{Context, Result, ensure};
 use lenso_app_authoring::bundle_archive::{PluginArchiveIdentity, VerifiedPluginArchive};
-use lenso_marketplace_directory_plugin::publishing::linked_cargo_crate_identity;
+use lenso_marketplace_directory_plugin::publishing::{
+    linked_cargo_crate_identity,
+    release_content::{BaseKind, Content, ContentKind, ContentOnlyMetadata, ReleaseContent},
+};
 use lenso_plugin_catalog::{
     Artifact, Availability, Documentation, Presentation, Release, digest,
     linked_cargo::{LinkedCargoIntegration, LinkedCargoRelease},
+    package::PackageRelease,
 };
 use serde::Deserialize;
 use std::{fs, io::Read, path::Path};
@@ -38,6 +42,49 @@ pub struct LinkedCargoMetadata {
     targets: Vec<String>,
     #[serde(default)]
     documentation: Vec<Documentation>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseContentDraft {
+    plugin_id: Option<String>,
+    version: Option<String>,
+    metadata: Option<ContentOnlyMetadataDraft>,
+    content: Vec<ContentDraft>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContentDraft {
+    id: String,
+    kind: ContentKind,
+    url: String,
+    file: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContentOnlyMetadataDraft {
+    publisher_id: String,
+    title: String,
+    summary: String,
+    source_url: String,
+    source_revision: String,
+    license: String,
+    documentation: Vec<DocumentationDraft>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DocumentationDraft {
+    id: String,
+    revision: String,
+    language: String,
+    topic: String,
+    target: Option<String>,
+    url: String,
+    media_type: String,
+    file: String,
 }
 
 pub fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
@@ -177,5 +224,209 @@ pub fn check_linked_cargo(directory: &Path) -> Result<LinkedCargoRelease> {
         identity.plugin_id == release.plugin_id,
         "crate Plugin ID does not match release"
     );
+    Ok(release)
+}
+
+fn local_file(directory: &Path, name: &str, limit: u64) -> Result<Vec<u8>> {
+    let path = Path::new(name);
+    ensure!(
+        path.file_name()
+            .is_some_and(|file| file == path.as_os_str())
+            && !matches!(name, "." | "..")
+            && !name.contains('\\'),
+        "content input file must be a local basename"
+    );
+    let path = directory.join(path);
+    ensure!(
+        fs::symlink_metadata(&path)?.file_type().is_file(),
+        "content input must be a regular file"
+    );
+    read_bounded(&path, limit)
+}
+
+fn content_archive_name(index: usize) -> String {
+    format!("content-{:02}.tar.gz", index + 1)
+}
+
+fn content_document_name(index: usize) -> String {
+    format!("documentation-{:02}.md", index + 1)
+}
+
+/// Prepare exact author-owned content without operator configuration or keys.
+/// `base` is an exact release JSON for attached content and absent for content-only.
+pub fn prepare_release_content(
+    base_kind: BaseKind,
+    base: Option<&Path>,
+    draft_path: &Path,
+    output: &Path,
+) -> Result<ReleaseContent> {
+    let draft: ReleaseContentDraft = serde_json::from_slice(&read_bounded(draft_path, 64 * 1024)?)
+        .context("read release content draft")?;
+    ensure!(
+        !draft.content.is_empty() && draft.content.len() <= 32,
+        "release content needs one to 32 entries"
+    );
+    let input_dir = draft_path.parent().unwrap_or_else(|| Path::new("."));
+    let mut documentation_bytes = Vec::new();
+    let (plugin_id, version, base_release_identity, metadata) = match base_kind {
+        BaseKind::ContentOnly => {
+            ensure!(base.is_none(), "content-only release has no base release");
+            let metadata = draft
+                .metadata
+                .context("content-only metadata is required")?;
+            ensure!(
+                !metadata.documentation.is_empty() && metadata.documentation.len() <= 64,
+                "content-only release needs one to 64 Markdown documents"
+            );
+            let mut documentation = Vec::with_capacity(metadata.documentation.len());
+            for document in metadata.documentation {
+                let bytes = local_file(input_dir, &document.file, 1024 * 1024)?;
+                documentation.push(Documentation {
+                    id: document.id,
+                    revision: document.revision,
+                    language: document.language,
+                    topic: document.topic,
+                    target: document.target,
+                    url: document.url,
+                    digest: digest(&bytes),
+                    size: bytes.len() as u64,
+                    media_type: document.media_type,
+                });
+                documentation_bytes.push(bytes);
+            }
+            (
+                draft
+                    .plugin_id
+                    .context("content-only plugin_id is required")?,
+                draft.version.context("content-only version is required")?,
+                String::new(),
+                Some(ContentOnlyMetadata {
+                    publisher_id: metadata.publisher_id,
+                    title: metadata.title,
+                    summary: metadata.summary,
+                    source_url: metadata.source_url,
+                    source_revision: metadata.source_revision,
+                    license: metadata.license,
+                    documentation,
+                }),
+            )
+        }
+        _ => {
+            ensure!(
+                draft.plugin_id.is_none() && draft.version.is_none() && draft.metadata.is_none(),
+                "attached release identity and metadata must come from its base"
+            );
+            let bytes = read_bounded(
+                base.context("attached content needs a base release")?,
+                64 * 1024,
+            )?;
+            match base_kind {
+                BaseKind::Portable => {
+                    let release: Release = serde_json::from_slice(&bytes)?;
+                    release.validate()?;
+                    ensure!(
+                        release.availability == Availability::Listed,
+                        "base release must be listed"
+                    );
+                    let identity = release.immutable_identity()?;
+                    (release.plugin_id, release.version, identity, None)
+                }
+                BaseKind::LinkedCargo => {
+                    let release: LinkedCargoRelease = serde_json::from_slice(&bytes)?;
+                    release.validate()?;
+                    ensure!(
+                        release.availability == Availability::Listed,
+                        "base release must be listed"
+                    );
+                    let identity = release.immutable_identity()?;
+                    (release.plugin_id, release.version, identity, None)
+                }
+                BaseKind::Package => {
+                    let release: PackageRelease = serde_json::from_slice(&bytes)?;
+                    release.validate()?;
+                    ensure!(
+                        release.availability == Availability::Listed,
+                        "base release must be listed"
+                    );
+                    let identity = release.immutable_identity()?;
+                    (release.plugin_id, release.version, identity, None)
+                }
+                BaseKind::ContentOnly => unreachable!(),
+            }
+        }
+    };
+    let mut archives = Vec::with_capacity(draft.content.len());
+    let mut content = Vec::with_capacity(draft.content.len());
+    for entry in draft.content {
+        let bytes = local_file(input_dir, &entry.file, 16 * 1024 * 1024)?;
+        content.push(Content {
+            id: entry.id,
+            kind: entry.kind,
+            url: entry.url,
+            digest: digest(&bytes),
+            size: bytes.len() as u64,
+        });
+        archives.push(bytes);
+    }
+    let mut release = ReleaseContent {
+        plugin_id,
+        version,
+        base_kind,
+        base_release_identity,
+        metadata,
+        content,
+    };
+    if base_kind == BaseKind::ContentOnly {
+        release.base_release_identity = release.content_only_identity()?;
+    }
+    release.verify_local_archives(&archives.iter().map(Vec::as_slice).collect::<Vec<_>>())?;
+    fs::create_dir(output).context("create a new release content submission directory")?;
+    for (index, bytes) in archives.iter().enumerate() {
+        fs::write(output.join(content_archive_name(index)), bytes)?;
+    }
+    if let Some(metadata) = &release.metadata {
+        for (index, (document, bytes)) in metadata
+            .documentation
+            .iter()
+            .zip(documentation_bytes)
+            .enumerate()
+        {
+            ensure!(
+                digest(&bytes) == document.digest && bytes.len() as u64 == document.size,
+                "documentation changed during preparation"
+            );
+            fs::write(output.join(content_document_name(index)), bytes)?;
+        }
+    }
+    fs::write(
+        output.join("release-content.json"),
+        serde_json::to_vec_pretty(&release)?,
+    )?;
+    Ok(release)
+}
+
+pub fn check_release_content(directory: &Path) -> Result<ReleaseContent> {
+    let release: ReleaseContent = serde_json::from_slice(&read_bounded(
+        &directory.join("release-content.json"),
+        64 * 1024,
+    )?)?;
+    let archives = (0..release.content.len())
+        .map(|index| {
+            read_bounded(
+                &directory.join(content_archive_name(index)),
+                16 * 1024 * 1024,
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+    release.verify_local_archives(&archives.iter().map(Vec::as_slice).collect::<Vec<_>>())?;
+    if let Some(metadata) = &release.metadata {
+        for (index, document) in metadata.documentation.iter().enumerate() {
+            let bytes = read_bounded(&directory.join(content_document_name(index)), 1024 * 1024)?;
+            ensure!(
+                digest(&bytes) == document.digest && bytes.len() as u64 == document.size,
+                "documentation size or digest mismatch"
+            );
+        }
+    }
     Ok(release)
 }

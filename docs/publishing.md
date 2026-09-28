@@ -163,4 +163,46 @@ checks the supplied bounded `.tar.gz` bytes, identity, namespace ownership and
 reviewer approval; it does not execute the content or rewrite an existing base
 release. The App owner selects and previews the exact content before copying;
 the copied files are App-owned.
+
+The author tool prepares these bytes without an operator key or repeated base
+metadata. Put `draft.json` beside the exact local archive(s). For attached
+content, it contains only an ordered `content` array; the tool reads Plugin ID,
+version and immutable identity from the published base release JSON:
+
+```json
+{
+  "content": [
+    {"id":"starter","kind":"editable_template","url":"https://example.org/starter.tar.gz","file":"starter.tar.gz"}
+  ]
+}
+```
+
+```sh
+lenso-marketplace-author prepare-release-content package ./published-package-release.json ./draft.json ./prepared-content
+lenso-marketplace-author check-release-content ./prepared-content
+```
+
+Use `portable` or `linked_cargo` in place of `package` for those exact base
+release JSONs. For source-only content, use `content_only -` and include
+`plugin_id`, `version`, and `metadata` in the draft. Its `metadata` has
+`publisher_id`, `title`, `summary`, credential-free HTTPS `source_url`, exact
+40- or 64-character lowercase hex `source_revision`, `license`, and at least
+one `documentation` record with `topic: "getting-started"`. Each document has
+`id`, `revision`, `language`, `topic`, optional `target`, HTTPS `url`,
+`media_type: "text/markdown"`, and a local `file` basename; the tool derives
+its exact digest and size. Each content entry likewise has `id`, `kind`, HTTPS
+`url`, and a local `.tar.gz` `file` basename. Input files must be regular files
+beside the draft. The output directory must not already exist; it contains
+`release-content.json`, numbered archive files, and numbered Markdown files.
+
+```sh
+lenso-marketplace-author prepare-release-content content_only - ./draft.json ./prepared-content
+lenso-marketplace-author check-release-content ./prepared-content
+```
+
+Preparation checks the same bounded archive rules as operator submission and
+does not fetch the signed URLs or prove they serve the local bytes. Submit the
+exact prepared JSON and numbered archive files to a maintainer; namespace
+authorization, review, signature and publication are separate. Source-only
+content cannot also own the same Plugin ID/version as a runtime base.
 See [optional signed release content](../tools/publisher/docs/operator.md#optional-signed-release-content).

@@ -1,14 +1,60 @@
 use anyhow::{Result, bail, ensure};
+use lenso_marketplace_directory_plugin::publishing::release_content::BaseKind;
 use std::{io, path::Path};
 fn run() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = "usage: lenso-marketplace-author prepare ARCHIVE METADATA.json NEW_DIRECTORY | check SUBMISSION_DIRECTORY | submission-url SUBMISSION_DIRECTORY | prepare-linked-cargo PACKAGE.crate METADATA.json NEW_DIRECTORY | check-linked-cargo SUBMISSION_DIRECTORY";
+    let usage = "usage: lenso-marketplace-author prepare ARCHIVE METADATA.json NEW_DIRECTORY | check SUBMISSION_DIRECTORY | submission-url SUBMISSION_DIRECTORY | prepare-linked-cargo PACKAGE.crate METADATA.json NEW_DIRECTORY | check-linked-cargo SUBMISSION_DIRECTORY | prepare-release-content KIND BASE_RELEASE.json|- DRAFT.json NEW_DIRECTORY | check-release-content SUBMISSION_DIRECTORY";
     if args.as_slice() == ["--help"] {
         println!("{usage}");
         return Ok(());
     }
     if args.as_slice() == ["--version"] {
         println!("lenso-marketplace-author {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    if args
+        .first()
+        .is_some_and(|command| command == "prepare-release-content")
+    {
+        ensure!(args.len() == 5, usage);
+        let kind = match args[1].as_str() {
+            "portable" => BaseKind::Portable,
+            "linked_cargo" => BaseKind::LinkedCargo,
+            "package" => BaseKind::Package,
+            "content_only" => BaseKind::ContentOnly,
+            _ => bail!("release content kind must be portable|linked_cargo|package|content_only"),
+        };
+        let base = (args[2] != "-").then(|| Path::new(&args[2]));
+        let release = lenso_marketplace_publisher::prepare_release_content(
+            kind,
+            base,
+            Path::new(&args[3]),
+            Path::new(&args[4]),
+        )?;
+        serde_json::to_writer(
+            io::stdout().lock(),
+            &serde_json::json!({
+                "status":"prepared", "plugin_id":release.plugin_id,
+                "version":release.version, "base_release_identity":release.base_release_identity,
+                "note":"Local validation only. Submit release-content.json and numbered archives for namespace review; documentation files accompany content-only metadata."
+            }),
+        )?;
+        return Ok(());
+    }
+    if args
+        .first()
+        .is_some_and(|command| command == "check-release-content")
+    {
+        ensure!(args.len() == 2, usage);
+        let release = lenso_marketplace_publisher::check_release_content(Path::new(&args[1]))?;
+        serde_json::to_writer(
+            io::stdout().lock(),
+            &serde_json::json!({
+                "status":"verified", "plugin_id":release.plugin_id,
+                "version":release.version, "base_release_identity":release.base_release_identity,
+                "note":"Exact local bytes verified. Registry provenance, namespace ownership, review and remote hosting remain separate."
+            }),
+        )?;
         return Ok(());
     }
     if args

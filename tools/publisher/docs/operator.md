@@ -291,6 +291,14 @@ by this channel; publish an adoptable simple root source archive instead.
 
 Use `release-content-base KIND RELEASE_JSON` to derive the immutable base
 identity; do not hash a modified release or its current availability field.
+Authors can instead use `lenso-marketplace-author prepare-release-content`
+with the exact base release JSON and a local draft: it reuses the base identity
+and metadata, calculates archive digests/sizes, and emits the strict
+`release-content.json` plus numbered archives. Its `check-release-content`
+command rechecks those exact local bytes. For `content_only`, the draft supplies
+the necessary author metadata and local Markdown files; the tool hashes the
+Markdown and derives the metadata-bound self identity. See the
+[author workflow](../../../docs/publishing.md).
 For `content_only`, pass the proposed release-content JSON with any placeholder
 `base_release_identity`, then replace that field with the returned value before
 submission. Its required `metadata` contains the claimed `publisher_id`, title,

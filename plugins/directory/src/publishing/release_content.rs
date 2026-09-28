@@ -228,6 +228,19 @@ pub struct ReleaseContent {
 }
 
 impl ReleaseContent {
+    /// Apply the same bounded archive checks used by operator submission.
+    pub fn verify_local_archives(&self, archives: &[&[u8]]) -> Result<()> {
+        self.validate()?;
+        ensure!(
+            archives.len() == self.content.len(),
+            "one archive is required for each content entry"
+        );
+        for (content, archive) in self.content.iter().zip(archives) {
+            content.verify_archive(archive, &self.plugin_id, &self.version)?;
+        }
+        Ok(())
+    }
+
     fn validate_content(&self) -> Result<()> {
         lenso_plugin_catalog::identity::validate_plugin_id_v1(&self.plugin_id)?;
         lenso_plugin_catalog::identity::validate_release_version(&self.version)?;
@@ -553,14 +566,7 @@ impl Directory {
         archives: &[&[u8]],
         now: u64,
     ) -> Result<i64> {
-        release.validate()?;
-        ensure!(
-            archives.len() == release.content.len(),
-            "one archive is required for each content entry"
-        );
-        for (content, archive) in release.content.iter().zip(archives) {
-            content.verify_archive(archive, &release.plugin_id, &release.version)?;
-        }
+        release.verify_local_archives(archives)?;
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
