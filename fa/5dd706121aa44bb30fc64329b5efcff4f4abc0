@@ -1,0 +1,151 @@
+README.md
+  s_7d146975368699::t_cb566074d8d05a 51-55
+Cargo.lock
+  s_7d146975368699::t_a74503807dfdca 1126,1128,1137-1138,1216-1241,1268,1338,1349,1353-1354,1376,1383-1384,1394,1428-1429,1451,1455-1456,1479,1483-1484,1506,1541,1554-1555,1557,1559,1565,1575,1581,1592,1608,1621,1643
+Cargo.toml
+  s_7d146975368699::t_afb0e62f178f17 11-12,27,29
+apps/native/Cargo.toml
+  s_7d146975368699::t_6fcb8ddd1cad73 14-15
+apps/native/src/lib.rs
+  s_7d146975368699::t_1349918bacfba0 63-72
+apps/native/tests/http.rs
+  s_7d146975368699::t_dfa9f8a6130fa9 1-4,123-142,197-265
+apps/workers-sdk-prototype/Cargo.toml
+  s_7d146975368699::t_6495792d61f310 25-26
+apps/workers-sdk-prototype/src/lib.rs
+  s_7d146975368699::t_42a868634b6ca3 567-576
+apps/workers-sdk-prototype/wrangler.jsonc
+  s_7d146975368699::t_43ccf1f1943902 18
+apps/workers/Cargo.toml
+  s_7d146975368699::t_7048f2da9ca836 28-29
+apps/workers/document-route.test.mjs
+  s_7d146975368699::t_5239bd026fd3f8 1-173
+apps/workers/documents.mjs
+  s_7d146975368699::t_45d0b214c4d610 1-208
+apps/workers/http-host.mjs
+  s_7d146975368699::t_e013c5d3155efe 4,62-65
+apps/workers/migrations/d1/0004_release_content.sql
+  s_7d146975368699::t_40d4b01001fd4e 1-7
+apps/workers/migrations/d1/0005_packages.sql
+  s_7d146975368699::t_da82020dbef496 1-7
+apps/workers/src/lib.rs
+  s_7d146975368699::t_5a3562b77d6eb8 102-118,256-265
+apps/workers/storage.mjs
+  s_7d146975368699::t_79fa4114747438 89-102,315-320
+apps/workers/storage.test.mjs
+  s_7d146975368699::t_51c0d0179ef74a 110,119-120,122,149-152,167-172,390-409
+apps/workers/wrangler.jsonc
+  s_7d146975368699::t_c614a5ef7eabcf 14
+candidates/linked-cargo/lenso.web-ingress/0.4.5/README.md
+  s_7d146975368699::t_369e0f9f40c65b 1-17
+candidates/linked-cargo/lenso.web-ingress/0.4.5/metadata.json
+  s_7d146975368699::t_caccd88c0a582b 1-23
+contracts/package-directory/Cargo.toml
+  s_7d146975368699::t_a5cda13aba1eb2 1-18
+contracts/package-directory/build.rs
+  s_7d146975368699::t_ba600a855266ac 1-20
+contracts/package-directory/capability.json
+  s_7d146975368699::t_3c8c6240af966d 1-15
+contracts/package-directory/generated/bindings.ts
+  s_7d146975368699::t_794ce11a302cf4 1-260
+contracts/package-directory/schemas/read-error.schema.json
+  s_7d146975368699::t_1fb1e51fb28607 1-4
+contracts/package-directory/schemas/read-request.schema.json
+  s_7d146975368699::t_689eaf7e3896f5 1-6
+contracts/package-directory/schemas/read-response.schema.json
+  s_7d146975368699::t_ea1fc3fe2936b1 1-7
+contracts/package-directory/src/generated.rs
+  s_7d146975368699::t_d95ea8cc1e4d71 1-389
+contracts/package-directory/src/lib.rs
+  s_7d146975368699::t_f2364f2f9e0474 1-2
+contracts/release-content-directory/Cargo.toml
+  s_7d146975368699::t_ecba2e2e8f5667 1-18
+contracts/release-content-directory/build.rs
+  s_7d146975368699::t_a98853a95b4714 1-20
+contracts/release-content-directory/capability.json
+  s_7d146975368699::t_7b21b71ce867f3 1-15
+contracts/release-content-directory/generated/bindings.ts
+  s_7d146975368699::t_bdda7c59ebc7d3 1-260
+contracts/release-content-directory/schemas/read-error.schema.json
+  s_7d146975368699::t_5244925673dbe0 1-4
+contracts/release-content-directory/schemas/read-request.schema.json
+  s_7d146975368699::t_90af1542a41e15 1-6
+contracts/release-content-directory/schemas/read-response.schema.json
+  s_7d146975368699::t_fb4787d479d10b 1-7
+contracts/release-content-directory/src/generated.rs
+  s_7d146975368699::t_2390e23c4f5123 1-389
+contracts/release-content-directory/src/lib.rs
+  s_7d146975368699::t_d4792d27572e65 1-2
+docs/operations.md
+  s_7d146975368699::t_0b019deeb8bb7a 79-86
+docs/publishing.md
+  s_7d146975368699::t_88615e661cc2f4 157-164
+plugins/directory/Cargo.toml
+  s_7d146975368699::t_544bc2268800a0 16,22-23,43-44,48-49
+plugins/directory/src/lib.rs
+  s_7d146975368699::t_1b0ca44fb64474 11-12,104-109,111-202
+plugins/directory/src/publishing.rs
+  s_7d146975368699::t_4e005a2e924739 6-7,17-22,24,32-46,136-178,193,201-204,229-243,327-335,417-428,431-455,460-462,478-484,492-497,517-518,523,570,648-650,653,659-662,664-675,853-910
+plugins/directory/src/publishing/details_revision.rs
+  s_7d146975368699::t_b87eacdcdedf52 3-62,91-92,122-125,151-152,157
+plugins/directory/src/publishing/linked_cargo.rs
+  s_7d146975368699::t_d6880b9b23dc6c 160-168,402
+plugins/directory/src/publishing/npm_archive.rs
+  s_7d146975368699::t_8a8f6075229697 1-229
+plugins/directory/src/publishing/package.rs
+  s_7d146975368699::t_0e1f379f91034d 1-239
+plugins/directory/src/publishing/release_content.rs
+  s_7d146975368699::t_34d9d633e2b18c 1-779
+plugins/directory/src/publishing/release_content_source.rs
+  s_7d146975368699::t_254f9edd224f21 1-197
+plugins/directory/src/storage.rs
+  s_7d146975368699::t_1632b3756a9ebe 22-35
+plugins/web/Cargo.toml
+  s_7d146975368699::t_e5f8074a351931 26-27
+plugins/web/src/lib.rs
+  s_7d146975368699::t_71461461fa7f75 12-13,46-47,336-378
+scripts/verify-archive-handoff.sh
+  s_7d146975368699::t_6807f79693a286 33-34
+scripts/verify-browser.sh
+  s_7d146975368699::t_f2ce4ad4114b0b 21-30
+tests/workers/sdk-flow.test.mjs
+  s_7d146975368699::t_06243a8a40b913 38-41
+tools/cloudflare/README.md
+  s_7d146975368699::t_d46c4674037356 41-44,52-54,63-65,91-146
+tools/cloudflare/promote-cloudflare.mjs
+  s_7d146975368699::t_dcfc8a72d548a1 3-9,17-18,21-49,79-80,82-83,96-103,106-119,128
+tools/cloudflare/promote-cloudflare.test.mjs
+  s_7d146975368699::t_660c426c386c42 1-70
+tools/cloudflare/promote.mjs
+  s_7d146975368699::t_6d3e607d396b8c 5-7,139-208,218-219,243-248,254,293,316,324,327-341
+tools/cloudflare/promote.test.mjs
+  s_7d146975368699::t_48060bde8bf248 2,9-10,97,171,175-260,268-297
+tools/cloudflare/release-content-runtime.test.mjs
+  s_7d146975368699::t_33ccfe9470eed7 1-125
+tools/publisher/Cargo.toml
+  s_7d146975368699::t_6e0d07106ce026 7-8
+tools/publisher/docs/operator.md
+  s_7d146975368699::t_054586780bbe8d 132-152,160-161,236-313
+tools/publisher/src/main.rs
+  s_7d146975368699::t_4c227a23ce331e 5-6,8-12,14,33-55,60-73,87-114,130-136,181-182,190-198,286-329,393-444,496-501,529-589,615-616,621-623,653-677,711-720,738-753
+tools/publisher/tests/package_publication.rs
+  s_7d146975368699::t_38c14875e76eec 1-434
+tools/publisher/tests/publisher.rs
+  s_7d146975368699::t_4a103790bbbc8b 4,26-54,321,398,410-723,845-1012
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa5dd706121aa44bb30fc64329b5efcff4f4abc0",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
