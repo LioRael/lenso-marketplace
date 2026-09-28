@@ -1,7 +1,7 @@
 use ed25519_dalek::SigningKey;
 use std::{
     fs,
-    io::Write,
+    io::{Cursor, Write},
     process::{Command, Output, Stdio},
 };
 
@@ -21,6 +21,35 @@ fn invoke(config: &std::path::Path, args: &[&str], key: Option<&[u8]>) -> Output
         child.stdin.take().unwrap().write_all(key).unwrap();
     }
     child.wait_with_output().unwrap()
+}
+
+fn linked_npm_archive(plugin_id: &str) -> Vec<u8> {
+    let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(
+        Vec::new(),
+        flate2::Compression::default(),
+    ));
+    let manifest = serde_json::to_vec(&serde_json::json!({
+        "name":"@example/linked", "version":"1.2.3",
+        "lenso":{
+            "pluginId":plugin_id, "releaseVersion":"1.2.3",
+            "runtime":"bun", "rootSlot":"tools"
+        }
+    }))
+    .unwrap();
+    let mut header = tar::Header::new_gnu();
+    header.set_size(manifest.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append_data(&mut header, "package/package.json", Cursor::new(manifest))
+        .unwrap();
+    let lock = b"{}\n";
+    let mut header = tar::Header::new_gnu();
+    header.set_size(lock.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append_data(&mut header, "package/bun.lock", Cursor::new(lock))
+        .unwrap();
+    tar.into_inner().unwrap().finish().unwrap()
 }
 
 #[test]
@@ -289,6 +318,7 @@ fn operator_reviews_publishes_and_verifies_release_details() {
     let verified: serde_json::Value = serde_json::from_slice(&verified.stdout).unwrap();
     assert_eq!(verified["catalog_id"], "details-test");
     assert_eq!(verified["revision"], 1);
+    assert_eq!(verified["documents"], serde_json::json!([]));
     let mut revision: serde_json::Value =
         serde_json::from_slice(&fs::read(&details_path).unwrap()).unwrap();
     revision["documentation"] = serde_json::json!([{
@@ -365,6 +395,7 @@ fn operator_reviews_publishes_and_verifies_release_details() {
     assert!(checked.status.success());
     let checked: serde_json::Value = serde_json::from_slice(&checked.stdout).unwrap();
     assert_eq!(checked["revision"], 2);
+    assert_eq!(checked["documents"], revision["documentation"]);
     assert!(
         !invoke(
             &config,
@@ -374,6 +405,320 @@ fn operator_reviews_publishes_and_verifies_release_details() {
         .status
         .success()
     );
+}
+
+#[test]
+fn operator_publishes_linked_cargo_with_additive_npm_details() {
+    let home = tempfile::tempdir().unwrap();
+    let config = home.path().join("operator.json");
+    let database = home.path().join("publisher.sqlite3");
+    let details_path = home.path().join("release-details.json");
+    let archive_path = home.path().join("plugin.tgz");
+    let key = [37u8; 32];
+    fs::write(&config, serde_json::to_vec(&serde_json::json!({
+        "database": database, "catalog_id": "linked-details-test", "reviewers": ["reviewer"],
+        "key_id": "operator-key", "public_key_hex": hex::encode(SigningKey::from_bytes(&key).verifying_key().as_bytes())
+    })).unwrap()).unwrap();
+    assert!(invoke(&config, &["initialize"], None).status.success());
+    assert!(
+        invoke(
+            &config,
+            &["claim", "reviewer", "example", "publisher", "author"],
+            None
+        )
+        .status
+        .success()
+    );
+
+    // The linked Cargo archive admission has its own test; this test begins
+    // with the exact, already-published base record and signs its snapshot.
+    let linked: lenso_plugin_catalog::linked_cargo::LinkedCargoRelease =
+        serde_json::from_value(serde_json::json!({
+            "plugin_id": "example.linked", "version": "1.2.3", "publisher_id": "publisher",
+            "title": "Linked", "summary": "Linked Rust Plugin", "source_url": "https://example.test/source",
+            "source_revision": "a".repeat(40), "license": "MIT", "package": "lenso-example-linked-plugin",
+            "registry_url": "https://crates.io", "crate_digest": lenso_plugin_catalog::digest(b"crate archive"),
+            "integration": "linked_plugin", "targets": ["aarch64-apple-darwin"],
+            "availability": "listed", "documentation": []
+        })).unwrap();
+    linked.validate().unwrap();
+    let body = serde_json::to_string(&linked).unwrap();
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    connection.execute(
+        "INSERT INTO linked_cargo_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'published')",
+        rusqlite::params!["example.linked@1.2.3", "publisher", body, lenso_plugin_catalog::digest(body.as_bytes())],
+    ).unwrap();
+    drop(connection);
+    let linked_receipt = invoke(
+        &config,
+        &["publish-linked-cargo", "reviewer", "0", "3600"],
+        Some(&key),
+    );
+    assert!(
+        linked_receipt.status.success(),
+        "{}",
+        String::from_utf8_lossy(&linked_receipt.stderr)
+    );
+
+    let archive = linked_npm_archive("example.linked");
+    fs::write(&archive_path, &archive).unwrap();
+
+    let details = serde_json::json!({
+        "plugin_id": "example.linked", "version": "1.2.3",
+        "base_release_identity": linked.immutable_identity().unwrap(),
+        "distributions": [
+            {"id":"cargo","kind":"cargo_package","package":linked.package,
+             "version":linked.version,"registry_url":linked.registry_url,
+             "integrity":linked.crate_digest,"targets":linked.targets},
+            {"id":"npm","kind":"npm_package","package":"@example/linked",
+             "version":"1.2.3","registry_url":"https://registry.npmjs.org",
+             "integrity":lenso_plugin_catalog::digest(&archive),"targets":[]}
+        ],
+        "documentation": []
+    });
+    fs::write(&details_path, serde_json::to_vec(&details).unwrap()).unwrap();
+    assert!(
+        !invoke(
+            &config,
+            &["submit-details", "author", details_path.to_str().unwrap()],
+            None
+        )
+        .status
+        .success()
+    );
+    let submitted = invoke(
+        &config,
+        &[
+            "submit-details",
+            "author",
+            details_path.to_str().unwrap(),
+            "npm",
+            archive_path.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        submitted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&submitted.stderr)
+    );
+    let submitted: serde_json::Value = serde_json::from_slice(&submitted.stdout).unwrap();
+    let id = submitted["submission_id"].as_i64().unwrap().to_string();
+    assert!(
+        invoke(
+            &config,
+            &[
+                "approve-details",
+                "reviewer",
+                &id,
+                submitted["proposal_digest"].as_str().unwrap(),
+                "v1"
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    let published = invoke(
+        &config,
+        &["publish-details", "reviewer", "0", "3600"],
+        Some(&key),
+    );
+    assert!(
+        published.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published.stderr)
+    );
+    assert_eq!(
+        published.stdout,
+        invoke(&config, &["export-details"], None).stdout
+    );
+
+    let linked_receipt: serde_json::Value = serde_json::from_slice(&linked_receipt.stdout).unwrap();
+    let published: serde_json::Value = serde_json::from_slice(&published.stdout).unwrap();
+    let trust = lenso_plugin_catalog::Trust {
+        catalog_id: "linked-details-test".into(),
+        keys: std::collections::BTreeMap::from([(
+            "operator-key".into(),
+            SigningKey::from_bytes(&key).verifying_key(),
+        )]),
+    };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let linked_snapshot = lenso_plugin_catalog::linked_cargo::verify(
+        linked_receipt["envelope"].as_str().unwrap().as_bytes(),
+        &trust,
+        None,
+        now,
+    )
+    .unwrap();
+    let details_snapshot = lenso_plugin_catalog::verify_release_details(
+        published["envelope"].as_str().unwrap().as_bytes(),
+        &trust,
+        None,
+        now,
+    )
+    .unwrap();
+    let selected = linked_snapshot
+        .select_details(&details_snapshot, "example.linked", "1.2.3", now)
+        .unwrap();
+    assert_eq!(selected.distributions.len(), 2);
+    assert!(
+        selected
+            .distributions
+            .iter()
+            .any(|distribution| distribution.id == "npm")
+    );
+
+    let mut revision = details;
+    revision["documentation"] = serde_json::json!([{
+        "id":"guide","revision":"r1","language":"en","topic":"start",
+        "url":"https://example.test/docs/guide.md","digest":lenso_plugin_catalog::digest(b"guide"),
+        "size":5,"media_type":"text/markdown"
+    }]);
+    fs::write(&details_path, serde_json::to_vec(&revision).unwrap()).unwrap();
+    let revised = invoke(
+        &config,
+        &[
+            "submit-details-revision",
+            "author",
+            details_path.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        revised.status.success(),
+        "{}",
+        String::from_utf8_lossy(&revised.stderr)
+    );
+    let revised: serde_json::Value = serde_json::from_slice(&revised.stdout).unwrap();
+    assert!(
+        invoke(
+            &config,
+            &[
+                "approve-details-revision",
+                "reviewer",
+                &revised["revision_id"].as_i64().unwrap().to_string(),
+                revised["proposal_digest"].as_str().unwrap(),
+                "v1"
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    let amended = invoke(
+        &config,
+        &["publish-details", "reviewer", "1", "3600"],
+        Some(&key),
+    );
+    assert!(
+        amended.status.success(),
+        "{}",
+        String::from_utf8_lossy(&amended.stderr)
+    );
+    assert_eq!(
+        amended.stdout,
+        invoke(&config, &["export-details"], None).stdout
+    );
+}
+
+#[test]
+fn operator_rejects_mismatched_npm_archive_or_linked_cargo_base() {
+    let home = tempfile::tempdir().unwrap();
+    let database = home.path().join("publisher.sqlite3");
+    let mut directory = lenso_marketplace_directory_plugin::publishing::Directory::open(
+        &database,
+        "linked-details-test",
+        ["reviewer".into()].into(),
+    )
+    .unwrap();
+    directory
+        .claim_namespace("reviewer", "example", "publisher", "author", 100)
+        .unwrap();
+    let linked: lenso_plugin_catalog::linked_cargo::LinkedCargoRelease =
+        serde_json::from_value(serde_json::json!({
+            "plugin_id":"example.linked","version":"1.2.3","publisher_id":"publisher",
+            "title":"Linked","summary":"Linked Rust Plugin","source_url":"https://example.test/source",
+            "source_revision":"a".repeat(40),"license":"MIT","package":"lenso-example-linked-plugin",
+            "registry_url":"https://crates.io","crate_digest":lenso_plugin_catalog::digest(b"crate archive"),
+            "integration":"linked_plugin","targets":["aarch64-apple-darwin"],
+            "availability":"listed","documentation":[]
+        })).unwrap();
+    let body = serde_json::to_string(&linked).unwrap();
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    connection.execute(
+        "INSERT INTO linked_cargo_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'published')",
+        rusqlite::params!["example.linked@1.2.3", "publisher", body, lenso_plugin_catalog::digest(body.as_bytes())],
+    ).unwrap();
+    drop(connection);
+    let archive = linked_npm_archive("example.linked");
+    let archives = std::collections::BTreeMap::from([("npm".into(), archive.clone())]);
+    let mut details: lenso_plugin_catalog::ReleaseDetails =
+        serde_json::from_value(serde_json::json!({
+            "plugin_id":"example.linked","version":"1.2.3",
+            "base_release_identity":linked.immutable_identity().unwrap(),
+            "distributions":[
+                {"id":"cargo","kind":"cargo_package","package":"lenso-example-linked-plugin",
+                 "version":"1.2.3","registry_url":"https://crates.io",
+                 "integrity":lenso_plugin_catalog::digest(b"different crate"),
+                 "targets":["aarch64-apple-darwin"]},
+                {"id":"npm","kind":"npm_package","package":"@example/linked",
+                 "version":"1.2.3","registry_url":"https://registry.npmjs.org",
+                 "integrity":lenso_plugin_catalog::digest(&archive),"targets":[]}
+            ]
+        }))
+        .unwrap();
+    assert!(
+        directory
+            .submit_details_with_archives("author", &details, &archives, 101)
+            .is_err()
+    );
+    details.distributions[0].integrity = Some(linked.crate_digest.clone());
+    details.base_release_identity = lenso_plugin_catalog::digest(b"different base");
+    assert!(
+        directory
+            .submit_details_with_archives("author", &details, &archives, 101)
+            .is_err()
+    );
+    details.base_release_identity = linked.immutable_identity().unwrap();
+    details.distributions[1].integrity = Some(lenso_plugin_catalog::digest(b"synthetic"));
+    assert!(
+        directory
+            .submit_details_with_archives("author", &details, &archives, 101)
+            .is_err()
+    );
+    let wrong_identity_archive = linked_npm_archive("example.other");
+    let wrong_archives =
+        std::collections::BTreeMap::from([("npm".into(), wrong_identity_archive.clone())]);
+    details.distributions[1].integrity =
+        Some(lenso_plugin_catalog::digest(&wrong_identity_archive));
+    let error = directory
+        .submit_details_with_archives("author", &details, &wrong_archives, 101)
+        .unwrap_err();
+    assert!(error.to_string().contains("Lenso Bun Plugin identity"));
+    // A legacy approved row without exact-archive admission cannot be signed.
+    details.distributions[1].integrity = Some(lenso_plugin_catalog::digest(&archive));
+    let body = serde_json::to_string(&details).unwrap();
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    connection.execute(
+        "INSERT INTO details_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'approved')",
+        rusqlite::params!["example.linked@1.2.3", "publisher", body, lenso_plugin_catalog::digest(body.as_bytes())],
+    ).unwrap();
+    drop(connection);
+    let error = directory
+        .publish_details(
+            "reviewer",
+            0,
+            110,
+            210,
+            "key",
+            &SigningKey::from_bytes(&[37; 32]),
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("lack exact archive admission"));
 }
 
 #[test]
@@ -497,6 +842,174 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         Some(envelope["envelope"].as_str().unwrap().as_bytes()),
     );
     assert!(verified.status.success());
+    let verified: serde_json::Value = serde_json::from_slice(&verified.stdout).unwrap();
+    assert_eq!(verified["documents"], serde_json::json!([document]));
+    let base = invoke(
+        &config,
+        &[
+            "release-content-base",
+            "linked_cargo",
+            candidate.join("release.json").to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(base.status.success());
+    let base: serde_json::Value = serde_json::from_slice(&base.stdout).unwrap();
+    assert_eq!(
+        base["base_release_identity"],
+        signed
+            .select("example.web", "0.4.5", now)
+            .unwrap()
+            .immutable_identity()
+            .unwrap()
+    );
+    let mut archive = Vec::new();
+    {
+        let encoder = flate2::write::GzEncoder::new(&mut archive, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let content = b"export const message = 'Hello';\n";
+        let mut header = tar::Header::new_gnu();
+        header.set_size(content.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "src/example.ts", &content[..])
+            .unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+    }
+    let archive_path = root.path().join("editable-template.tar.gz");
+    fs::write(&archive_path, &archive).unwrap();
+    let content_release = serde_json::json!({
+        "plugin_id":"example.web", "version":"0.4.5", "base_kind":"linked_cargo",
+        "base_release_identity":base["base_release_identity"],
+        "content":[{
+            "id":"editable-starter", "kind":"editable_template",
+            "url":"https://example.test/content/example.web/0.4.5/editable-starter.tar.gz",
+            "digest":lenso_plugin_catalog::digest(&archive), "size":archive.len()
+        }]
+    });
+    let content_path = root.path().join("release-content.json");
+    fs::write(&content_path, serde_json::to_vec(&content_release).unwrap()).unwrap();
+    let bad_archive_path = root.path().join("bad-template.tar.gz");
+    fs::write(&bad_archive_path, b"tampered").unwrap();
+    assert!(
+        !invoke(
+            &config,
+            &[
+                "submit-release-content",
+                "author",
+                content_path.to_str().unwrap(),
+                bad_archive_path.to_str().unwrap()
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    assert!(
+        !invoke(
+            &config,
+            &[
+                "submit-release-content",
+                "intruder",
+                content_path.to_str().unwrap(),
+                archive_path.to_str().unwrap()
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    let submitted_content = invoke(
+        &config,
+        &[
+            "submit-release-content",
+            "author",
+            content_path.to_str().unwrap(),
+            archive_path.to_str().unwrap(),
+        ],
+        None,
+    );
+    assert!(
+        submitted_content.status.success(),
+        "{}",
+        String::from_utf8_lossy(&submitted_content.stderr)
+    );
+    let submission: serde_json::Value = serde_json::from_slice(&submitted_content.stdout).unwrap();
+    let content_id = submission["submission_id"].as_i64().unwrap().to_string();
+    let inspected_content = invoke(
+        &config,
+        &["inspect-release-content", "reviewer", &content_id],
+        None,
+    );
+    assert!(inspected_content.status.success());
+    let inspected_content: serde_json::Value =
+        serde_json::from_slice(&inspected_content.stdout).unwrap();
+    assert_eq!(inspected_content["release_content"], content_release);
+    assert_eq!(inspected_content["state"], "awaiting_review");
+    assert!(
+        invoke(
+            &config,
+            &[
+                "approve-release-content",
+                "reviewer",
+                &content_id,
+                submission["proposal_digest"].as_str().unwrap(),
+                "v1"
+            ],
+            None
+        )
+        .status
+        .success()
+    );
+    let published_content = invoke(
+        &config,
+        &["publish-release-content", "reviewer", "0", "3600"],
+        Some(&key),
+    );
+    assert!(
+        published_content.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published_content.stderr)
+    );
+    assert_eq!(
+        published_content.stdout,
+        invoke(&config, &["export-release-content"], None).stdout
+    );
+    assert!(
+        !invoke(
+            &config,
+            &["publish-release-content", "reviewer", "0", "3600"],
+            Some(&key)
+        )
+        .status
+        .success()
+    );
+    let content_envelope: serde_json::Value =
+        serde_json::from_slice(&published_content.stdout).unwrap();
+    let verified_content = lenso_plugin_catalog::release_content::verify(
+        content_envelope["envelope"].as_str().unwrap().as_bytes(),
+        &trust,
+        None,
+        now,
+    )
+    .unwrap();
+    verified_content
+        .select_linked(&signed, "example.web", "0.4.5", now)
+        .unwrap()
+        .select("editable-starter")
+        .unwrap()
+        .verify_bytes(&archive)
+        .unwrap();
+    assert!(
+        invoke(
+            &config,
+            &["verify-release-content"],
+            Some(content_envelope["envelope"].as_str().unwrap().as_bytes())
+        )
+        .status
+        .success()
+    );
     let mut revised = prepared;
     revised.documentation.push(
         serde_json::from_value(serde_json::json!({

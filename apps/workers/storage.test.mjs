@@ -107,6 +107,7 @@ const fixture = (envelope = signedEnvelope) => {
   const key = `accepted/${encodeURIComponent(catalog)}/${hash(raw).slice(7)}.json`;
   const state = {
     calls: { batch: 0, first: 0, get: [], put: 0, run: 0 },
+    content: { digest: hash(envelope), object_key: "proof/content.json" },
     controller: new AbortController(),
     details: { digest: hash(envelope), object_key: "proof/details.json" },
     linked: { digest: hash(envelope), object_key: "proof/linked.json" },
@@ -115,7 +116,10 @@ const fixture = (envelope = signedEnvelope) => {
       ["proof/first.json", envelope],
       ["proof/details.json", envelope],
       ["proof/linked.json", envelope],
+      ["proof/package.json", envelope],
+      ["proof/content.json", envelope],
     ]),
+    package: { digest: hash(envelope), object_key: "proof/package.json" },
     pointer: { object_key: key, token: accepted.token },
     publication: { digest: hash(envelope), object_key: "proof/first.json" },
   };
@@ -142,6 +146,10 @@ const fixture = (envelope = signedEnvelope) => {
             table = "details";
           } else if (sql.includes("marketplace_linked_cargo")) {
             table = "linked";
+          } else if (sql.includes("marketplace_packages")) {
+            table = "package";
+          } else if (sql.includes("marketplace_release_content")) {
+            table = "content";
           } else if (sql.includes("marketplace_publications")) {
             table = "publication";
           }
@@ -156,6 +164,12 @@ const fixture = (envelope = signedEnvelope) => {
           } else if (table === "linked") {
             expected =
               "SELECT object_key,digest FROM marketplace_linked_cargo WHERE catalog_id=?";
+          } else if (table === "package") {
+            expected =
+              "SELECT object_key,digest FROM marketplace_packages WHERE catalog_id=?";
+          } else if (table === "content") {
+            expected =
+              "SELECT object_key,digest FROM marketplace_release_content WHERE catalog_id=?";
           }
           assert.equal(sql, expected);
           return {
@@ -371,6 +385,26 @@ test("raw linked Cargo releases use their independent signed pointer", async () 
     signedEnvelope
   );
   assert.deepEqual(state.calls.get, ["proof/linked.json"]);
+});
+
+test("raw package releases use their independent signed pointer without writes", async () => {
+  const { state, storage } = fixture();
+  assert.equal(
+    JSON.parse(await storage("published_package", input)),
+    signedEnvelope
+  );
+  assert.deepEqual(state.calls.get, ["proof/package.json"]);
+  assert.equal(state.calls.put, 0);
+  assert.equal(state.calls.run, 0);
+});
+
+test("raw release content uses its independent signed pointer", async () => {
+  const { state, storage } = fixture();
+  assert.equal(
+    JSON.parse(await storage("published_release_content", input)),
+    signedEnvelope
+  );
+  assert.deepEqual(state.calls.get, ["proof/content.json"]);
 });
 
 test("failed or malformed D1 batch cannot become missing accepted state", async () => {

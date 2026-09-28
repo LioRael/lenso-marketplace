@@ -157,6 +157,15 @@ impl Directory {
             !existing_portable,
             "a portable base Release already owns this identity; use release details for its linked distribution"
         );
+        let existing_package: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM package_submissions WHERE identity=?1)",
+            [&identity],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            !existing_package,
+            "a package-only release already owns this identity"
+        );
         let owns_namespace: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2 AND (?3 LIKE namespace || '.%'))",
             params![release.publisher_id, actor, release.plugin_id],
@@ -390,6 +399,7 @@ impl Directory {
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        Self::ensure_exclusive_release_identities(&transaction)?;
         let current: i64 = transaction.query_row(
             "SELECT COALESCE(MAX(revision),0) FROM linked_cargo_snapshots",
             [],

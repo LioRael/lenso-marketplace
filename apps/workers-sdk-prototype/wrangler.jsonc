@@ -15,6 +15,7 @@
       "../../plugins/web/src",
       "../../contracts/directory/src",
       "../../contracts/linked-directory/src",
+      "../../contracts/package-directory/src",
     ],
   },
   "workers_dev": true,

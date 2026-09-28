@@ -1,4 +1,7 @@
-use lenso_marketplace_directory_plugin::publishing::Directory;
+use lenso_marketplace_directory_plugin::publishing::{
+    Directory,
+    release_content::{self, BaseKind, Content, ContentKind, ReleaseContent},
+};
 use std::{
     collections::BTreeSet,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -117,6 +120,26 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
                     .revision,
                 1
             );
+            // This route exposes exact operator-owned bytes. Consumer signature
+            // verification remains a separate trust boundary.
+            let package_bytes = b"{\"package\":\"exact\"}";
+            rusqlite::Connection::open(&config.directory_database)
+                .unwrap()
+                .execute(
+                    "INSERT INTO package_snapshots(revision,envelope) VALUES(1,?1)",
+                    [package_bytes.as_slice()],
+                )
+                .unwrap();
+            let package_response = client
+                .get(format!("http://{address}/api/marketplace/v1/package"))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(package_response.status(), 200);
+            assert_eq!(
+                package_response.bytes().await.unwrap().as_ref(),
+                package_bytes
+            );
             publisher
                 .claim_namespace("reviewer", "example", "publisher", "author", now)
                 .unwrap();
@@ -170,6 +193,75 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
                 .unwrap()
                 .package,
                 "example-web-plugin"
+            );
+            let content_archive = {
+                let encoder =
+                    flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+                let mut builder = tar::Builder::new(encoder);
+                let bytes = b"export const view = true;\n";
+                let mut header = tar::Header::new_gnu();
+                header.set_size(bytes.len() as u64);
+                header.set_mode(0o644);
+                header.set_cksum();
+                builder
+                    .append_data(&mut header, "src/view.tsx", &bytes[..])
+                    .unwrap();
+                builder.into_inner().unwrap().finish().unwrap()
+            };
+            let content = ReleaseContent {
+                plugin_id: linked.plugin_id.clone(),
+                version: linked.version.clone(),
+                base_kind: BaseKind::LinkedCargo,
+                base_release_identity: release_content::linked_identity(&linked).unwrap(),
+                content: vec![Content {
+                    id: "view-template".into(),
+                    kind: ContentKind::EditableTemplate,
+                    url: "https://example.com/view-template.tar.gz".into(),
+                    digest: lenso_plugin_catalog::digest(&content_archive),
+                    size: content_archive.len() as u64,
+                }],
+            };
+            let id = publisher
+                .submit_release_content("author", &content, &[&content_archive], now)
+                .unwrap();
+            let (_, proposal_digest, _) = publisher
+                .inspect_release_content_submission("author", id)
+                .unwrap();
+            publisher
+                .approve_release_content("reviewer", id, &proposal_digest, "v2", now)
+                .unwrap();
+            publisher
+                .publish_release_content("reviewer", 0, now, now + 3600, "test-key", &key)
+                .unwrap();
+            let content_envelope = client
+                .get(format!(
+                    "http://{address}/api/marketplace/v1/release-content"
+                ))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(content_envelope.status(), 200);
+            let content_envelope = content_envelope.text().await.unwrap();
+            let linked_verified = lenso_plugin_catalog::linked_cargo::verify(
+                linked_envelope.as_bytes(),
+                &trust,
+                None,
+                now,
+            )
+            .unwrap();
+            assert_eq!(
+                lenso_plugin_catalog::release_content::verify(
+                    content_envelope.as_bytes(),
+                    &trust,
+                    None,
+                    now,
+                )
+                .unwrap()
+                .select_linked(&linked_verified, "example.web", "0.4.5", now)
+                .unwrap()
+                .content[0]
+                    .id,
+                "view-template"
             );
 
             assert_eq!(

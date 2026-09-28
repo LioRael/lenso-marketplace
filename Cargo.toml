@@ -8,6 +8,8 @@ members = [
   "plugins/web",
   "contracts/directory",
   "contracts/linked-directory",
+  "contracts/package-directory",
+  "contracts/release-content-directory",
   "tools/publisher",
   "tests/support",
 ]
@@ -22,9 +24,9 @@ default-members = [
 exclude = ["tests/fixtures/echo", "tests/fixtures/proof"]
 
 [workspace.dependencies]
-lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso.git", rev = "8e6eb5eb9f468959eea713eab5f20592dfe65a71", default-features = false }
+lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso.git", rev = "a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b", default-features = false }
 lenso-kernel = "=0.3.6"
-lenso-app-plan = "=0.4.1"
+lenso-app-plan = "=0.4.6"
 lenso-native-adapter = "=0.3.14"
 wasm-bindgen = "=0.2.127"
 wasm-bindgen-futures = "=0.4.77"

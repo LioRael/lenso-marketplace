@@ -9,6 +9,8 @@ use lenso_capability_http_endpoint::{
 };
 use lenso_capability_marketplace_directory as directory;
 use lenso_capability_marketplace_linked_directory as linked_directory;
+use lenso_capability_marketplace_package_directory as package_directory;
+use lenso_capability_marketplace_release_content_directory as content_directory;
 use lenso_kernel::{DeactivateContext, InvocationContext, PrepareContext, RuntimeFailure};
 use lenso_plugin_catalog::{BrowseSnapshot, Trust};
 #[cfg(not(feature = "native"))]
@@ -41,6 +43,8 @@ struct MarketplaceWeb {
     config: Config,
     directory: Port<directory::DirectoryClient>,
     linked_directory: Port<linked_directory::LinkedDirectoryClient>,
+    package_directory: Port<package_directory::PackageDirectoryClient>,
+    content_directory: Port<content_directory::ReleaseContentDirectoryClient>,
     cache: Rc<RefCell<Option<VerifiedCache>>>,
     event_cache: Rc<RefCell<Option<EventCache>>>,
     storage: Option<Rc<dyn CacheStorage>>,
@@ -329,6 +333,49 @@ impl MarketplaceWeb {
             .map_err(|error| {
                 EndpointHandleInvocationError::Runtime(failure(format!(
                     "linked Cargo directory unavailable: {error:?}"
+                )))
+            })?;
+        Ok(asset(
+            "application/json",
+            source.envelope_json.as_str().as_bytes(),
+        ))
+    }
+    /// Separately signed npm-only package releases; never a Portable Bundle.
+    #[get("marketplace.package", "/api/marketplace/v1/package")]
+    async fn package(
+        &self,
+        context: InvocationContext,
+    ) -> Result<HandleResponse, EndpointHandleInvocationError> {
+        let snapshot = self
+            .package_directory
+            .read_package_with_context(context, package_directory::ReadPackageRequest {})
+            .await
+            .map_err(|error| {
+                EndpointHandleInvocationError::Runtime(failure(format!(
+                    "package directory unavailable: {error:?}"
+                )))
+            })?;
+        Ok(asset(
+            "application/json",
+            snapshot.envelope_json.as_str().as_bytes(),
+        ))
+    }
+    /// Separately signed optional source and development content for an exact base release.
+    #[get("marketplace.release-content", "/api/marketplace/v1/release-content")]
+    async fn release_content(
+        &self,
+        context: InvocationContext,
+    ) -> Result<HandleResponse, EndpointHandleInvocationError> {
+        let source = self
+            .content_directory
+            .read_release_content_with_context(
+                context,
+                content_directory::ReadReleaseContentRequest {},
+            )
+            .await
+            .map_err(|error| {
+                EndpointHandleInvocationError::Runtime(failure(format!(
+                    "release content directory unavailable: {error:?}"
                 )))
             })?;
         Ok(asset(

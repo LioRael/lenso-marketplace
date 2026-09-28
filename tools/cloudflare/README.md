@@ -38,9 +38,10 @@ revision. Artifact archive admission/upload, production binding credentials,
 protected execution, renewal scheduling and production rollout remain separate
 work. This module is not a publicly callable publishing service.
 
-Run `node --test tools/cloudflare/promote.test.mjs` from the repository root. These
-storage fault tests inject a verifier; the Catalog process tests independently
-exercise the real Rust `verify` command.
+Run `node --test tools/cloudflare/promote.test.mjs tools/cloudflare/promote-cloudflare.test.mjs`
+from the repository root. These storage fault and protected-host dispatch tests
+inject a verifier; the Catalog process tests independently exercise the real
+Rust `verify` command.
 
 `node --test tools/cloudflare/promote-runtime.test.mjs` additionally runs the operation
 in local workerd through Miniflare using real local D1 and R2 bindings. It
@@ -48,6 +49,9 @@ checks create-only R2 conditions, exact bytes, D1 competing updates, stale
 pointers and preservation of consumer acceptance. The fixture verifier is a
 stub; this is storage integration evidence, not signature or deployed Cloudflare
 qualification. It creates no remote resources and disposes its isolated runtime.
+`node --test tools/cloudflare/release-content-runtime.test.mjs` checks the
+separate v2 pointer against local D1/R2, including competing updates and
+preservation of portable publication and consumer acceptance rows.
 
 ## Protected host to Cloudflare
 
@@ -56,8 +60,9 @@ publication from the configured Rust publisher database, verifies it using the
 same binary and configured trust, then invokes conditional promotion against D1
 REST and R2 S3. Run this command on the protected operator host, outside the
 public Worker. It never initializes a database, signs a new revision or accepts
-an arbitrary envelope file. First use the existing Rust `publish` operation to
-commit an authorized publication; after a network failure, reconcile before
+an arbitrary envelope file. First use the matching Rust `publish`,
+`publish-details`, `publish-linked-cargo`, `publish-package` or `publish-release-content` operation
+to commit an authorized publication; after a network failure, reconcile before
 repeating promotion. Do not publish another revision just to retry transport.
 
 The public configuration has this shape (replace every placeholder):
@@ -82,6 +87,62 @@ them to the selected account/database and bucket using available provider scopes
 they are distinct from the Ed25519 signing key and from a Wrangler OAuth login.
 Never place them in this configuration or commit them. The command does not
 create credentials, migrations, buckets or environments.
+
+For signed release-content v2, set `"kind": "release-content"` in the same
+configuration. The protected host then calls the publisher's
+`export-release-content` and `verify-release-content` operations, and promotes
+the verified bytes under the `release-content/` R2 prefix through the independent
+`marketplace_release_content` D1 pointer. The Rust verifier owns the
+`lenso.marketplace.release-content.v2` schema and separate signature context;
+this JavaScript adapter does not reinterpret or re-sign the envelope. Existing
+portable (`kind` omitted), `release-details` and `linked-cargo` kinds retain
+their own pointers and object namespaces. A successful v2 promotion does not
+update them or `marketplace_accepted`.
+
+For npm-only package releases, set `"kind": "package"` and use a publisher
+built with `--features package-publication` after the signed Rust package
+protocol is available in the Market lock. The protected adapter exports and
+verifies the exact signed package envelope before conditionally promoting it
+under `packages/` through `marketplace_packages`. Apply
+`apps/workers/migrations/d1/0005_packages.sql` explicitly first, and review
+the full prior pointer or confirmed empty slot. This adds no public writer
+route; the read-only Worker serves `/api/marketplace/v1/package`.
+
+## Retain exact published Markdown bodies
+
+For `release-details`, `linked-cargo` and `package` promotions, the protected
+host requires every document in the Rust-verified snapshot to exist in the
+Marketplace R2 bucket before advancing the D1 publication pointer. Supply
+missing bodies as an optional `documentFiles` object in the same protected
+promotion config, keyed by signed `sha256:<hex>` digest with absolute local
+Markdown paths as values. Each file is bounded to 1 MiB and checked against
+the signed size and SHA-256 before a create-only upload to
+`documents/sha256/<hex>.md`. An already uploaded object is read back and
+verified, so renewals do not need to resupply its file. An unrelated file key,
+missing body, changed object or uncertain write fails before pointer promotion.
+Do not place private documents in this public signed-directory workflow.
+
+The public Worker serves `GET` and `HEAD /documents/sha256/<hex>.md` only when
+that digest appears in the exact envelope named by a current D1 publication
+pointer. It verifies the envelope object against the pointer digest, then the
+Markdown body against its signed size and digest. The response carries
+`X-Lenso-Document-Digest` and `text/markdown; charset=utf-8`; it is never an
+MDX/JS execution path. A published body's bytes remain readable after the
+envelope's freshness window expires, while catalog freshness and adoption are
+separate consumer decisions. A later publication that omits the document no
+longer authorizes this route; the R2 object remains retained but unserved.
+Existing external signed URLs are not automatically mirrored: the operator
+must provide their exact bytes once. Protect the bucket from lifecycle deletion
+and back it up independently of the publisher database; this code never
+deletes published document objects.
+
+Apply `apps/workers/migrations/d1/0004_release_content.sql` explicitly to the
+selected D1 database before first v2 promotion. The promoter deliberately does
+not create tables or infer an empty pointer from a missing migration. Review
+the current row and provide its complete pointer as `expected`, or `null` only
+for a confirmed empty v2 slot. Do not use the portable kind to publish v2 bytes;
+the independent Rust verifier operation and pointer are part of the trust
+boundary.
 
 The adapter signs R2 requests with aws4fetch `sign()` and performs one fetch;
 it does not use the SDK retrying fetch helper. Requests have a 30-second timeout,

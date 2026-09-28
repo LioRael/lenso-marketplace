@@ -3,8 +3,8 @@
 use anyhow::{Context, Result, ensure};
 use ed25519_dalek::SigningKey;
 use lenso_plugin_catalog::{
-    Availability, Release, ReleaseDetails, ReleaseDetailsSnapshot, Snapshot, digest, sign,
-    sign_release_details,
+    Availability, DistributionKind, Release, ReleaseDetails, ReleaseDetailsSnapshot, Snapshot,
+    digest, sign, sign_release_details,
 };
 use rusqlite::{Connection, OptionalExtension as _, TransactionBehavior, params};
 use std::{
@@ -14,13 +14,34 @@ use std::{
 
 mod details_revision;
 mod linked_cargo;
-use details_revision::ensure_additive_documents;
+mod npm_archive;
+#[cfg(feature = "package-publication")]
+mod package;
+pub mod release_content;
+mod release_content_source;
+use details_revision::{ensure_additive_documents, published_base_publisher};
 pub use linked_cargo::{LinkedCargoCrateIdentity, linked_cargo_crate_identity};
+pub use npm_archive::MAX_NPM_ARCHIVE_BYTES;
 
 pub struct Directory {
     connection: Connection,
     reviewers: BTreeSet<String>,
     catalog_id: String,
+}
+
+fn owns_plugin_namespace(
+    connection: &Connection,
+    publisher: &str,
+    actor: &str,
+    plugin_id: &str,
+) -> Result<bool> {
+    let claims: Vec<String> = connection
+        .prepare("SELECT namespace FROM namespaces WHERE publisher=?1 AND actor=?2")?
+        .query_map(params![publisher, actor], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(claims
+        .iter()
+        .any(|namespace| plugin_id.starts_with(&format!("{namespace}."))))
 }
 
 /// Read-only projection for the public directory Plugin. Opening this handle never
@@ -112,6 +133,49 @@ impl PublishedDirectory {
             Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
         }
     }
+
+    pub fn latest_package(&self) -> Result<Option<String>> {
+        // A read-only projection may open a database from before this channel existed.
+        let has_table: bool = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='package_snapshots')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_table {
+            return Ok(None);
+        }
+        let value: Option<Option<Vec<u8>>> = self.connection.query_row(
+            "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM package_snapshots ORDER BY revision DESC LIMIT 1",
+            [i64::try_from(lenso_plugin_catalog::MAX_ENVELOPE_BYTES)?], |row| row.get(0)
+        ).optional()?;
+        match value {
+            None => Ok(None),
+            Some(None) => anyhow::bail!("published package envelope exceeds size limit"),
+            Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+        }
+    }
+
+    pub fn latest_release_content(&self) -> Result<Option<String>> {
+        // Existing publisher databases predate this optional publication channel.
+        // The read-only public projection must not run a migration on request.
+        let has_table: bool = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='release_content_snapshots')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_table {
+            return Ok(None);
+        }
+        let value: Option<Option<Vec<u8>>> = self.connection.query_row(
+            "SELECT CASE WHEN length(envelope)<=?1 THEN envelope ELSE NULL END FROM release_content_snapshots ORDER BY revision DESC LIMIT 1",
+            [i64::try_from(lenso_plugin_catalog::MAX_ENVELOPE_BYTES)?], |row| row.get(0)
+        ).optional()?;
+        match value {
+            None => Ok(None),
+            Some(None) => anyhow::bail!("published release content envelope exceeds size limit"),
+            Some(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+        }
+    }
 }
 
 impl Directory {
@@ -126,6 +190,7 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE TABLE IF NOT EXISTS snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS details_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS details_npm_admissions (identity TEXT NOT NULL, details_digest TEXT NOT NULL, actor TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY(identity,details_digest));
             CREATE TABLE IF NOT EXISTS details_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE UNIQUE INDEX IF NOT EXISTS details_amendments_identity_digest ON details_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS details_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
@@ -133,6 +198,10 @@ impl Directory {
             CREATE TABLE IF NOT EXISTS linked_cargo_amendments (id INTEGER PRIMARY KEY, identity TEXT NOT NULL, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, base_digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
             CREATE UNIQUE INDEX IF NOT EXISTS linked_cargo_amendments_identity_digest ON linked_cargo_amendments(identity,digest);
             CREATE TABLE IF NOT EXISTS linked_cargo_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS package_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS package_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS release_content_submissions (id INTEGER PRIMARY KEY, identity TEXT NOT NULL UNIQUE, publisher TEXT NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, state TEXT NOT NULL, reviewer TEXT, policy TEXT);
+            CREATE TABLE IF NOT EXISTS release_content_snapshots (revision INTEGER PRIMARY KEY, envelope BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, subject TEXT NOT NULL, at INTEGER NOT NULL);
         ")?;
         connection.execute("INSERT OR IGNORE INTO metadata VALUES(1, ?1)", [catalog_id])?;
@@ -153,6 +222,21 @@ impl Directory {
         ensure!(
             self.reviewers.contains(actor),
             "reviewer authorization required"
+        );
+        Ok(())
+    }
+
+    fn ensure_exclusive_release_identities(transaction: &rusqlite::Transaction<'_>) -> Result<()> {
+        let collision: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM submissions p JOIN linked_cargo_submissions l ON p.identity=l.identity
+                UNION ALL SELECT 1 FROM submissions p JOIN package_submissions n ON p.identity=n.identity
+                UNION ALL SELECT 1 FROM linked_cargo_submissions l JOIN package_submissions n ON l.identity=n.identity)",
+            [],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            !collision,
+            "release identity is owned by multiple base channels"
         );
         Ok(())
     }
@@ -240,6 +324,15 @@ impl Directory {
             !existing_linked,
             "a source-only linked Cargo release already owns this identity"
         );
+        let existing_package: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM package_submissions WHERE identity=?1)",
+            [&identity],
+            |row| row.get(0),
+        )?;
+        ensure!(
+            !existing_package,
+            "a package-only release already owns this identity"
+        );
         let existing: Option<(i64, String)> = transaction
             .query_row(
                 "SELECT id,digest FROM submissions WHERE identity=?1",
@@ -322,27 +415,51 @@ impl Directory {
         details: &ReleaseDetails,
         now: u64,
     ) -> Result<i64> {
+        self.submit_details_with_archives(actor, details, &BTreeMap::new(), now)
+    }
+
+    /// Admit exact local npm bytes before any additive npm digest may be reviewed
+    /// or signed. This does not prove that the named registry serves those bytes.
+    pub fn submit_details_with_archives(
+        &mut self,
+        actor: &str,
+        details: &ReleaseDetails,
+        archives: &BTreeMap<String, Vec<u8>>,
+        now: u64,
+    ) -> Result<i64> {
         details.validate()?;
+        let npm: Vec<_> = details
+            .distributions
+            .iter()
+            .filter(|distribution| distribution.kind == DistributionKind::NpmPackage)
+            .collect();
+        let has_npm = !npm.is_empty();
+        ensure!(
+            archives.len() == npm.len(),
+            "one exact npm archive is required for each npm distribution"
+        );
+        for distribution in npm {
+            npm_archive::verify_npm_archive(
+                archives
+                    .get(&distribution.id)
+                    .context("npm archive is missing for distribution")?,
+                &distribution.package,
+                &distribution.version,
+                &details.plugin_id,
+                &details.version,
+                distribution
+                    .integrity
+                    .as_deref()
+                    .context("npm integrity missing")?,
+            )?;
+        }
         let identity = format!("{}@{}", details.plugin_id, details.version);
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let (base_body, publisher, base_state): (String, String, String) = transaction.query_row(
-            "SELECT body,publisher,state FROM submissions WHERE identity=?1",
-            [&identity],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )?;
-        ensure!(
-            base_state == "published",
-            "release details require an already published base release"
-        );
-        let base: Release = serde_json::from_str(&base_body)?;
-        details.validate_against(&base)?;
-        let owns_namespace: bool = transaction.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
-            |row| row.get(0),
-        )?;
+        let publisher = published_base_publisher(&transaction, details)?;
+        let owns_namespace =
+            owns_plugin_namespace(&transaction, &publisher, actor, &details.plugin_id)?;
         ensure!(owns_namespace, "publisher does not own this namespace");
         let body = serde_json::to_string(details)?;
         let body_digest = digest(body.as_bytes());
@@ -358,6 +475,13 @@ impl Directory {
                 previous == body_digest,
                 "release details identity already submitted with different content"
             );
+            if has_npm {
+                transaction.execute(
+                    "INSERT OR IGNORE INTO details_npm_admissions(identity,details_digest,actor,at) VALUES(?1,?2,?3,?4)",
+                    params![identity, body_digest, actor, i64::try_from(now)?],
+                )?;
+            }
+            transaction.commit()?;
             return Ok(id);
         }
         transaction.execute(
@@ -365,6 +489,12 @@ impl Directory {
             params![identity, publisher, body, body_digest],
         )?;
         let id = transaction.last_insert_rowid();
+        if has_npm {
+            transaction.execute(
+                "INSERT INTO details_npm_admissions(identity,details_digest,actor,at) VALUES(?1,?2,?3,?4)",
+                params![identity, body_digest, actor, i64::try_from(now)?],
+            )?;
+        }
         transaction.execute(
             "INSERT INTO audit(actor,action,subject,at) VALUES(?1,'submit_details',?2,?3)",
             params![actor, identity, i64::try_from(now)?],
@@ -384,16 +514,13 @@ impl Directory {
                 [submission],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )?;
-        let owner: bool = self.connection.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
-            |row| row.get(0),
-        )?;
+        let details: ReleaseDetails = serde_json::from_str(&body)?;
+        let owner = owns_plugin_namespace(&self.connection, &publisher, actor, &details.plugin_id)?;
         ensure!(
             owner || self.reviewers.contains(actor),
             "release details access denied"
         );
-        Ok((serde_json::from_str(&body)?, digest, state))
+        Ok((details, digest, state))
     }
 
     pub fn approve_details(
@@ -440,6 +567,7 @@ impl Directory {
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        Self::ensure_exclusive_release_identities(&transaction)?;
         let current: i64 = transaction.query_row(
             "SELECT COALESCE(MAX(revision),0) FROM snapshots",
             [],
@@ -517,18 +645,34 @@ impl Directory {
             current == i64::try_from(expected_revision)?,
             "release details revision changed; read publication result"
         );
-        let bodies: Vec<(String, String)> = transaction
-            .prepare("SELECT body,digest FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
-            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        let bodies: Vec<(String, String, String)> = transaction
+            .prepare("SELECT body,digest,publisher FROM details_submissions WHERE state IN ('approved','published') ORDER BY identity")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
             .collect::<rusqlite::Result<_>>()?;
         let mut releases = BTreeMap::<String, (ReleaseDetails, String)>::new();
-        for (body, reviewed_digest) in &bodies {
+        for (body, reviewed_digest, publisher) in &bodies {
             ensure!(
                 digest(body.as_bytes()) == *reviewed_digest,
                 "reviewed release details digest mismatch"
             );
             let details: ReleaseDetails = serde_json::from_str(body)?;
+            ensure!(
+                &published_base_publisher(&transaction, &details)? == publisher,
+                "base publisher changed"
+            );
             let identity = format!("{}@{}", details.plugin_id, details.version);
+            if details
+                .distributions
+                .iter()
+                .any(|distribution| distribution.kind == DistributionKind::NpmPackage)
+            {
+                let admitted: bool = transaction.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM details_npm_admissions WHERE identity=?1 AND details_digest=?2)",
+                    params![identity, reviewed_digest],
+                    |row| row.get(0),
+                )?;
+                ensure!(admitted, "npm release details lack exact archive admission");
+            }
             ensure!(
                 releases
                     .insert(identity, (details, digest(body.as_bytes())))
@@ -703,6 +847,64 @@ mod tests {
             directory
                 .insert_verified("author", &release(), 101)
                 .is_err()
+        );
+    }
+    #[test]
+    fn release_details_reads_and_writes_require_the_plugins_namespace() {
+        let home = tempfile::tempdir().unwrap();
+        let mut directory = Directory::open(
+            &home.path().join("directory.db"),
+            "test",
+            BTreeSet::from(["reviewer".into()]),
+        )
+        .unwrap();
+        directory
+            .claim_namespace("reviewer", "example.alpha", "publisher", "alice", 100)
+            .unwrap();
+        directory
+            .claim_namespace("reviewer", "example.beta", "publisher", "bob", 100)
+            .unwrap();
+        let mut base = release();
+        base.plugin_id = "example.alpha.echo".into();
+        let base_id = directory.insert_verified("alice", &base, 101).unwrap();
+        let (_, base_digest, _) = directory.inspect_submission("reviewer", base_id).unwrap();
+        directory
+            .approve("reviewer", base_id, &base_digest, "v1", 102)
+            .unwrap();
+        let key = SigningKey::from_bytes(&[17; 32]);
+        directory
+            .publish("reviewer", 0, 103, 200, "test-key", &key)
+            .unwrap();
+
+        let details = details(&base);
+        assert!(directory.submit_details("bob", &details, 104).is_err());
+        let id = directory.submit_details("alice", &details, 104).unwrap();
+        assert!(directory.inspect_details_submission("bob", id).is_err());
+        let (_, details_digest, _) = directory
+            .inspect_details_submission("reviewer", id)
+            .unwrap();
+        directory
+            .approve_details("reviewer", id, &details_digest, "v1", 105)
+            .unwrap();
+        directory
+            .publish_details("reviewer", 0, 106, 200, "test-key", &key)
+            .unwrap();
+
+        let mut amendment = details;
+        amendment.documentation.push(document("r1"));
+        assert!(
+            directory
+                .submit_details_revision("bob", &amendment, 107)
+                .is_err()
+        );
+        let revision = directory
+            .submit_details_revision("alice", &amendment, 107)
+            .unwrap();
+        assert!(directory.inspect_details_revision("bob", revision).is_err());
+        assert!(
+            directory
+                .inspect_details_revision("reviewer", revision)
+                .is_ok()
         );
     }
     #[test]

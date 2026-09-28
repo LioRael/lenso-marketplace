@@ -19,4 +19,18 @@ pub trait PublishedStorage: std::fmt::Debug {
     ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
         Box::pin(async { Ok(None) })
     }
+
+    fn published_package<'a>(
+        &'a self,
+        _catalog: &'a str,
+    ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
+        Box::pin(async { Ok(None) })
+    }
+
+    fn published_release_content<'a>(
+        &'a self,
+        _catalog: &'a str,
+    ) -> LocalBoxFuture<'a, anyhow::Result<Option<String>>> {
+        Box::pin(async { Ok(None) })
+    }
 }

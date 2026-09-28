@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 default-run = "lenso-marketplace-publisher"
 publish = false
+[features]
+package-publication = ["lenso-marketplace-directory-plugin/package-publication"]
 [dependencies]
 lenso-marketplace-directory-plugin = { path = "../../plugins/directory" }
 lenso-plugin-catalog = { workspace = true, features = ["bundle-verification"] }
