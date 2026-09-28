@@ -16,7 +16,7 @@ pnpm build
 cargo fetch --locked --manifest-path "$marketplace_root/tests/fixtures/echo/Cargo.toml"
 lenso plugin check --repo-root "$marketplace_root/tests/fixtures/echo"
 lenso plugin dev --repo-root "$marketplace_root/tests/fixtures/echo" --operation execute \
-  --request-json '{"name":"lenso.marketplace.echo","arguments_json":"{\"text\":\"marketplace proof\"}"}'
+  --request-json '{"name":"echo","arguments_json":"{\"text\":\"marketplace proof\"}"}'
 lenso plugin pack --repo-root "$marketplace_root/tests/fixtures/echo" --output "$proof_root/echo.lenso-plugin" --json
 if [[ -n "${LENSO_RUST_WORKSPACE:-}" ]]; then
   if [[ "$LENSO_RUST_WORKSPACE" != /* || ! -f "$LENSO_RUST_WORKSPACE/crates/lenso-cli/Cargo.toml" ]]; then

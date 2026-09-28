@@ -4,6 +4,6 @@ Ordinary Rust source compiled as a trusted native Process Plugin. The SDK owns t
 
 ```sh
 lenso plugin check
-lenso plugin dev --operation execute --request-json '{"name":"lenso.marketplace.echo","arguments_json":"{\"text\":\"hello\"}"}'
+lenso plugin dev --operation execute --request-json '{"name":"echo","arguments_json":"{\"text\":\"hello\"}"}'
 lenso plugin pack
 ```
