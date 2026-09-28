@@ -1,0 +1,29 @@
+Cargo.toml
+  s_7d146975368699::t_b04cd1e30e0ed6 27
+Cargo.lock
+  s_d4da68265a0e74::t_8b403b4ec3f0ae 1138,1555,1559,1575,1592
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb027db6df022aefbfecfe99776c8909208b7928",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    },
+    "s_d4da68265a0e74": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e81c-5545-7070-a109-b8ec740fd5cd",
+        "model": "unknown"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
