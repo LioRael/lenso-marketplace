@@ -14,13 +14,13 @@ const channels = {
     "lenso.marketplace.linked-cargo-snapshot.v1",
   ],
   packages: ["marketplace_packages", "lenso.marketplace.package-snapshot.v1"],
-  "release-details": [
-    "marketplace_release_details",
-    "lenso.marketplace.release-details.v1",
-  ],
   "release-content": [
     "marketplace_release_content",
     "lenso.marketplace.release-content.v2",
+  ],
+  "release-details": [
+    "marketplace_release_details",
+    "lenso.marketplace.release-details.v1",
   ],
 };
 

@@ -8,6 +8,7 @@ const fixture = (name) =>
 const digest = (bytes) =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 const publicKey = createPublicKey({
+  format: "der",
   key: Buffer.concat([
     Buffer.from("302a300506032b6570032100", "hex"),
     Buffer.from(
@@ -15,7 +16,6 @@ const publicKey = createPublicKey({
       "hex"
     ),
   ]),
-  format: "der",
   type: "spki",
 });
 const signed = (name, schema) => {
@@ -45,10 +45,12 @@ const signed = (name, schema) => {
 };
 
 test("D16 signed package and content fixtures join by exact immutable identity", () => {
-  const base = signed(
+  const {
+    releases: [base],
+  } = signed(
     "package-snapshot.envelope.json",
     "lenso.marketplace.package-snapshot.v1"
-  ).releases[0];
+  );
   assert.match(base.source_revision, /^[a-f0-9]{40}$/u);
   assert.deepEqual(base, JSON.parse(fixture("package-release.json")));
   const baseIdentity = digest(
@@ -66,23 +68,27 @@ test("D16 signed package and content fixtures join by exact immutable identity",
       ])
     )
   );
-  const attached = signed(
+  const {
+    releases: [attached],
+  } = signed(
     "package-content.envelope.json",
     "lenso.marketplace.release-content.v2"
-  ).releases[0];
+  );
   assert.equal(attached.base_kind, "package");
   assert.equal(attached.base_release_identity, baseIdentity);
   assert.equal(attached.plugin_id, base.plugin_id);
   assert.equal(attached.version, base.version);
   assert.equal(attached.metadata, undefined);
 
-  const standalone = signed(
+  const {
+    releases: [standalone],
+  } = signed(
     "content-only.envelope.json",
     "lenso.marketplace.release-content.v2"
-  ).releases[0];
+  );
   assert.equal(standalone.base_kind, "content_only");
   assert.notEqual(standalone.plugin_id, base.plugin_id);
-  const metadata = standalone.metadata;
+  const { metadata } = standalone;
   assert.equal(metadata.publisher_id, "publisher");
   assert.ok(
     metadata.documentation.some((doc) => doc.topic === "getting-started")

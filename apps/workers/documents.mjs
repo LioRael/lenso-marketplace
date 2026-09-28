@@ -71,6 +71,12 @@ const readBounded = async (bucket, key, limit) => {
   return bytes;
 };
 
+const validPublishedDocument = (document) =>
+  document.media_type === "text/markdown" &&
+  Number.isSafeInteger(document.size) &&
+  document.size >= 1 &&
+  document.size <= MAX_DOCUMENT;
+
 const signedDocument = (bytes, catalogId, revision, schema, wanted) => {
   const envelope = JSON.parse(decoder.decode(bytes));
   const encoded = envelope?.payload_base64;
@@ -103,12 +109,7 @@ const signedDocument = (bytes, catalogId, revision, schema, wanted) => {
       if (document?.digest !== wanted) {
         continue;
       }
-      if (
-        document.media_type !== "text/markdown" ||
-        !Number.isSafeInteger(document.size) ||
-        document.size < 1 ||
-        document.size > MAX_DOCUMENT
-      ) {
+      if (!validPublishedDocument(document)) {
         throw new Error("invalid published document metadata");
       }
       return document;
