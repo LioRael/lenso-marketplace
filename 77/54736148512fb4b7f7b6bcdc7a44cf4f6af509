@@ -1,0 +1,31 @@
+apps/workers/documents.mjs
+  s_7d146975368699::t_31c68fc4d43a62 74-79,112
+apps/workers/document-route.test.mjs
+  s_7d146975368699::t_31c68fc4d43a62 21-23
+  s_7d146975368699::t_e492948564bbbe 24
+apps/workers/d16-fixture.test.mjs
+  s_7d146975368699::t_31c68fc4d43a62 11,48-50,53,71-73,76,83
+  s_7d146975368699::t_7cf3a230d548a7 84-85,88,91
+tests/fixtures/d16/content-only.envelope.json
+  s_7d146975368699::t_f0607efe920c49 1-5
+tests/fixtures/d16/package-content.envelope.json
+  s_7d146975368699::t_cc8725cb768b63 1-5
+tests/fixtures/d16/package-snapshot.envelope.json
+  s_7d146975368699::t_5338142f0a438b 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7754736148512fb4b7f7b6bcdc7a44cf4f6af509",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
