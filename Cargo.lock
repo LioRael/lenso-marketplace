@@ -1135,7 +1135,7 @@ dependencies = [
 [[package]]
 name = "lenso-app-plan"
 version = "0.4.6"
-source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
+source = "git+https://github.com/LioRael/lenso.git?rev=634afb0a03f9c0b34d9aba040338696849339146#634afb0a03f9c0b34d9aba040338696849339146"
 dependencies = [
  "serde",
  "serde_json",
@@ -1552,11 +1552,11 @@ dependencies = [
 [[package]]
 name = "lenso-plugin-bundle"
 version = "0.6.1"
-source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
+source = "git+https://github.com/LioRael/lenso.git?rev=634afb0a03f9c0b34d9aba040338696849339146#634afb0a03f9c0b34d9aba040338696849339146"
 dependencies = [
  "flate2",
  "hex",
- "lenso-app-plan 0.4.6 (git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b)",
+ "lenso-app-plan 0.4.6 (git+https://github.com/LioRael/lenso.git?rev=634afb0a03f9c0b34d9aba040338696849339146)",
  "lenso-process-protocol",
  "semver",
  "serde",
@@ -1572,7 +1572,7 @@ dependencies = [
 [[package]]
 name = "lenso-plugin-catalog"
 version = "0.1.2"
-source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
+source = "git+https://github.com/LioRael/lenso.git?rev=634afb0a03f9c0b34d9aba040338696849339146#634afb0a03f9c0b34d9aba040338696849339146"
 dependencies = [
  "anyhow",
  "base64",
@@ -1589,7 +1589,7 @@ dependencies = [
 [[package]]
 name = "lenso-process-protocol"
 version = "0.2.3"
-source = "git+https://github.com/LioRael/lenso.git?rev=a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b#a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b"
+source = "git+https://github.com/LioRael/lenso.git?rev=634afb0a03f9c0b34d9aba040338696849339146#634afb0a03f9c0b34d9aba040338696849339146"
 dependencies = [
  "base64",
  "serde",

@@ -24,7 +24,7 @@ default-members = [
 exclude = ["tests/fixtures/echo", "tests/fixtures/proof"]
 
 [workspace.dependencies]
-lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso.git", rev = "a1d4b59e4e180d4f817b0a459a5efd2fa8fe4d8b", default-features = false }
+lenso-plugin-catalog = { git = "https://github.com/LioRael/lenso.git", rev = "634afb0a03f9c0b34d9aba040338696849339146", default-features = false }
 lenso-kernel = "=0.3.6"
 lenso-app-plan = "=0.4.6"
 lenso-native-adapter = "=0.3.14"
