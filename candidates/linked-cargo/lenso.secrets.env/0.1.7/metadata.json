@@ -1,0 +1,23 @@
+{
+  "publisher_id": "lenso",
+  "title": "Environment Secrets",
+  "summary": "Allowlisted environment-backed Secrets Provider for Lenso Apps. Resolves only explicitly configured logical references.",
+  "source_url": "https://github.com/LioRael/lenso-secrets-plugin/commit/43591a4374cf2a6ec586ba5c365bdf41eff1beb4",
+  "source_revision": "43591a4374cf2a6ec586ba5c365bdf41eff1beb4",
+  "license": "MIT",
+  "registry_url": "https://crates.io/crates/lenso-secrets-env-plugin/0.1.7",
+  "integration": "linked_plugin",
+  "targets": ["aarch64-unknown-linux-gnu"],
+  "documentation": [
+    {
+      "id": "secrets-provider-guide",
+      "revision": "43591a4374cf2a6ec586ba5c365bdf41eff1beb4",
+      "language": "en",
+      "topic": "usage",
+      "url": "https://raw.githubusercontent.com/LioRael/lenso-secrets-plugin/43591a4374cf2a6ec586ba5c365bdf41eff1beb4/README.md",
+      "digest": "sha256:38904fbf66d398777eb0f78d8d08d3433609f609f255151a926bb05a829b0d0b",
+      "size": 4592,
+      "media_type": "text/markdown"
+    }
+  ]
+}
