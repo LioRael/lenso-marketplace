@@ -1,0 +1,19 @@
+Cargo.lock
+  s_ad5cb83e3f5f5a::t_e9ad55774274d2 1128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d6ba54a96365d51d1f3493a629d6e453eb8eca5",
+  "prompts": {},
+  "sessions": {
+    "s_ad5cb83e3f5f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e8c8-2283-70a1-a333-2766b1f4e72d",
+        "model": "unknown"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
