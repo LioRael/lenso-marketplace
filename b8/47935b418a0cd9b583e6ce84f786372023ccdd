@@ -1,0 +1,72 @@
+plugins/directory/src/publishing/release_content.rs
+  s_7d146975368699::t_b15b0440f08a95 776,920-1034,1036,1038,1040-1046,1049,1052-1053,1060,1062,1065-1067
+  s_7d146975368699::t_9aca6e5fee33e4 8,49-106,225-226,231,235-242,257-258,260-286,295
+  s_7d146975368699::t_4282bcfd918725 7,9,28-29,259,287-294,296-317,392,397-399,426-429,432-437,439-448,454-494,567-576,632,634-635,646,700
+  s_7d146975368699::t_66b298158c2725 423-425
+  s_7d146975368699::t_6d2c4219073293 1056
+  s_7d146975368699::t_ba1edeff508f15 400-409,701-702,704,711-726,775,777,1035,1037,1039,1047-1048,1050-1051,1054-1055,1057-1059,1061,1063-1064,1068-1071,1093
+tools/cloudflare/promote.test.mjs
+  s_7d146975368699::t_4e59397375f8e8 298-330
+plugins/directory/src/publishing.rs
+  s_7d146975368699::t_6d4835709649a7 318
+tests/fixtures/d16/getting-started.md
+  s_7d146975368699::t_157f3985fa7b9c 1
+tests/fixtures/d16/package-release.json
+  s_7d146975368699::t_8d6d0597426f78 1-33
+plugins/directory/src/publishing/linked_cargo.rs
+  s_7d146975368699::t_6d4835709649a7 151
+tools/cloudflare/README.md
+  s_7d146975368699::t_d305c5e4874a8c 113,123-126
+tools/cloudflare/promote.mjs
+  s_7d146975368699::t_325f72f943cf56 340
+apps/workers/d16-fixture.test.mjs
+  s_7d146975368699::t_a33d512dcdce58 1-126
+  s_7d146975368699::t_6331d44acdfc59 127-136
+tests/fixtures/d16/README.md
+  s_7d146975368699::t_157f3985fa7b9c 14-16,25-26
+  s_7d146975368699::t_8d6d0597426f78 1-2,6-13,18-24
+  s_7d146975368699::t_d8e712dbec85cc 17,27-29
+  s_7d146975368699::t_46b919cd3bdd3a 3-5
+plugins/directory/src/publishing/package.rs
+  s_7d146975368699::t_6d4835709649a7 44
+tests/fixtures/d16/package-snapshot.envelope.json
+  s_7d146975368699::t_8d6d0597426f78 1
+tests/fixtures/d16/package-content.envelope.json
+  s_7d146975368699::t_8d6d0597426f78 1
+tools/publisher/src/main.rs
+  s_7d146975368699::t_325f72f943cf56 121-123,606-616
+  s_7d146975368699::t_f7ebbd9c8cff5e 90,107-120
+apps/workers/documents.mjs
+  s_7d146975368699::t_325f72f943cf56 18-22,97-98
+  s_7d146975368699::t_6bbc4839bb3310 99,102
+tools/cloudflare/promote-cloudflare.mjs
+  s_7d146975368699::t_325f72f943cf56 107
+tools/publisher/docs/operator.md
+  s_7d146975368699::t_d305c5e4874a8c 281
+  s_7d146975368699::t_610c7d8a250808 280,296-302,304
+  s_7d146975368699::t_e4be64e585e529 276-279,292,294-295,310-311,326-327
+docs/publishing.md
+  s_7d146975368699::t_e4be64e585e529 158-165
+apps/native/tests/http.rs
+  s_7d146975368699::t_c794e322b36036 216
+tests/fixtures/d16/content-only.envelope.json
+  s_7d146975368699::t_8d6d0597426f78 1
+apps/workers/document-route.test.mjs
+  s_7d146975368699::t_91766021ee3ea3 21-24,41-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b847935b418a0cd9b583e6ce84f786372023ccdd",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
