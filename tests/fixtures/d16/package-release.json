@@ -1,0 +1,33 @@
+{
+  "plugin_id": "example.editor",
+  "version": "1.0.0",
+  "publisher_id": "publisher",
+  "title": "Editor",
+  "summary": "Npm-only Plugin",
+  "source_url": "https://example.test/source",
+  "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "license": "MIT",
+  "distributions": [
+    {
+      "id": "npm",
+      "kind": "npm_package",
+      "package": "@example/editor",
+      "version": "1.0.0",
+      "integrity": "sha256:77a3b450f5e597d0da9d8aad5bf7f3617e6e41e32b4e3eb2fc7105f5790bec7a",
+      "registry_url": "https://registry.npmjs.org"
+    }
+  ],
+  "availability": "listed",
+  "documentation": [
+    {
+      "id": "start",
+      "revision": "r1",
+      "language": "en",
+      "topic": "getting-started",
+      "url": "https://example.test/editor/1.0.0/start.md",
+      "digest": "sha256:1214f810629b7d83e5e1eb7d87d3352e9b878b36d2e06ae4f0ecda22abb159b3",
+      "size": 15,
+      "media_type": "text/markdown"
+    }
+  ]
+}

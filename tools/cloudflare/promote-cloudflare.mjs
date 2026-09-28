@@ -104,7 +104,7 @@ const main = async () => {
   }
   const publication = publisher(exportOperation);
   const documentBodies = new Map();
-  if (details || linked || packaged) {
+  if (details || linked || packaged || content) {
     for (const [digest, path] of Object.entries(config.documentFiles ?? {})) {
       assert.match(digest, /^sha256:[a-f0-9]{64}$/u);
       assert.ok(isAbsolute(path), "absolute document path required");

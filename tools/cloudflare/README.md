@@ -110,7 +110,7 @@ route; the read-only Worker serves `/api/marketplace/v1/package`.
 
 ## Retain exact published Markdown bodies
 
-For `release-details`, `linked-cargo` and `package` promotions, the protected
+For `release-details`, `linked-cargo`, `package` and `release-content` promotions, the protected
 host requires every document in the Rust-verified snapshot to exist in the
 Marketplace R2 bucket before advancing the D1 publication pointer. Supply
 missing bodies as an optional `documentFiles` object in the same protected
@@ -120,7 +120,10 @@ the signed size and SHA-256 before a create-only upload to
 `documents/sha256/<hex>.md`. An already uploaded object is read back and
 verified, so renewals do not need to resupply its file. An unrelated file key,
 missing body, changed object or uncertain write fails before pointer promotion.
-Do not place private documents in this public signed-directory workflow.
+Do not place private documents in this public signed-directory workflow. For
+content-only releases, this step is required for the signed `getting-started`
+Markdown before its public pointer can advance. The source URL is not fetched;
+only the operator-supplied local Markdown bytes are retained.
 
 The public Worker serves `GET` and `HEAD /documents/sha256/<hex>.md` only when
 that digest appears in the exact envelope named by a current D1 publication

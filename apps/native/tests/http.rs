@@ -213,6 +213,7 @@ async fn real_host_serves_verified_catalog_and_honest_failures() {
                 version: linked.version.clone(),
                 base_kind: BaseKind::LinkedCargo,
                 base_release_identity: release_content::linked_identity(&linked).unwrap(),
+                metadata: None,
                 content: vec![Content {
                     id: "view-template".into(),
                     kind: ContentKind::EditableTemplate,

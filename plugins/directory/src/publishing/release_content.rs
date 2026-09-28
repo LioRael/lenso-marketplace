@@ -4,7 +4,9 @@
 use super::*;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use ed25519_dalek::{Signature, Signer as _, VerifyingKey};
-use lenso_plugin_catalog::{Envelope, Trust, linked_cargo::LinkedCargoRelease};
+use lenso_plugin_catalog::{
+    Documentation, Envelope, Trust, linked_cargo::LinkedCargoRelease, package::PackageRelease,
+};
 use serde::{Deserialize, Serialize};
 use std::io::Read as _;
 
@@ -23,6 +25,8 @@ const ATTRIBUTION: &str = ".lenso-release-content.json";
 pub enum BaseKind {
     Portable,
     LinkedCargo,
+    Package,
+    ContentOnly,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -40,6 +44,64 @@ pub struct Content {
     pub url: String,
     pub digest: String,
     pub size: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContentOnlyMetadata {
+    pub publisher_id: String,
+    pub title: String,
+    pub summary: String,
+    pub source_url: String,
+    pub source_revision: String,
+    pub license: String,
+    pub documentation: Vec<Documentation>,
+}
+
+impl ContentOnlyMetadata {
+    fn validate(&self) -> Result<()> {
+        lenso_plugin_catalog::bounded_text(&self.publisher_id, 128)?;
+        lenso_plugin_catalog::bounded_text(&self.title, 160)?;
+        lenso_plugin_catalog::bounded_text(&self.summary, 640)?;
+        lenso_plugin_catalog::bounded_text(&self.license, 128)?;
+        let source = url::Url::parse(&self.source_url)?;
+        ensure!(
+            self.source_url.len() <= 2048
+                && source.scheme() == "https"
+                && source.host_str().is_some()
+                && source.username().is_empty()
+                && source.password().is_none()
+                && source.fragment().is_none(),
+            "content-only source must be a credential-free HTTPS URL"
+        );
+        ensure!(
+            matches!(self.source_revision.len(), 40 | 64)
+                && self
+                    .source_revision
+                    .bytes()
+                    .all(|byte| { byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte) }),
+            "content-only source must name an exact commit digest"
+        );
+        ensure!(
+            !self.documentation.is_empty() && self.documentation.len() <= 64,
+            "content-only release needs one to 64 Markdown documents"
+        );
+        let mut documents = BTreeSet::new();
+        let mut getting_started = false;
+        for document in &self.documentation {
+            document.validate()?;
+            ensure!(
+                documents.insert((&document.id, &document.revision)),
+                "duplicate content-only document identity"
+            );
+            getting_started |= document.topic == "getting-started";
+        }
+        ensure!(
+            getting_started,
+            "content-only release needs getting-started Markdown"
+        );
+        Ok(())
+    }
 }
 
 impl Content {
@@ -160,15 +222,24 @@ pub struct ReleaseContent {
     pub version: String,
     pub base_kind: BaseKind,
     pub base_release_identity: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<ContentOnlyMetadata>,
     pub content: Vec<Content>,
 }
 
 impl ReleaseContent {
-    fn validate(&self) -> Result<()> {
+    fn validate_content(&self) -> Result<()> {
         lenso_plugin_catalog::identity::validate_plugin_id_v1(&self.plugin_id)?;
         lenso_plugin_catalog::identity::validate_release_version(&self.version)?;
         lenso_plugin_catalog::bounded_text(&self.version, 128)?;
-        valid_digest(&self.base_release_identity)?;
+        match (self.base_kind, &self.metadata) {
+            (BaseKind::ContentOnly, Some(metadata)) => metadata.validate()?,
+            (BaseKind::ContentOnly, None) => {
+                anyhow::bail!("content-only release requires signed metadata")
+            }
+            (_, Some(_)) => anyhow::bail!("attached release metadata comes from its base"),
+            (_, None) => {}
+        }
         ensure!(
             !self.content.is_empty() && self.content.len() <= 32,
             "release content needs one to 32 entries"
@@ -179,6 +250,67 @@ impl ReleaseContent {
             ensure!(
                 ids.insert(&content.id),
                 "duplicate release content identity"
+            );
+        }
+        Ok(())
+    }
+
+    pub fn content_only_identity(&self) -> Result<String> {
+        ensure!(
+            self.base_kind == BaseKind::ContentOnly,
+            "self identity requires content_only base kind"
+        );
+        self.validate_content()?;
+        let metadata = self
+            .metadata
+            .as_ref()
+            .context("content-only metadata is missing")?;
+        let documents = metadata
+            .documentation
+            .iter()
+            .map(|document| {
+                (
+                    &document.id,
+                    &document.revision,
+                    &document.language,
+                    &document.topic,
+                    &document.target,
+                    &document.url,
+                    &document.digest,
+                    document.size,
+                    &document.media_type,
+                )
+            })
+            .collect::<Vec<_>>();
+        let metadata_identity = (
+            &metadata.publisher_id,
+            &metadata.title,
+            &metadata.summary,
+            &metadata.source_url,
+            &metadata.source_revision,
+            &metadata.license,
+            documents,
+        );
+        let content = self
+            .content
+            .iter()
+            .map(|item| (&item.id, item.kind, &item.url, &item.digest, item.size))
+            .collect::<Vec<_>>();
+        Ok(digest(&serde_json::to_vec(&(
+            &self.plugin_id,
+            &self.version,
+            metadata_identity,
+            content,
+        ))?))
+    }
+
+    fn validate(&self) -> Result<()> {
+        self.validate_content()?;
+        valid_digest(&self.base_release_identity)?;
+        if self.base_kind == BaseKind::ContentOnly {
+            ensure!(
+                self.base_release_identity == self.content_only_identity()?,
+                "content-only release identity does not match its exact content"
             );
         }
         Ok(())
@@ -257,11 +389,24 @@ pub fn linked_identity(release: &LinkedCargoRelease) -> Result<String> {
     ))?))
 }
 
-fn base_publisher(connection: &Connection, release: &ReleaseContent) -> Result<String> {
+fn base_publisher(connection: &Connection, release: &ReleaseContent) -> Result<Option<String>> {
     let identity = format!("{}@{}", release.plugin_id, release.version);
     let (table, label) = match release.base_kind {
         BaseKind::Portable => ("submissions", "portable"),
         BaseKind::LinkedCargo => ("linked_cargo_submissions", "linked Cargo"),
+        BaseKind::Package => ("package_submissions", "package"),
+        BaseKind::ContentOnly => {
+            let collision: bool = connection.query_row(
+                "SELECT EXISTS(SELECT 1 FROM submissions WHERE identity=?1 UNION ALL SELECT 1 FROM linked_cargo_submissions WHERE identity=?1 UNION ALL SELECT 1 FROM package_submissions WHERE identity=?1)",
+                [&identity],
+                |row| row.get(0),
+            )?;
+            ensure!(
+                !collision,
+                "content-only identity already has a base release"
+            );
+            return Ok(None);
+        }
     };
     let query = format!("SELECT body,publisher,state FROM {table} WHERE identity=?1");
     let (body, publisher, state): (String, String, String) = connection
@@ -275,17 +420,78 @@ fn base_publisher(connection: &Connection, release: &ReleaseContent) -> Result<S
     );
     let actual = match release.base_kind {
         BaseKind::Portable => {
-            serde_json::from_str::<lenso_plugin_catalog::Release>(&body)?.immutable_identity()?
+            let base: lenso_plugin_catalog::Release = serde_json::from_str(&body)?;
+            base.validate()?;
+            ensure!(
+                base.publisher_id == publisher,
+                "stored base publisher mismatch"
+            );
+            base.immutable_identity()?
         }
         BaseKind::LinkedCargo => {
-            linked_identity(&serde_json::from_str::<LinkedCargoRelease>(&body)?)?
+            let base: LinkedCargoRelease = serde_json::from_str(&body)?;
+            ensure!(
+                base.publisher_id == publisher,
+                "stored base publisher mismatch"
+            );
+            linked_identity(&base)?
         }
+        BaseKind::Package => {
+            let base: PackageRelease = serde_json::from_str(&body)?;
+            base.validate()?;
+            ensure!(
+                base.publisher_id == publisher,
+                "stored base publisher mismatch"
+            );
+            base.immutable_identity()?
+        }
+        BaseKind::ContentOnly => unreachable!(),
     };
     ensure!(
         actual == release.base_release_identity,
         "release content base identity mismatch"
     );
-    Ok(publisher)
+    Ok(Some(publisher))
+}
+
+pub(super) fn ensure_no_content_only_owner(connection: &Connection, identity: &str) -> Result<()> {
+    let body: Option<String> = connection
+        .query_row(
+            "SELECT body FROM release_content_submissions WHERE identity=?1",
+            [identity],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(body) = body {
+        let release: ReleaseContent = serde_json::from_str(&body)?;
+        ensure!(
+            release.base_kind != BaseKind::ContentOnly,
+            "content-only release already owns this identity"
+        );
+    }
+    Ok(())
+}
+
+fn claimed_publisher(connection: &Connection, actor: &str, plugin_id: &str) -> Result<String> {
+    let claims: Vec<String> = connection
+        .prepare("SELECT publisher FROM namespaces WHERE actor=?1 AND (?2 LIKE namespace || '.%')")?
+        .query_map(params![actor, plugin_id], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    ensure!(claims.len() == 1, "publisher does not own this namespace");
+    Ok(claims[0].clone())
+}
+
+fn ensure_publisher_claim(connection: &Connection, publisher: &str, plugin_id: &str) -> Result<()> {
+    let claimed: bool = connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND (?2 LIKE namespace || '.%'))",
+        params![publisher, plugin_id],
+        |row| row.get(0),
+    )?;
+    ensure!(
+        claimed,
+        "release content publisher no longer owns namespace"
+    );
+    Ok(())
 }
 
 fn signing_bytes(key_id: &str, payload: &[u8]) -> Vec<u8> {
@@ -358,7 +564,16 @@ impl Directory {
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let publisher = base_publisher(&transaction, release)?;
+        let publisher = match base_publisher(&transaction, release)? {
+            Some(publisher) => publisher,
+            None => claimed_publisher(&transaction, actor, &release.plugin_id)?,
+        };
+        if let Some(metadata) = &release.metadata {
+            ensure!(
+                metadata.publisher_id == publisher,
+                "content-only metadata publisher does not own namespace"
+            );
+        }
         let owns_namespace: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2 AND (?3 LIKE namespace || '.%'))",
             params![publisher, actor, release.plugin_id], |row| row.get(0)
@@ -414,9 +629,10 @@ impl Directory {
                 [submission],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )?;
+        let release: ReleaseContent = serde_json::from_str(&body)?;
         let owns_namespace: bool = self.connection.query_row(
-            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2)",
-            params![publisher, actor],
+            "SELECT EXISTS(SELECT 1 FROM namespaces WHERE publisher=?1 AND actor=?2 AND (?3 LIKE namespace || '.%'))",
+            params![publisher, actor, release.plugin_id],
             |row| row.get(0),
         )?;
         ensure!(
@@ -427,7 +643,7 @@ impl Directory {
             digest(body.as_bytes()) == proposal_digest,
             "stored release content digest mismatch"
         );
-        Ok((serde_json::from_str(&body)?, proposal_digest, state))
+        Ok((release, proposal_digest, state))
     }
 
     pub fn approve_release_content(
@@ -481,18 +697,33 @@ impl Directory {
             current == i64::try_from(expected_revision)?,
             "release content revision changed; read publication result"
         );
-        let bodies: Vec<(String, String)> = transaction.prepare(
-            "SELECT body,digest FROM release_content_submissions WHERE state IN ('approved','published') ORDER BY identity"
-        )?.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+        let bodies: Vec<(String, String, String)> = transaction.prepare(
+            "SELECT body,digest,publisher FROM release_content_submissions WHERE state IN ('approved','published') ORDER BY identity"
+        )?.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
         let mut releases = Vec::with_capacity(bodies.len());
-        for (body, reviewed_digest) in bodies {
+        for (body, reviewed_digest, publisher) in bodies {
             ensure!(
                 digest(body.as_bytes()) == reviewed_digest,
                 "reviewed release content digest mismatch"
             );
             let release: ReleaseContent = serde_json::from_str(&body)?;
             release.validate()?;
-            base_publisher(&transaction, &release)?;
+            match base_publisher(&transaction, &release)? {
+                Some(base_publisher) => ensure!(
+                    publisher == base_publisher,
+                    "release content publisher differs from base release"
+                ),
+                None => {
+                    ensure_publisher_claim(&transaction, &publisher, &release.plugin_id)?;
+                    ensure!(
+                        release
+                            .metadata
+                            .as_ref()
+                            .is_some_and(|metadata| metadata.publisher_id == publisher),
+                        "content-only metadata publisher differs from namespace claim"
+                    );
+                }
+            }
             releases.push(release);
         }
         let revision = current
@@ -541,7 +772,9 @@ impl Directory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lenso_plugin_catalog::{Availability, linked_cargo::LinkedCargoIntegration};
+    use lenso_plugin_catalog::{
+        Availability, Distribution, DistributionKind, linked_cargo::LinkedCargoIntegration,
+    };
 
     fn archive_with(entries: impl IntoIterator<Item = (String, Vec<u8>)>) -> Vec<u8> {
         let encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
@@ -684,6 +917,158 @@ mod tests {
         }
     }
 
+    fn content_release(kind: BaseKind, archive: &[u8]) -> ReleaseContent {
+        let metadata = (kind == BaseKind::ContentOnly).then(|| ContentOnlyMetadata {
+            publisher_id: "publisher".into(),
+            title: "Editor".into(),
+            summary: "Editable editor source".into(),
+            source_url: "https://example.com/source".into(),
+            source_revision: "a".repeat(40),
+            license: "MIT".into(),
+            documentation: vec![Documentation {
+                id: "start".into(),
+                revision: "r1".into(),
+                language: "en".into(),
+                topic: "getting-started".into(),
+                target: None,
+                url: "https://example.com/editor/1.0.0/start.md".into(),
+                digest: digest(b"# Editor\n"),
+                size: 9,
+                media_type: "text/markdown".into(),
+            }],
+        });
+        ReleaseContent {
+            plugin_id: "example.editor".into(),
+            version: "1.0.0".into(),
+            base_kind: kind,
+            base_release_identity: digest(b"placeholder"),
+            metadata,
+            content: vec![Content {
+                id: "starter".into(),
+                kind: ContentKind::EditableTemplate,
+                url: "https://example.com/starter.tar.gz".into(),
+                digest: digest(archive),
+                size: archive.len() as u64,
+            }],
+        }
+    }
+
+    #[test]
+    fn content_only_release_has_reviewed_self_identity_without_runtime_base() {
+        let root = tempfile::tempdir().unwrap();
+        let database = root.path().join("marketplace.sqlite3");
+        let mut directory =
+            Directory::open(&database, "catalog", BTreeSet::from(["reviewer".into()])).unwrap();
+        directory
+            .claim_namespace("reviewer", "example", "publisher", "author", 100)
+            .unwrap();
+        let archive = archive();
+        let mut release = content_release(BaseKind::ContentOnly, &archive);
+        assert!(release.validate().is_err());
+        release.base_release_identity = release.content_only_identity().unwrap();
+        assert!(
+            directory
+                .submit_release_content("outsider", &release, &[&archive], 101)
+                .is_err()
+        );
+        let id = directory
+            .submit_release_content("author", &release, &[&archive], 101)
+            .unwrap();
+        let (_, proposal_digest, state) = directory
+            .inspect_release_content_submission("author", id)
+            .unwrap();
+        assert_eq!(state, "awaiting_review");
+        directory
+            .approve_release_content("reviewer", id, &proposal_digest, "v2", 102)
+            .unwrap();
+        let key = SigningKey::from_bytes(&[7; 32]);
+        let bytes = directory
+            .publish_release_content("reviewer", 0, 103, 200, "key", &key)
+            .unwrap();
+        let trust = Trust {
+            catalog_id: "catalog".into(),
+            keys: BTreeMap::from([("key".into(), key.verifying_key())]),
+        };
+        assert_eq!(
+            verify(&bytes, &trust, 150).unwrap().releases,
+            vec![release.clone()]
+        );
+        assert!(
+            ensure_no_content_only_owner(&directory.connection, "example.editor@1.0.0").is_err()
+        );
+        let mut changed = release;
+        changed.content[0].url = "https://example.com/changed.tar.gz".into();
+        assert!(
+            directory
+                .submit_release_content("author", &changed, &[&archive], 104)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn package_content_requires_exact_published_package_identity() {
+        let root = tempfile::tempdir().unwrap();
+        let database = root.path().join("marketplace.sqlite3");
+        let mut directory =
+            Directory::open(&database, "catalog", BTreeSet::from(["reviewer".into()])).unwrap();
+        directory
+            .claim_namespace("reviewer", "example", "publisher", "author", 100)
+            .unwrap();
+        let package = PackageRelease {
+            plugin_id: "example.editor".into(),
+            version: "1.0.0".into(),
+            publisher_id: "publisher".into(),
+            title: "Editor".into(),
+            summary: "Npm-only Plugin".into(),
+            source_url: "https://example.com/source".into(),
+            source_revision: "a".repeat(40),
+            license: "MIT".into(),
+            distributions: vec![Distribution {
+                id: "npm".into(),
+                kind: DistributionKind::NpmPackage,
+                package: "@example/editor".into(),
+                version: "1.0.0".into(),
+                integrity: Some(digest(b"npm archive")),
+                registry_url: Some("https://registry.npmjs.org".into()),
+                artifact: None,
+                targets: vec![],
+            }],
+            availability: Availability::Listed,
+            documentation: vec![],
+        };
+        let package_body = serde_json::to_string(&package).unwrap();
+        directory.connection.execute(
+            "INSERT INTO package_submissions(identity,publisher,body,digest,state) VALUES(?1,?2,?3,?4,'published')",
+            params!["example.editor@1.0.0", "publisher", package_body, digest(package_body.as_bytes())],
+        ).unwrap();
+        let archive = archive();
+        let mut release = content_release(BaseKind::Package, &archive);
+        assert!(
+            directory
+                .submit_release_content("author", &release, &[&archive], 101)
+                .is_err()
+        );
+        release.base_release_identity = package.immutable_identity().unwrap();
+        let id = directory
+            .submit_release_content("author", &release, &[&archive], 101)
+            .unwrap();
+        let (_, proposal_digest, _) = directory
+            .inspect_release_content_submission("reviewer", id)
+            .unwrap();
+        directory
+            .approve_release_content("reviewer", id, &proposal_digest, "v2", 102)
+            .unwrap();
+        let key = SigningKey::from_bytes(&[7; 32]);
+        let bytes = directory
+            .publish_release_content("reviewer", 0, 103, 200, "key", &key)
+            .unwrap();
+        let trust = Trust {
+            catalog_id: "catalog".into(),
+            keys: BTreeMap::from([("key".into(), key.verifying_key())]),
+        };
+        assert_eq!(verify(&bytes, &trust, 150).unwrap().releases, vec![release]);
+    }
+
     #[test]
     fn reviewed_content_is_separately_signed_and_immutable() {
         let root = tempfile::tempdir().unwrap();
@@ -705,6 +1090,7 @@ mod tests {
             version: base.version.clone(),
             base_kind: BaseKind::LinkedCargo,
             base_release_identity: linked_identity(&base).unwrap(),
+            metadata: None,
             content: vec![Content {
                 id: "react-starter".into(),
                 kind: ContentKind::EditableTemplate,

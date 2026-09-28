@@ -15,6 +15,11 @@ const sources = [
     "lenso.marketplace.linked-cargo-snapshot.v1",
   ],
   ["packages", "marketplace_packages", "lenso.marketplace.package-snapshot.v1"],
+  [
+    "release-content",
+    "marketplace_release_content",
+    "lenso.marketplace.release-content.v2",
+  ],
 ];
 
 const sha256 = async (bytes) =>
@@ -89,10 +94,12 @@ const signedDocument = (bytes, catalogId, revision, schema, wanted) => {
     throw new Error("published document snapshot mismatch");
   }
   for (const release of payload.releases) {
-    if (!Array.isArray(release?.documentation)) {
+    const documents =
+      release?.metadata?.documentation ?? release?.documentation;
+    if (!Array.isArray(documents)) {
       continue;
     }
-    for (const document of release.documentation) {
+    for (const document of documents) {
       if (document?.digest !== wanted) {
         continue;
       }

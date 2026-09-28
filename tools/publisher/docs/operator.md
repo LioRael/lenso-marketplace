@@ -273,9 +273,12 @@ separate evidence.
 ## Optional signed release content
 
 Editable templates and development extensions use a separate
-`lenso.marketplace.release-content.v2` snapshot. They attach to one already
-published `portable` or `linked_cargo` base with the same Plugin ID and exact
-version. Neither the portable nor linked Cargo v1 signed payload is changed.
+`lenso.marketplace.release-content.v2` snapshot. Content can attach to one
+already published `portable`, `linked_cargo`, or `package` base with the same
+Plugin ID and exact version. A source-only template or development extension
+uses `content_only` instead: it has no fabricated runtime or package base,
+and its identity is the SHA-256 of the exact signed metadata and ordered
+content tuple. The existing base signed payloads are never changed.
 Each content entry identifies a credential-free HTTPS `.tar.gz`, compressed
 size and SHA-256. The operator checks the supplied exact archive bytes and
 rejects links, path traversal, duplicate paths and excessive expansion, but
@@ -286,15 +289,26 @@ Bun or Cargo Plugin source with the signed ID/version and nonempty convention
 declarations. Composite/workspace discovery layouts are conservatively rejected
 by this channel; publish an adoptable simple root source archive instead.
 
-Use `release-content-base KIND RELEASE_JSON` to derive the immutable v1 base
+Use `release-content-base KIND RELEASE_JSON` to derive the immutable base
 identity; do not hash a modified release or its current availability field.
+For `content_only`, pass the proposed release-content JSON with any placeholder
+`base_release_identity`, then replace that field with the returned value before
+submission. Its required `metadata` contains the claimed `publisher_id`, title,
+summary, exact HTTPS source revision, license, and one or more version-bound
+Markdown records, including `getting-started`. The self-identity tuple binds
+all those fields and the content entries in their signed array order. Attached
+content must omit `metadata` because it uses the exact base release metadata.
+Namespace claim and maintainer review still apply. The source URL is display
+metadata, never an instruction for the publisher or Worker to fetch it.
 The content JSON has `plugin_id`, `version`, `base_kind`,
-`base_release_identity` and a `content` array of `id`, `kind`
+`base_release_identity`, optional content-only `metadata`, and a `content` array of `id`, `kind`
 (`editable_template` or `development_extension`), `url`, `digest`, `size`.
 Pass archives in that array's order:
 
 ```sh
 lenso-marketplace-publisher operator.json release-content-base linked_cargo /absolute/published-linked-release.json
+lenso-marketplace-publisher operator.json release-content-base package /absolute/published-package-release.json
+lenso-marketplace-publisher operator.json release-content-base content_only /absolute/source-only-content.json
 lenso-marketplace-publisher operator.json submit-release-content AUTHOR /absolute/release-content.json /absolute/template.tar.gz /absolute/extension.tar.gz
 lenso-marketplace-publisher operator.json inspect-release-content REVIEWER SUBMISSION_ID
 lenso-marketplace-publisher operator.json approve-release-content REVIEWER SUBMISSION_ID EXPECTED_DIGEST POLICY
@@ -309,7 +323,8 @@ The same ID/version cannot be resubmitted with changed content. App owners must
 explicitly preview and copy selected content from verified local bytes; copied
 templates become App-owned and later updates never overwrite user edits.
 Development extensions remain inert until separately selected as a local source;
-listing or copying one grants no runtime permission.
+listing or copying one grants no runtime permission. A `content_only` record is
+copy/preview material, not a runtime installation candidate.
 
 ### Public submission tracking
 

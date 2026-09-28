@@ -18,6 +18,10 @@ const channels = {
     "marketplace_release_details",
     "lenso.marketplace.release-details.v1",
   ],
+  "release-content": [
+    "marketplace_release_content",
+    "lenso.marketplace.release-content.v2",
+  ],
 };
 
 const fixture = (
@@ -34,15 +38,27 @@ const fixture = (
           expires_at: expiresAt,
           issued_at: Math.floor(Date.now() / 1000) - 60,
           releases: [
-            {
-              documentation: [
-                {
-                  digest: documentDigest,
-                  media_type: "text/markdown",
-                  size: body.byteLength,
+            channel === "release-content"
+              ? {
+                  metadata: {
+                    documentation: [
+                      {
+                        digest: documentDigest,
+                        media_type: "text/markdown",
+                        size: body.byteLength,
+                      },
+                    ],
+                  },
+                }
+              : {
+                  documentation: [
+                    {
+                      digest: documentDigest,
+                      media_type: "text/markdown",
+                      size: body.byteLength,
+                    },
+                  ],
                 },
-              ],
-            },
           ],
           revision: 1,
           schema,

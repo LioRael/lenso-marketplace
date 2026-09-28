@@ -87,7 +87,7 @@ fn run() -> Result<()> {
         "release-content-base" => {
             ensure!(
                 args.len() == 4,
-                "release-content-base requires portable|linked_cargo RELEASE_JSON"
+                "release-content-base requires portable|linked_cargo|package|content_only RELEASE_JSON"
             );
             let bytes = fs::read(&args[3])?;
             ensure!(
@@ -104,7 +104,23 @@ fn run() -> Result<()> {
                     let release: LinkedCargoRelease = serde_json::from_slice(&bytes)?;
                     release_content::linked_identity(&release)?
                 }
-                _ => anyhow::bail!("base kind must be portable or linked_cargo"),
+                "package" => {
+                    let release: lenso_plugin_catalog::package::PackageRelease =
+                        serde_json::from_slice(&bytes)?;
+                    release.validate()?;
+                    release.immutable_identity()?
+                }
+                "content_only" => {
+                    let release: ReleaseContent = serde_json::from_slice(&bytes)?;
+                    ensure!(
+                        release.base_kind == release_content::BaseKind::ContentOnly,
+                        "release content must declare content_only base kind"
+                    );
+                    release.content_only_identity()?
+                }
+                _ => anyhow::bail!(
+                    "base kind must be portable, linked_cargo, package or content_only"
+                ),
             };
             serde_json::to_writer(
                 io::stdout().lock(),
@@ -587,7 +603,17 @@ fn run() -> Result<()> {
             };
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let snapshot = release_content::verify(&envelope, &trust, now)?;
-            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at});
+            let documents: Vec<_> = snapshot
+                .releases
+                .iter()
+                .flat_map(|release| {
+                    release
+                        .metadata
+                        .iter()
+                        .flat_map(|metadata| &metadata.documentation)
+                })
+                .collect();
+            let receipt = serde_json::json!({"catalog_id":snapshot.catalog_id,"revision":snapshot.revision,"expires_at":snapshot.expires_at,"documents":documents});
             serde_json::to_writer(io::stdout().lock(), &receipt)?;
         }
         "initialize" => {

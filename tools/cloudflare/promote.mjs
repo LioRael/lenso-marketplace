@@ -337,5 +337,6 @@ export const promoteReleaseContent = (input) =>
   promoteWithTarget({
     ...input,
     objectPrefix: "release-content",
+    retainDocuments: true,
     table: "marketplace_release_content",
   });

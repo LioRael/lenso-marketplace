@@ -295,3 +295,36 @@ test("release content uses its own immutable object and conditional pointer", as
   assert.equal(state.pointer.revision, 2);
   assert.equal(state.writes, 2);
 });
+
+test("content-only Markdown is verified and retained before publication", async () => {
+  const { state, input } = storage("marketplace_release_content");
+  const body = new TextEncoder().encode("# Editor 1.0.0\n");
+  const digest = `sha256:${createHash("sha256").update(body).digest("hex")}`;
+  const document = {
+    digest,
+    media_type: "text/markdown",
+    size: body.byteLength,
+  };
+  const candidate = {
+    ...input(1),
+    verify: (envelope) => ({
+      ...JSON.parse(envelope),
+      documents: [document],
+    }),
+  };
+  await assert.rejects(
+    promoteReleaseContent(candidate),
+    /missing reviewed document body/u
+  );
+  assert.equal(state.pointer, null);
+  const result = await promoteReleaseContent({
+    ...candidate,
+    documentBodies: new Map([[digest, body]]),
+  });
+  assert.equal(result.status, "published");
+  assert.equal(result.document_count, 1);
+  assert.deepEqual(
+    state.objects.get(`documents/sha256/${digest.slice(7)}.md`),
+    body
+  );
+});

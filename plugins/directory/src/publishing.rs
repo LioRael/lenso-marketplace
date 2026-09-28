@@ -315,6 +315,7 @@ impl Directory {
         let body = serde_json::to_string(release)?;
         let body_digest = digest(body.as_bytes());
         let identity = format!("{}@{}", release.plugin_id, release.version);
+        release_content::ensure_no_content_only_owner(&transaction, &identity)?;
         let existing_linked: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM linked_cargo_submissions WHERE identity=?1)",
             [&identity],

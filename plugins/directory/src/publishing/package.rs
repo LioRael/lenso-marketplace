@@ -41,6 +41,7 @@ impl Directory {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let identity = format!("{}@{}", release.plugin_id, release.version);
+        super::release_content::ensure_no_content_only_owner(&transaction, &identity)?;
         let collision: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM submissions WHERE identity=?1 UNION ALL SELECT 1 FROM linked_cargo_submissions WHERE identity=?1)",
             [&identity],
