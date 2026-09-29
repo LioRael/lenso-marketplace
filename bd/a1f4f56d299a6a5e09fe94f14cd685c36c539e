@@ -1,0 +1,20 @@
+tools/keyless/verify.mjs
+  s_7d146975368699::t_5d7de0395e05b2 4,124-126,132
+  s_7d146975368699::t_58da773518d22b 91-97,121-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bda1f4f56d299a6a5e09fe94f14cd685c36c539e",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
