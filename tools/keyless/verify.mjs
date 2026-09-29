@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { open } from "node:fs/promises";
+import { mkdir, mkdtemp, open } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -88,8 +88,13 @@ export const readBoundedFile = async (path, limit = 4 * 1024 * 1024) => {
   }
 };
 
-export const verifierEnvironment = (environment = process.env) => {
-  const scratch = join(environment.RUNNER_TEMP || tmpdir(), "lenso-keyless-gh");
+export const verifierEnvironment = (
+  environment = process.env,
+  scratchDirectory = ""
+) => {
+  const scratch =
+    scratchDirectory ||
+    join(environment.RUNNER_TEMP || tmpdir(), "lenso-keyless-gh");
   return {
     GH_CONFIG_DIR: join(scratch, "config"),
     HOME: scratch,
@@ -113,12 +118,18 @@ export const verifyArtifact = async (
     throw new Error("Catalog bytes do not match the reviewed digest");
   }
   await readBoundedFile(bundle);
+  const scratch = await mkdtemp(
+    join(process.env.RUNNER_TEMP || tmpdir(), "lenso-keyless-gh-")
+  );
+  const environment = verifierEnvironment(process.env, scratch);
+  await mkdir(environment.GH_CONFIG_DIR, { mode: 0o700 });
+  await mkdir(environment.XDG_CACHE_HOME, { mode: 0o700 });
   const result = spawnSync(
     "gh",
     verificationArguments(artifact, bundle, sourceCommit),
     {
       encoding: "utf-8",
-      env: verifierEnvironment(),
+      env: environment,
       maxBuffer: 8 * 1024 * 1024,
       timeout: 60_000,
     }
