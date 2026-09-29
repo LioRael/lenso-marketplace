@@ -1,0 +1,35 @@
+tools/keyless/catalog.mjs
+  s_7d146975368699::t_ce6b0c9b106841 64-82
+  s_7d146975368699::t_45e5c9815edd8e 8-13,145,147
+  s_7d146975368699::t_d084ebd5f58bac 49,107-111
+  s_7d146975368699::t_aee0f0a3b0dd86 1-7,14-48,50-63,83-106,112-144,146,148-166
+tools/keyless/verify.mjs
+  s_7d146975368699::t_7210043eac3a54 1-20,22-68
+  s_7d146975368699::t_45e5c9815edd8e 21
+tools/keyless/verify.test.mjs
+  s_7d146975368699::t_7210043eac3a54 1-29
+tools/keyless/catalog.test.mjs
+  s_7d146975368699::t_ce6b0c9b106841 13-14
+  s_7d146975368699::t_45e5c9815edd8e 3,21
+  s_7d146975368699::t_e5cc1314776b8e 1-2,4-12,15-20,22-73
+tools/keyless/README.md
+  s_7d146975368699::t_e5cc1314776b8e 1-35
+.github/workflows/publish-keyless-catalog.yml
+  s_7d146975368699::t_d084ebd5f58bac 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a5a4663b87d0c2b6b65dba511dc19c418617053",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
