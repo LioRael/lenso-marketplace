@@ -1,0 +1,28 @@
+docs/publishing.md
+  s_7d146975368699::t_14202ddd765f95 8-11
+  s_7d146975368699::t_c8d5b6f5f48ea9 12
+apps/workers/artifacts.mjs
+  s_7d146975368699::t_14202ddd765f95 1,5,24,40-41
+  s_7d146975368699::t_2f0b322a8f000a 42-43
+apps/workers/artifact-route.test.mjs
+  s_7d146975368699::t_14202ddd765f95 51-69,71,80-81
+  s_7d146975368699::t_ecaaf64f31faad 70,72-79,82-86
+tools/publisher/docs/operator.md
+  s_7d146975368699::t_14202ddd765f95 236,242-246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "679c0f8ff37c4667205487dd6b1be2f6ef6697db",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
