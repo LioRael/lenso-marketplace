@@ -6,6 +6,8 @@ Publication requires a reviewed main commit and SHA-256 of the original checked-
 
 The resulting provenance must pass the native `gh attestation verify` verifier with the exact repository, workflow, main ref, issuer, source and signer commit. Self-hosted runner attestations are rejected. Do not enable custom trust roots or disable Sigstore public-good verification. Certificate expiry does not itself expire a properly verified historical provenance bundle.
 
+The exact certificate identity binds the repository, workflow and main ref. Native `gh` accepts it as the sole signer selector: `--signer-repo`, `--signer-workflow` and `--cert-identity-regex` are mutually exclusive with `--cert-identity` and must not be added. The separate repository and source/signer commit constraints still apply.
+
 ```sh
 node tools/keyless/catalog.mjs tools/keyless/catalog.json REVIEWED_SHA256
 node tools/keyless/verify.mjs catalog.json bundle.json SOURCE_COMMIT REVIEWED_SHA256

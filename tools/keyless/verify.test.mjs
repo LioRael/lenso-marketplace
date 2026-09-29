@@ -29,6 +29,9 @@ test("verification pins repository, workflow, ref, exact source and signer", () 
   assert.ok(args.includes("--deny-self-hosted-runners"));
   assert.ok(!args.includes("--no-public-good"));
   assert.ok(!args.includes("--custom-trusted-root"));
+  assert.ok(!args.includes("--signer-repo"));
+  assert.ok(!args.includes("--signer-workflow"));
+  assert.ok(!args.includes("--cert-identity-regex"));
 });
 
 test("verification rejects non-exact source and ambiguous local paths", () => {
