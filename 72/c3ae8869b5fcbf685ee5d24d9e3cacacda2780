@@ -1,0 +1,25 @@
+tools/cloudflare/deployment-config.test.mjs
+  s_7d146975368699::t_c25a7f4457151b 52-54,73-77
+  s_7d146975368699::t_a54e4935ae2f2b 69-72
+  s_7d146975368699::t_3a5f1562f4e491 78-79
+tools/cloudflare/deployment-config.mjs
+  s_7d146975368699::t_a54e4935ae2f2b 114
+docs/operations.md
+  s_7d146975368699::t_a54e4935ae2f2b 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72c3ae8869b5fcbf685ee5d24d9e3cacacda2780",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
