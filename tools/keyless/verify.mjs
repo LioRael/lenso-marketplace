@@ -7,12 +7,12 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const publisher = Object.freeze({
+  ref: "refs/heads/main",
   repository: "LioRael/lenso-marketplace",
   workflow: ".github/workflows/publish-keyless-catalog.yml",
-  ref: "refs/heads/main",
 });
 
-export function verificationArguments(artifact, bundle, sourceCommit) {
+export const verificationArguments = (artifact, bundle, sourceCommit) => {
   if (!/^[a-f0-9]{40}$/u.test(sourceCommit)) {
     throw new Error("An exact reviewed source commit is required");
   }
@@ -54,16 +54,15 @@ export function verificationArguments(artifact, bundle, sourceCommit) {
     "--format",
     "json",
   ];
-}
+};
 
-export function digest(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
-}
+export const digest = (bytes) =>
+  createHash("sha256").update(bytes).digest("hex");
 
-export async function readBoundedFile(path, limit = 4 * 1024 * 1024) {
+export const readBoundedFile = async (path, limit = 4 * 1024 * 1024) => {
   const handle = await open(
     path,
-    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+    constants.O_RDONLY + (constants.O_NOFOLLOW ?? 0)
   );
   try {
     const info = await handle.stat();
@@ -79,35 +78,38 @@ export async function readBoundedFile(path, limit = 4 * 1024 * 1024) {
         bytes.length - offset,
         offset
       );
-      if (result.bytesRead === 0) break;
+      if (result.bytesRead === 0) {
+        break;
+      }
       offset += result.bytesRead;
     }
-    if (offset !== info.size || offset > limit)
+    if (offset !== info.size || offset > limit) {
       throw new Error("Input changed or exceeds byte limit");
+    }
     return bytes.subarray(0, offset);
   } finally {
     await handle.close();
   }
-}
+};
 
-export function verifierEnvironment(environment = process.env) {
+export const verifierEnvironment = (environment = process.env) => {
   const scratch = join(environment.RUNNER_TEMP || tmpdir(), "lenso-keyless-gh");
   return {
-    PATH: environment.PATH || "/usr/local/bin:/usr/bin:/bin",
-    HOME: scratch,
     GH_CONFIG_DIR: join(scratch, "config"),
-    XDG_CACHE_HOME: join(scratch, "cache"),
+    HOME: scratch,
+    PATH: environment.PATH || "/usr/local/bin:/usr/bin:/bin",
     TMPDIR: environment.RUNNER_TEMP || tmpdir(),
+    XDG_CACHE_HOME: join(scratch, "cache"),
     ...(environment.GH_TOKEN ? { GH_TOKEN: environment.GH_TOKEN } : {}),
   };
-}
+};
 
-export async function verifyArtifact(
+export const verifyArtifact = async (
   artifact,
   bundle,
   sourceCommit,
   expectedDigest
-) {
+) => {
   if (!/^[a-f0-9]{64}$/u.test(expectedDigest)) {
     throw new Error("An exact reviewed catalog SHA-256 is required");
   }
@@ -119,10 +121,10 @@ export async function verifyArtifact(
     "gh",
     verificationArguments(artifact, bundle, sourceCommit),
     {
-      encoding: "utf8",
-      timeout: 60_000,
-      maxBuffer: 8 * 1024 * 1024,
+      encoding: "utf-8",
       env: verifierEnvironment(),
+      maxBuffer: 8 * 1024 * 1024,
+      timeout: 60_000,
     }
   );
   if (result.error || result.status !== 0) {
@@ -138,7 +140,7 @@ export async function verifyArtifact(
     throw new Error("Verifier returned no verified attestation");
   }
   return verified;
-}
+};
 
 if (
   process.argv[1] &&
@@ -146,7 +148,9 @@ if (
 ) {
   const [artifact, bundle, sourceCommit, expectedDigest, ...extra] =
     process.argv.slice(2);
-  if (extra.length > 0) throw new Error("Unexpected verification arguments");
+  if (extra.length > 0) {
+    throw new Error("Unexpected verification arguments");
+  }
   await verifyArtifact(artifact, bundle, sourceCommit, expectedDigest);
   console.log("Catalog digest and publisher attestation verified");
 }

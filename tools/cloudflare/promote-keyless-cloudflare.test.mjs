@@ -3,21 +3,19 @@ import { test } from "node:test";
 
 import { validateOperatorConfig } from "./promote-keyless-cloudflare.mjs";
 
-function fixture() {
-  return {
-    catalogPath: "/scratch/catalog.json",
-    bundlePath: "/scratch/bundle.json",
-    deploymentConfig: "/scratch/wrangler.json",
-    reviewedCatalogSha256: "a".repeat(64),
-    reviewedBundleSha256: "b".repeat(64),
-    sourceSha: "c".repeat(40),
-    expected: null,
-    accountId: "d".repeat(32),
-    databaseId: "ff75e080-5957-4d2e-9a42-8729b4d602a4",
-    bucketName: "lenso-marketplace-v2-production",
-    catalogId: "lenso-official-v2",
-  };
-}
+const fixture = () => ({
+  accountId: "d".repeat(32),
+  bucketName: "lenso-marketplace-v2-production",
+  bundlePath: "/scratch/bundle.json",
+  catalogId: "lenso-official-v2",
+  catalogPath: "/scratch/catalog.json",
+  databaseId: "ff75e080-5957-4d2e-9a42-8729b4d602a4",
+  deploymentConfig: "/scratch/wrangler.json",
+  expected: null,
+  reviewedBundleSha256: "b".repeat(64),
+  reviewedCatalogSha256: "a".repeat(64),
+  sourceSha: "c".repeat(40),
+});
 
 test("operator requires exact reviewed immutable identities and absolute paths", () => {
   validateOperatorConfig(fixture());
@@ -59,6 +57,6 @@ test("operator cannot silently switch authority or omit expected head", () => {
   assert.throws(() => validateOperatorConfig(config));
   validateOperatorConfig({
     ...fixture(),
-    expected: { revision: 1, catalog_digest: "a".repeat(64) },
+    expected: { catalog_digest: "a".repeat(64), revision: 1 },
   });
 });

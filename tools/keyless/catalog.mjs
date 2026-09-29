@@ -11,36 +11,35 @@ export const channels = [
   "release_content",
 ];
 export const legacySchemas = Object.freeze({
-  portable: "lenso.marketplace.snapshot.v1",
   linked_cargo: "lenso.marketplace.linked-cargo-snapshot.v1",
   package: "lenso.marketplace.package-snapshot.v1",
+  portable: "lenso.marketplace.snapshot.v1",
   release_content: "lenso.marketplace.release-content.v2",
 });
 const sha256 = /^sha256:[a-f0-9]{64}$/u;
 
-function fields(value, allowed, required = allowed) {
+const fields = (value, allowed, required = allowed) => {
   assert.ok(
     value && typeof value === "object" && !Array.isArray(value),
     "Expected an object"
   );
-  for (const key of Object.keys(value))
+  for (const key of Object.keys(value)) {
     assert.ok(allowed.includes(key), `Unknown field ${key}`);
-  for (const key of required)
+  }
+  for (const key of required) {
     assert.ok(Object.hasOwn(value, key), `Missing field ${key}`);
-}
+  }
+};
 
-function text(value, limit = 2048) {
+const text = (value, limit = 2048) => {
   assert.ok(
     typeof value === "string" && value.length > 0 && value.length <= limit,
     "Unbounded text"
   );
-  assert.ok(
-    !/[\u0000-\u001f]/u.test(value),
-    "Control characters are not allowed"
-  );
-}
+  assert.ok(!/[\p{Cc}]/u.test(value), "Control characters are not allowed");
+};
 
-function https(value) {
+const https = (value) => {
   text(value);
   const url = new URL(value);
   assert.ok(
@@ -51,22 +50,26 @@ function https(value) {
       !url.hash,
     "Expected a credential-free HTTPS URL"
   );
-}
+};
 
-function boundedRecord(value, depth = 0) {
+const boundedRecord = (value, depth = 0) => {
   assert.ok(depth <= 16, "Record nesting exceeds limit");
   if (typeof value === "string") {
     text(value, 16_384);
     return;
   }
-  if (typeof value === "boolean" || value === null) return;
+  if (typeof value === "boolean" || value === null) {
+    return;
+  }
   if (typeof value === "number") {
     assert.ok(Number.isSafeInteger(value) && value >= 0);
     return;
   }
   if (Array.isArray(value)) {
     assert.ok(value.length <= 1024);
-    for (const child of value) boundedRecord(child, depth + 1);
+    for (const child of value) {
+      boundedRecord(child, depth + 1);
+    }
     return;
   }
   assert.ok(value && typeof value === "object");
@@ -85,27 +88,32 @@ function boundedRecord(value, depth = 0) {
     ) {
       assert.match(child, sha256, `Invalid ${key}`);
     }
-    if (key === "source_revision")
+    if (key === "source_revision") {
       assert.match(child, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u);
-    if (key === "url" || key.endsWith("_url")) https(child);
-    if (key === "size")
+    }
+    if (key === "url" || key.endsWith("_url")) {
+      https(child);
+    }
+    if (key === "size") {
       assert.ok(
         Number.isSafeInteger(child) && child > 0 && child <= 512 * 1024 * 1024
       );
+    }
     boundedRecord(child, depth + 1);
   }
-}
+};
 
-function validateRecord(release) {
-  const record = release.record;
+const validateRecord = (release) => {
+  const { record } = release;
   boundedRecord(record);
   assert.equal(record.plugin_id, release.plugin_id);
   assert.equal(record.version, release.version);
   const metadata =
     release.channel === "release_content" ? record.metadata : record;
   assert.ok(metadata && typeof metadata === "object");
-  for (const key of ["publisher_id", "title", "summary", "license"])
+  for (const key of ["publisher_id", "title", "summary", "license"]) {
     text(metadata[key], 1024);
+  }
   https(metadata.source_url);
   assert.match(metadata.source_revision, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u);
   if (metadata.documentation !== undefined) {
@@ -115,8 +123,9 @@ function validateRecord(release) {
     );
     const documents = new Set();
     for (const document of metadata.documentation) {
-      for (const key of ["id", "revision", "language", "topic"])
+      for (const key of ["id", "revision", "language", "topic"]) {
         text(document[key], 128);
+      }
       const identity = `${document.id}@${document.revision}`;
       assert.ok(!documents.has(identity), "Duplicate documentation identity");
       documents.add(identity);
@@ -175,9 +184,9 @@ function validateRecord(release) {
     https(record.artifact.url);
     assert.ok(record.artifact.size > 0);
   }
-}
+};
 
-export function validateCatalog(input) {
+export const validateCatalog = (input) => {
   fields(input, [
     "schema",
     "catalog_id",
@@ -230,8 +239,12 @@ export function validateCatalog(input) {
     );
     statuses.add(identity);
     assert.ok(["listed", "yanked", "revoked"].includes(status.state));
-    if (status.reason !== undefined) text(status.reason, 1024);
-    if (status.state !== "listed") text(status.reason, 1024);
+    if (status.reason !== undefined) {
+      text(status.reason, 1024);
+    }
+    if (status.state !== "listed") {
+      text(status.reason, 1024);
+    }
   }
   fields(input.legacy_sources, channels);
   for (const [channel, source] of Object.entries(input.legacy_sources)) {
@@ -241,9 +254,9 @@ export function validateCatalog(input) {
     assert.match(source.payload_digest, sha256);
   }
   return input;
-}
+};
 
-export function loadReviewedCatalog(bytes, expectedDigest) {
+export const loadReviewedCatalog = (bytes, expectedDigest) => {
   assert.ok(bytes.length <= 4 * 1024 * 1024, "Catalog exceeds four MiB");
   assert.match(expectedDigest, /^[a-f0-9]{64}$/u);
   assert.equal(
@@ -251,8 +264,8 @@ export function loadReviewedCatalog(bytes, expectedDigest) {
     expectedDigest,
     "Reviewed catalog digest mismatch"
   );
-  return validateCatalog(JSON.parse(bytes.toString("utf8")));
-}
+  return validateCatalog(JSON.parse(bytes.toString("utf-8")));
+};
 
 if (
   process.argv[1] &&

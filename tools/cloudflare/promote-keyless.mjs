@@ -6,7 +6,7 @@ import { digest } from "../keyless/verify.mjs";
 const columns =
   "catalog_id, revision, catalog_digest, catalog_size, bundle_digest, bundle_size, source_sha";
 
-async function readObject(object) {
+const readObject = async (object) => {
   assert.ok(object && object.size > 0 && object.size <= 4 * 1024 * 1024);
   const reader = object.body.getReader();
   const chunks = [];
@@ -14,7 +14,9 @@ async function readObject(object) {
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
       size += value.byteLength;
       assert.ok(size <= object.size, "Stored object exceeds declared size");
       chunks.push(value);
@@ -25,9 +27,9 @@ async function readObject(object) {
     await reader.cancel();
     reader.releaseLock();
   }
-}
+};
 
-export async function promoteKeyless({
+export const promoteKeyless = async ({
   catalogBytes,
   bundleBytes,
   sourceSha,
@@ -35,7 +37,7 @@ export async function promoteKeyless({
   verify,
   bucket,
   database,
-}) {
+}) => {
   for (const bytes of [catalogBytes, bundleBytes]) {
     assert.ok(
       Buffer.isBuffer(bytes) &&
@@ -51,7 +53,7 @@ export async function promoteKeyless({
         expected.revision > 0 &&
         /^[a-f0-9]{64}$/u.test(expected.catalog_digest))
   );
-  const catalog = validateCatalog(JSON.parse(catalogBytes.toString("utf8")));
+  const catalog = validateCatalog(JSON.parse(catalogBytes.toString("utf-8")));
   assert.ok(
     catalog.issued_at <= Math.floor(Date.now() / 1000) + 300,
     "Catalog issued in the future"
@@ -60,7 +62,7 @@ export async function promoteKeyless({
   const bundleDigest = digest(bundleBytes);
   // The protected adapter must cryptographically verify these exact bytes.
   // Neither a caller-supplied receipt nor the catalog's own metadata is proof.
-  await verify({ catalogBytes, bundleBytes, sourceSha, catalogDigest });
+  await verify({ bundleBytes, catalogBytes, catalogDigest, sourceSha });
   const current = await database
     .prepare(
       `SELECT ${columns} FROM marketplace_keyless_heads WHERE catalog_id = ?`
@@ -85,7 +87,7 @@ export async function promoteKeyless({
       await bucket.get(`keyless/${current.catalog_digest}.json`)
     );
     assert.equal(digest(oldBytes), current.catalog_digest);
-    const old = validateCatalog(JSON.parse(oldBytes.toString("utf8")));
+    const old = validateCatalog(JSON.parse(oldBytes.toString("utf-8")));
     assert.equal(old.catalog_id, catalog.catalog_id);
     assert.equal(old.revision, current.revision);
     const next = new Map(
@@ -166,15 +168,15 @@ export async function promoteKeyless({
   assert.deepEqual(
     receipt,
     {
-      catalog_id: catalog.catalog_id,
-      revision: catalog.revision,
-      catalog_digest: catalogDigest,
-      catalog_size: catalogBytes.length,
       bundle_digest: bundleDigest,
       bundle_size: bundleBytes.length,
+      catalog_digest: catalogDigest,
+      catalog_id: catalog.catalog_id,
+      catalog_size: catalogBytes.length,
+      revision: catalog.revision,
       source_sha: sourceSha,
     },
     "Head receipt differs; reconcile before retrying"
   );
   return receipt;
-}
+};

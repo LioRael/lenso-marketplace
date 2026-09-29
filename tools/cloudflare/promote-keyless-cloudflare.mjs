@@ -8,7 +8,7 @@ import { loadReviewedCatalog } from "../keyless/catalog.mjs";
 import { digest, readBoundedFile, verifyArtifact } from "../keyless/verify.mjs";
 import { promoteKeyless } from "./promote-keyless.mjs";
 
-export function validateOperatorConfig(config) {
+export const validateOperatorConfig = (config) => {
   const allowed = [
     "catalogPath",
     "bundlePath",
@@ -23,15 +23,16 @@ export function validateOperatorConfig(config) {
     "catalogId",
   ];
   assert.ok(config && typeof config === "object" && !Array.isArray(config));
-  assert.deepEqual(Object.keys(config).sort(), allowed.sort());
+  assert.deepEqual(Object.keys(config).toSorted(), allowed.toSorted());
   for (const key of ["catalogPath", "bundlePath", "deploymentConfig"]) {
     assert.ok(
       typeof config[key] === "string" && isAbsolute(config[key]),
       "Absolute input paths required"
     );
   }
-  for (const key of ["reviewedCatalogSha256", "reviewedBundleSha256"])
+  for (const key of ["reviewedCatalogSha256", "reviewedBundleSha256"]) {
     assert.match(config[key], /^[a-f0-9]{64}$/u);
+  }
   assert.match(config.sourceSha, /^[a-f0-9]{40}$/u);
   assert.match(config.accountId, /^[a-f0-9]{32}$/u);
   assert.match(
@@ -41,7 +42,7 @@ export function validateOperatorConfig(config) {
   assert.match(config.bucketName, /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/u);
   assert.equal(config.catalogId, "lenso-official-v2");
   if (config.expected !== null) {
-    assert.deepEqual(Object.keys(config.expected).sort(), [
+    assert.deepEqual(Object.keys(config.expected).toSorted(), [
       "catalog_digest",
       "revision",
     ]);
@@ -52,13 +53,12 @@ export function validateOperatorConfig(config) {
     assert.match(config.expected.catalog_digest, /^[a-f0-9]{64}$/u);
   }
   return config;
-}
+};
 
-export async function promoteFromConfig(config) {
+export const promoteFromConfig = async (config) => {
   validateOperatorConfig(config);
-  const deployment = JSON.parse(
-    (await readBoundedFile(config.deploymentConfig)).toString("utf8")
-  );
+  const deploymentBytes = await readBoundedFile(config.deploymentConfig);
+  const deployment = JSON.parse(deploymentBytes.toString("utf-8"));
   assert.equal(deployment.name, "lenso-marketplace");
   assert.equal(deployment.account_id, config.accountId);
   assert.equal(deployment.vars.CATALOG_ID, config.catalogId);
@@ -85,17 +85,17 @@ export async function promoteFromConfig(config) {
   await chmod(directory, 0o500);
   const { cloudflareStorage } = await import("./cloudflare.mjs");
   return promoteKeyless({
-    catalogBytes,
     bundleBytes,
-    sourceSha: config.sourceSha,
+    catalogBytes,
     expected: config.expected,
+    sourceSha: config.sourceSha,
     ...cloudflareStorage({
-      accountId: config.accountId,
-      databaseId: config.databaseId,
-      bucketName: config.bucketName,
-      token: process.env.MARKETPLACE_D1_TOKEN,
       accessKeyId: process.env.MARKETPLACE_R2_ACCESS_KEY_ID,
+      accountId: config.accountId,
+      bucketName: config.bucketName,
+      databaseId: config.databaseId,
       secretAccessKey: process.env.MARKETPLACE_R2_SECRET_ACCESS_KEY,
+      token: process.env.MARKETPLACE_D1_TOKEN,
     }),
     verify: async (input) => {
       assert.equal(input.sourceSha, config.sourceSha);
@@ -112,7 +112,7 @@ export async function promoteFromConfig(config) {
       );
     },
   });
-}
+};
 
 if (
   process.argv[1] &&
@@ -124,9 +124,8 @@ if (
       isAbsolute(process.argv[2]),
       "Absolute operator configuration path required"
     );
-    const config = JSON.parse(
-      (await readBoundedFile(process.argv[2])).toString("utf8")
-    );
+    const configBytes = await readBoundedFile(process.argv[2]);
+    const config = JSON.parse(configBytes.toString("utf-8"));
     console.log(JSON.stringify(await promoteFromConfig(config)));
   } catch {
     console.error(

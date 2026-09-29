@@ -54,16 +54,16 @@ test("reviewed digest binds the original bytes, not parsed JSON", () => {
 
 test("native verifier gets only explicitly allowed ephemeral environment", () => {
   const environment = verifierEnvironment({
+    GH_HOST: "attacker.example",
+    GH_TOKEN: "ephemeral-test-token",
+    GITHUB_TOKEN: "not-forwarded",
+    HOME: "/host/private",
+    MARKETPLACE_D1_TOKEN: "not-forwarded",
+    NODE_OPTIONS: "--import=malicious",
     PATH: "/usr/bin:/bin",
     RUNNER_TEMP: "/scratch",
-    GH_TOKEN: "ephemeral-test-token",
-    MARKETPLACE_D1_TOKEN: "not-forwarded",
-    GITHUB_TOKEN: "not-forwarded",
-    GH_HOST: "attacker.example",
-    NODE_OPTIONS: "--import=malicious",
-    HOME: "/host/private",
   });
-  assert.deepEqual(Object.keys(environment).sort(), [
+  assert.deepEqual(Object.keys(environment).toSorted(), [
     "GH_CONFIG_DIR",
     "GH_TOKEN",
     "HOME",
@@ -78,7 +78,8 @@ test("bounded input reader rejects oversized and symlinked files before consumpt
   const directory = await mkdtemp(join(tmpdir(), "keyless-reader-test-"));
   const path = join(directory, "input.json");
   await writeFile(path, "{}", { flag: "wx" });
-  assert.equal((await readBoundedFile(path, 2)).toString(), "{}");
+  const bytes = await readBoundedFile(path, 2);
+  assert.equal(bytes.toString(), "{}");
   await assert.rejects(readBoundedFile(path, 1));
   const link = join(directory, "link.json");
   await symlink(path, link);

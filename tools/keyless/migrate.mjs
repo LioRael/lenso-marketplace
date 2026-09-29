@@ -11,19 +11,19 @@ import {
 import { digest, readBoundedFile } from "./verify.mjs";
 
 const key = createPublicKey({
+  format: "der",
   key: Buffer.from(
     "302a300506032b6570032100f7e627ec01f22224328c194fd957689fede66419fb26e9b1dc1d6b4347920865",
     "hex"
   ),
-  format: "der",
   type: "spki",
 });
 
-export function verifyLegacyEnvelope(bytes, channel, now) {
+export const verifyLegacyEnvelope = (bytes, channel, now) => {
   assert.ok(bytes.length <= 4 * 1024 * 1024);
   assert.ok(channels.includes(channel));
-  const envelope = JSON.parse(bytes.toString("utf8"));
-  assert.deepEqual(Object.keys(envelope).sort(), [
+  const envelope = JSON.parse(bytes.toString("utf-8"));
+  assert.deepEqual(Object.keys(envelope).toSorted(), [
     "key_id",
     "payload_base64",
     "signature_base64",
@@ -46,7 +46,7 @@ export function verifyLegacyEnvelope(bytes, channel, now) {
     ),
     "Legacy publisher signature does not verify"
   );
-  const snapshot = JSON.parse(payload.toString("utf8"));
+  const snapshot = JSON.parse(payload.toString("utf-8"));
   assert.equal(snapshot.schema, legacySchemas[channel]);
   assert.equal(snapshot.catalog_id, "lenso-official-v2");
   assert.ok(Number.isSafeInteger(snapshot.revision) && snapshot.revision > 0);
@@ -58,9 +58,9 @@ export function verifyLegacyEnvelope(bytes, channel, now) {
   );
   assert.ok(Array.isArray(snapshot.releases));
   return { payload, snapshot };
-}
+};
 
-export function migrateVerifiedSources(sources, now, checkpoint) {
+export const migrateVerifiedSources = (sources, now, checkpoint) => {
   assert.equal(checkpoint.schema, "lenso.site.catalog-checkpoints.v1");
   assert.equal(checkpoint.catalog_id, "lenso-official-v2");
   const releases = [];
@@ -72,9 +72,9 @@ export function migrateVerifiedSources(sources, now, checkpoint) {
       now
     );
     legacySources[channel] = {
-      schema: snapshot.schema,
-      revision: snapshot.revision,
       payload_digest: `sha256:${digest(payload)}`,
+      revision: snapshot.revision,
+      schema: snapshot.schema,
     };
     const prior = checkpoint[channel];
     assert.ok(prior, "Authoritative channel history checkpoint is required");
@@ -90,19 +90,20 @@ export function migrateVerifiedSources(sources, now, checkpoint) {
       "Reviewed payload history changed"
     );
     assert.deepEqual(
-      Object.keys(prior.release_identities).sort(),
+      Object.keys(prior.release_identities).toSorted(),
       snapshot.releases
         .map((record) => `${record.plugin_id}@${record.version}`)
-        .sort(),
+        .toSorted(),
       "Initial migration must preserve the complete recorded release history"
     );
-    for (const record of snapshot.releases)
+    for (const record of snapshot.releases) {
       releases.push({
         channel,
         plugin_id: record.plugin_id,
-        version: record.version,
         record,
+        version: record.version,
       });
+    }
   }
   assert.equal(
     releases.length,
@@ -111,19 +112,19 @@ export function migrateVerifiedSources(sources, now, checkpoint) {
   );
   const statuses = releases.map(({ plugin_id, version, record }) => ({
     plugin_id,
-    version,
     state: record.availability || "listed",
+    version,
   }));
   return validateCatalog({
-    schema,
     catalog_id: "lenso-official-v2",
-    revision: 1,
     issued_at: now,
-    releases,
-    statuses,
     legacy_sources: legacySources,
+    releases,
+    revision: 1,
+    schema,
+    statuses,
   });
-}
+};
 
 if (
   process.argv[1] &&
@@ -140,9 +141,9 @@ if (
   ] = process.argv.slice(2);
   assert.equal(extra.length, 0);
   const paths = {
-    portable,
     linked_cargo: linked,
     package: packagePath,
+    portable,
     release_content: content,
   };
   const sources = Object.fromEntries(
@@ -153,9 +154,8 @@ if (
       ])
     )
   );
-  const checkpoint = JSON.parse(
-    (await readBoundedFile(checkpointPath)).toString("utf8")
-  );
+  const checkpointBytes = await readBoundedFile(checkpointPath);
+  const checkpoint = JSON.parse(checkpointBytes.toString("utf-8"));
   console.log(
     JSON.stringify(
       migrateVerifiedSources(sources, Number(nowText), checkpoint),

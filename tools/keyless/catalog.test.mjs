@@ -10,51 +10,49 @@ import {
 } from "./catalog.mjs";
 import { digest } from "./verify.mjs";
 
-function fixture() {
-  return {
-    schema,
-    catalog_id: "lenso-official-v2",
-    revision: 1,
-    issued_at: 1,
-    releases: [
+const fixture = () => ({
+  catalog_id: "lenso-official-v2",
+  issued_at: 1,
+  legacy_sources: Object.fromEntries(
+    channels.map((channel) => [
+      channel,
       {
-        channel: "package",
-        plugin_id: "test.plugin",
-        version: "1.0.0",
-        record: {
-          plugin_id: "test.plugin",
-          version: "1.0.0",
-          source_revision: "a".repeat(40),
-          publisher_id: "test",
-          title: "Test",
-          summary: "Test fixture",
-          license: "MIT",
-          source_url: "https://github.com/example/test",
-          distributions: [
-            {
-              kind: "npm_package",
-              package: "@test/plugin",
-              version: "1.0.0",
-              registry_url: "https://registry.npmjs.org",
-              integrity: `sha256:${"b".repeat(64)}`,
-            },
-          ],
-        },
+        payload_digest: `sha256:${"c".repeat(64)}`,
+        revision: 1,
+        schema: legacySchemas[channel],
       },
-    ],
-    statuses: [{ plugin_id: "test.plugin", version: "1.0.0", state: "listed" }],
-    legacy_sources: Object.fromEntries(
-      channels.map((channel) => [
-        channel,
-        {
-          schema: legacySchemas[channel],
-          revision: 1,
-          payload_digest: `sha256:${"c".repeat(64)}`,
-        },
-      ])
-    ),
-  };
-}
+    ])
+  ),
+  releases: [
+    {
+      channel: "package",
+      plugin_id: "test.plugin",
+      record: {
+        distributions: [
+          {
+            integrity: `sha256:${"b".repeat(64)}`,
+            kind: "npm_package",
+            package: "@test/plugin",
+            registry_url: "https://registry.npmjs.org",
+            version: "1.0.0",
+          },
+        ],
+        license: "MIT",
+        plugin_id: "test.plugin",
+        publisher_id: "test",
+        source_revision: "a".repeat(40),
+        source_url: "https://github.com/example/test",
+        summary: "Test fixture",
+        title: "Test",
+        version: "1.0.0",
+      },
+      version: "1.0.0",
+    },
+  ],
+  revision: 1,
+  schema,
+  statuses: [{ plugin_id: "test.plugin", state: "listed", version: "1.0.0" }],
+});
 
 test("catalog preserves typed records without expiry or a self-referential source commit", () => {
   const catalog = fixture();
@@ -69,7 +67,7 @@ test("catalog rejects missing, duplicate and unmatched status identities", () =>
   catalog.statuses = [];
   assert.throws(() => validateCatalog(catalog));
   catalog.statuses = [
-    { plugin_id: "test.other", version: "1.0.0", state: "listed" },
+    { plugin_id: "test.other", state: "listed", version: "1.0.0" },
   ];
   assert.throws(() => validateCatalog(catalog));
   const duplicate = fixture();
