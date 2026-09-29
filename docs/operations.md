@@ -2,6 +2,11 @@
 
 ## Public deployment
 
+For a replacement of the legacy signing root, use the separate
+[parallel-root migration](parallel-root-migration.md) gates. This section's
+`lenso-official` example describes the existing service and must not be used
+to initialize a new signer or overwrite its resources.
+
 Build from the repository root with `pnpm build` and `pnpm build:workers`.
 The UI build writes `plugins/web/ui/dist`, which is deployed as
 Cloudflare Static Assets in the same release; `/api/*`, `/artifacts/*`, and

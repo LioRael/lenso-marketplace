@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -22,6 +22,19 @@ const valid = {
   key_id: "lenso-marketplace-2026",
   public_key_hex: productionKey,
   worker: "lenso-marketplace",
+};
+
+const parallel = {
+  ...valid,
+  bucket_name: "lenso-marketplace-v2-production",
+  catalog_id: "lenso-official-v2",
+  database_id: "22222222-2222-4222-8222-222222222222",
+  database_name: "lenso-marketplace-v2-production",
+  deployment_track: "parallel-new-root",
+  hostname: "marketplace-v2.lenso.dev",
+  key_id: "lenso-marketplace-v2-2026",
+  legacy_public_key_hex: "b".repeat(64),
+  worker: "lenso-marketplace-v2",
 };
 
 const run = (input) => {
@@ -77,9 +90,63 @@ test("routes signed document reads through the Worker before static assets", () 
   ]);
 });
 
+test("renders an isolated parallel root without copying migration metadata", () => {
+  const { outputPath, result } = run(parallel);
+  result();
+  const config = JSON.parse(readFileSync(outputPath, "utf-8"));
+  assert.equal(config.name, parallel.worker);
+  assert.equal(config.routes[0].pattern, parallel.hostname);
+  assert.equal(config.d1_databases[0].database_id, parallel.database_id);
+  assert.equal(config.r2_buckets[0].bucket_name, parallel.bucket_name);
+  assert.equal(config.vars.CATALOG_ID, parallel.catalog_id);
+  assert.equal(config.vars.CATALOG_KEY_ID, parallel.key_id);
+  assert.equal(config.vars.CATALOG_PUBLIC_KEY, parallel.public_key_hex);
+  assert.ok(!Object.hasOwn(config, "legacy_public_key_hex"));
+  assert.ok(!Object.hasOwn(config, "deployment_track"));
+});
+
+for (const field of [
+  "worker",
+  "hostname",
+  "database_name",
+  "database_id",
+  "bucket_name",
+  "catalog_id",
+  "key_id",
+]) {
+  test(`parallel root refuses the legacy ${field}`, () => {
+    const input = { ...parallel, [field]: valid[field] };
+    if (field === "database_id") {
+      input.database_id = "cb599e1c-fb55-44f3-850b-679f2f934b67";
+    }
+    const { result, outputPath } = run(input);
+    assert.throws(result);
+    assert.equal(existsSync(outputPath), false);
+  });
+}
+
+test("parallel root refuses a reused signing public key", () => {
+  const { result, outputPath } = run({
+    ...parallel,
+    legacy_public_key_hex: parallel.public_key_hex,
+  });
+  assert.throws(result);
+  assert.equal(existsSync(outputPath), false);
+});
+
+test("parallel root requires a verified prior public key input", () => {
+  const { result, outputPath } = run({
+    ...parallel,
+    legacy_public_key_hex: undefined,
+  });
+  assert.throws(result);
+  assert.equal(existsSync(outputPath), false);
+});
+
 for (const [label, mutate] of [
   ["missing account", (input) => delete input.account_id],
   ["non-production environment", (input) => (input.environment = "proof")],
+  ["unknown deployment track", (input) => (input.deployment_track = "other")],
   [
     "workers.dev hostname",
     (input) => (input.hostname = "lenso-marketplace.workers.dev"),

@@ -10,6 +10,7 @@ import {
 import { isAbsolute } from "node:path";
 
 import { cloudflareStorage } from "./cloudflare.mjs";
+import { assertParallelRoot } from "./parallel-root.mjs";
 import {
   promotePublication,
   promoteReleaseDetails,
@@ -47,6 +48,55 @@ const readDocument = (path) => {
   }
 };
 
+const validateParallelPromotion = (config) => {
+  assert.ok(
+    config.deploymentTrack === undefined ||
+      config.deploymentTrack === "parallel-new-root",
+    "unknown deployment track"
+  );
+  if (config.deploymentTrack !== "parallel-new-root") {
+    return;
+  }
+  assert.ok(
+    isAbsolute(config.deploymentConfig),
+    "parallel root requires an absolute deployment config path"
+  );
+  const deployment = JSON.parse(readFileSync(config.deploymentConfig, "utf-8"));
+  assert.equal(deployment.d1_databases?.length, 1);
+  assert.equal(deployment.r2_buckets?.length, 1);
+  assert.equal(deployment.routes?.length, 1);
+  assert.equal(deployment.routes[0].custom_domain, true);
+  assertParallelRoot({
+    bucket_name: deployment.r2_buckets[0].bucket_name,
+    catalog_id: deployment.vars?.CATALOG_ID,
+    database_id: deployment.d1_databases[0].database_id,
+    database_name: deployment.d1_databases[0].database_name,
+    deployment_track: config.deploymentTrack,
+    hostname: deployment.routes[0].pattern,
+    key_id: deployment.vars?.CATALOG_KEY_ID,
+    legacy_public_key_hex: config.legacyPublicKeyHex,
+    public_key_hex: deployment.vars?.CATALOG_PUBLIC_KEY,
+    worker: deployment.name,
+  });
+  assert.equal(config.accountId, deployment.account_id);
+  assert.equal(config.databaseId, deployment.d1_databases[0].database_id);
+  assert.equal(config.bucketName, deployment.r2_buckets[0].bucket_name);
+  assert.equal(config.catalogId, deployment.vars.CATALOG_ID);
+  const publisherConfig = JSON.parse(
+    readFileSync(config.publisherConfig, "utf-8")
+  );
+  assert.ok(
+    isAbsolute(publisherConfig.database),
+    "parallel root requires an absolute private publisher database path"
+  );
+  assert.equal(publisherConfig.catalog_id, deployment.vars.CATALOG_ID);
+  assert.equal(publisherConfig.key_id, deployment.vars.CATALOG_KEY_ID);
+  assert.equal(
+    publisherConfig.public_key_hex,
+    deployment.vars.CATALOG_PUBLIC_KEY
+  );
+};
+
 // Run only in the protected operator host. CONFIG contains public identifiers,
 // absolute publisher paths and the operator-reviewed expected remote pointer.
 const main = async () => {
@@ -60,6 +110,7 @@ const main = async () => {
     isAbsolute(config.publisherBinary) && isAbsolute(config.publisherConfig),
     "absolute publisher paths required"
   );
+  validateParallelPromotion(config);
   const publisher = (operation, input) => {
     const result = spawnSync(
       config.publisherBinary,

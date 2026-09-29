@@ -4,12 +4,19 @@ import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { assertParallelRoot } from "./parallel-root.mjs";
+
 const [inputPath, outputPath] = process.argv.slice(2);
 assert.ok(
   inputPath && outputPath,
   "usage: node tools/cloudflare/deployment-config.mjs inputs.json output.json"
 );
 const input = JSON.parse(readFileSync(inputPath, "utf-8"));
+assert.ok(
+  input.deployment_track === undefined ||
+    input.deployment_track === "parallel-new-root",
+  "unknown deployment track"
+);
 if ("workers_dev" in input) {
   assert.equal(
     typeof input.workers_dev,
@@ -99,6 +106,9 @@ assert.ok(
   ].some((value) => /proof|test-key|workers-g3|recovery/iu.test(value)),
   "proof resource or identity rejected"
 );
+if (input.deployment_track === "parallel-new-root") {
+  assertParallelRoot(input);
+}
 assert.ok(
   Number.isInteger(input.cpu_ms) && input.cpu_ms > 0 && input.cpu_ms <= 1000,
   "explicit qualified CPU ceiling required (1..1000ms)"

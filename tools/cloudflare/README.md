@@ -154,8 +154,11 @@ in errors. Transport failures remain uncertain until the promotion operation
 reconciles durable state. Exact successful pointer receipts are printed to stdout;
 a broken stdout does not roll back committed storage.
 
-The intended production custody environment is `marketplace-production`, with
-an additive `marketplace.lenso.dev` service and a reviewed empty first directory.
+The original production custody design used `marketplace-production` and
+`marketplace.lenso.dev`. The live signer and publisher database are unavailable;
+do not reinitialize that catalog. New production publication must follow the
+[parallel-root migration](../../docs/parallel-root-migration.md) with a distinct
+catalog, trust key, Worker, domain, D1 and R2.
 A durable publisher database and backup/restore ownership must be wired before
 unattended renewal. An ephemeral Actions checkout is not the publisher database;
 this command alone does not configure or qualify an unattended workflow.
