@@ -2,6 +2,7 @@ import { createWorkersHttpHost } from "@lenso/workers-runtime/host";
 
 import { artifactResponse } from "./artifacts.mjs";
 import { documentResponse } from "./documents.mjs";
+import { keylessResponse } from "./keyless-current.mjs";
 import * as bindings from "./pkg/lenso_marketplace_workers_host.js";
 import wasmModule from "./pkg/lenso_marketplace_workers_host_bg.wasm";
 import { createStorageScope } from "./storage-scope.mjs";
@@ -59,6 +60,10 @@ export const createMarketplaceWorker = ({
   });
   return Object.freeze({
     async fetch(request, env, ctx) {
+      const keyless = await keylessResponse(request, env);
+      if (keyless) {
+        return keyless;
+      }
       const document = await documentResponse(request, env);
       if (document) {
         return document;
