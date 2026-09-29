@@ -1,0 +1,39 @@
+tools/cloudflare/parallel-root.mjs
+  s_7d146975368699::t_35800891194dc2 8-10,12,25-29
+  s_7d146975368699::t_788ef81bff9201 1-7,11,13-24,30-43
+docs/operations.md
+  s_7d146975368699::t_f2ade3702ecf63 5-9
+docs/parallel-root-migration.md
+  s_7d146975368699::t_f2ade3702ecf63 1-109
+tools/cloudflare/deployment-config.mjs
+  s_7d146975368699::t_788ef81bff9201 7-8,15-19,109-111
+tools/cloudflare/README.md
+  s_7d146975368699::t_f2ade3702ecf63 157-161
+tools/cloudflare/promote-cloudflare.test.mjs
+  s_7d146975368699::t_31b7efe7bdb7ff 5,72-92,94-104,106-107,111-139
+  s_7d146975368699::t_35800891194dc2 93,105,108-110
+  s_7d146975368699::t_1df855accec4bf 140
+tools/cloudflare/deployment-config.test.mjs
+  s_7d146975368699::t_d3d3fcbf0ee0f0 3,27-30,35-36,38-39,93-103,106-145,149
+  s_7d146975368699::t_35800891194dc2 31-34,37,104-105
+tools/cloudflare/promote-cloudflare.mjs
+  s_7d146975368699::t_f225680fb16764 13
+  s_7d146975368699::t_35800891194dc2 51-99
+  s_7d146975368699::t_1b9211048a3578 113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "647c12745e8255d8baaa8dc1086a1ae5c3e5181b",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-reserve"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
