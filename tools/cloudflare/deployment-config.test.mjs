@@ -49,12 +49,9 @@ test("renders an account-bound production Worker config", () => {
   ]);
   assert.equal(config.d1_databases[0].database_id, valid.database_id);
   assert.equal(config.r2_buckets[0].bucket_name, valid.bucket_name);
-  assert.deepEqual(config.assets, {
-    binding: "ASSETS",
-    directory: join(root, "plugins/web/ui/dist"),
-    not_found_handling: "none",
-    run_worker_first: ["/api/*", "/artifacts/*"],
-  });
+  assert.equal(config.assets.binding, "ASSETS");
+  assert.equal(config.assets.directory, join(root, "plugins/web/ui/dist"));
+  assert.equal(config.assets.not_found_handling, "none");
   assert.deepEqual(config.vars, {
     CATALOG_ID: valid.catalog_id,
     CATALOG_KEY_ID: valid.key_id,
@@ -67,6 +64,17 @@ test("can explicitly retain the public Agent workers.dev origin", () => {
   const { outputPath, result } = run({ ...valid, workers_dev: true });
   assert.match(result(), /Configuration written for review/u);
   assert.equal(JSON.parse(readFileSync(outputPath, "utf-8")).workers_dev, true);
+});
+
+test("routes signed document reads through the Worker before static assets", () => {
+  const { outputPath, result } = run(valid);
+  result();
+  const config = JSON.parse(readFileSync(outputPath, "utf-8"));
+  assert.deepEqual(config.assets.run_worker_first, [
+    "/api/*",
+    "/artifacts/*",
+    "/documents/*",
+  ]);
 });
 
 for (const [label, mutate] of [

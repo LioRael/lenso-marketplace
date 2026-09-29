@@ -4,8 +4,8 @@
 
 Build from the repository root with `pnpm build` and `pnpm build:workers`.
 The UI build writes `plugins/web/ui/dist`, which is deployed as
-Cloudflare Static Assets in the same release; only `/api/*` and `/artifacts/*`
-are routed through the Wasm Worker. The only public entrypoint is
+Cloudflare Static Assets in the same release; `/api/*`, `/artifacts/*`, and
+`/documents/*` are routed through the Wasm Worker. The only public entrypoint is
 `apps/workers/worker.mjs`. A reviewed
 environment configuration must set the Worker/account, hostname, D1 and private
 R2 bindings, catalog ID, trusted key ID and public key. Never supply signing keys

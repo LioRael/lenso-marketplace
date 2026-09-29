@@ -111,7 +111,7 @@ const config = {
       new URL("../../plugins/web/ui/dist", import.meta.url)
     ),
     not_found_handling: "none",
-    run_worker_first: ["/api/*", "/artifacts/*"],
+    run_worker_first: ["/api/*", "/artifacts/*", "/documents/*"],
   },
   compatibility_date: "2026-07-08",
   compatibility_flags: [
