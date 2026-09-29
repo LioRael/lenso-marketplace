@@ -1,0 +1,26 @@
+tools/keyless/verify.mjs
+  s_7d146975368699::t_27793330609ba4 60
+  s_7d146975368699::t_11edcdd00b1a65 58-59,61,63-69,71-72,74-75,164
+  s_7d146975368699::t_5839ced76fc602 62,70,73
+tools/keyless/verify.test.mjs
+  s_7d146975368699::t_5839ced76fc602 16-20,23-24,27-30,37-42,47
+  s_7d146975368699::t_11edcdd00b1a65 9,21-22,31-34,43-46,48
+  s_7d146975368699::t_27793330609ba4 15,25-26,35-36
+  s_7d146975368699::t_201d59225bdd25 49-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5074b410c9b8f06762795db65dbc5ba294375acd",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
