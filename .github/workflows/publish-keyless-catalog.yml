@@ -1,0 +1,67 @@
+name: Publish keyless catalog
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_source_sha:
+        description: Exact main commit reviewed for this publication
+        type: string
+        required: true
+      reviewed_catalog_sha256:
+        description: SHA-256 of checked-in tools/keyless/catalog.json
+        type: string
+        required: true
+      confirmation:
+        description: Type attest-reviewed-catalog to publish provenance
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: keyless-catalog-publication
+  cancel-in-progress: false
+jobs:
+  attest:
+    if: github.repository == 'LioRael/lenso-marketplace' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Validate reviewed same-commit input
+        env:
+          REVIEWED_SOURCE_SHA: ${{ inputs.reviewed_source_sha }}
+          REVIEWED_CATALOG_SHA256: ${{ inputs.reviewed_catalog_sha256 }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$REVIEWED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$CONFIRMATION" = attest-reviewed-catalog
+          node --test tools/keyless/*.test.mjs
+          node tools/keyless/catalog.mjs tools/keyless/catalog.json "$REVIEWED_CATALOG_SHA256"
+      - name: Attest the exact reviewed catalog
+        id: attestation
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        with:
+          subject-path: tools/keyless/catalog.json
+      - name: Independently verify publisher identity
+        env:
+          REVIEWED_CATALOG_SHA256: ${{ inputs.reviewed_catalog_sha256 }}
+          BUNDLE_PATH: ${{ steps.attestation.outputs.bundle-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/keyless/verify.mjs tools/keyless/catalog.json "$BUNDLE_PATH" "$GITHUB_SHA" "$REVIEWED_CATALOG_SHA256"
+      - name: Retain exact bytes and verification bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: keyless-catalog-${{ github.sha }}
+          path: |
+            tools/keyless/catalog.json
+            ${{ steps.attestation.outputs.bundle-path }}
+          if-no-files-found: error
+          retention-days: 90
