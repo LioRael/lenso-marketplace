@@ -1,21 +1,24 @@
-# Parallel Marketplace trust root
+# Marketplace new-root cutover
 
-The existing `lenso-official` catalog at `marketplace.lenso.dev` is a legacy
-service, not a source for a new signing revision. Its authoritative publisher
-database and signing key are unavailable. Keep its Worker, D1, R2, route,
-signed revision 4 and consumer checkpoints unchanged. Do not initialize a
-replacement database under that catalog ID, rotate its key in place or treat a
-copy of the public envelope as reviewed publisher state.
+The existing `lenso-official` catalog at `marketplace.lenso.dev` is retired,
+not a source for a new signing revision. Its authoritative publisher database
+and signing key are unavailable. Do not initialize a replacement database
+under that catalog ID, rotate its key in place or treat a copy of the public
+envelope as reviewed publisher state. The old service is not a supported
+fallback for the new product; after the new root passes consumer acceptance,
+its DNS, Worker, D1 and R2 resources may be decommissioned as one explicitly
+reviewed operation.
 
-The parallel root is a separate catalog and public origin. Its exact catalog
+The new root is a separate catalog and public origin. Its exact catalog
 ID, key ID, Worker name, custom hostname, D1 ID/name, R2 bucket, reviewer
 identities and custody owners are launch decisions; no production values are
 chosen by this repository. The new public key must be derived from a newly
 custodied private seed outside the repository. The old public key must first be
 read back from the deployed legacy Worker configuration or another verified
-consumer trust record. Both public keys are required to render a parallel
-configuration so equality can be rejected. Neither private seed is an input to
-the renderer.
+consumer trust record. It is retained only as a non-operational fingerprint
+so accidental reuse can be rejected. Both public keys are required to render a
+new-root configuration so equality can be rejected. Neither private seed is an
+input to the renderer.
 
 ## Local configuration candidate
 
@@ -23,8 +26,8 @@ Copy the public values below into an untracked operator input, replacing every
 placeholder with reviewed values. `legacy_public_key_hex` is a public
 verification key, not a private seed. The known old production Worker, domain,
 D1, R2, catalog and key identifiers are rejected in this track. Use a separate
-Worker and custom domain even if both roots remain in the same Cloudflare
-account. Do not reuse the old bucket under a new object prefix.
+Worker and custom domain. Do not reuse the old bucket under a new object
+prefix.
 
 ```json
 {
@@ -73,9 +76,9 @@ the selected **new D1 channel** is empty.
 
 ## Launch gates
 
-1. Record the old Worker version, route, resource IDs and verified public key.
-   Confirm the new names, catalog ID, key ID and public key differ. The old
-   service must remain reachable throughout rollout.
+1. Record the retired Worker version, route, resource IDs and verified public
+   key fingerprint. Confirm the new names, catalog ID, key ID and public key
+   differ. This record is a collision guard, not a second supported root.
 2. Assign a signer custodian, at least one independent reviewer, protected
    publisher host, and backup/restore owner. Create the new key in that custody
    system; do not print or commit it. Prove a publisher SQLite online backup,
@@ -100,8 +103,12 @@ the selected **new D1 channel** is empty.
    exact bytes from the new public origin, and perform Site/CLI consumer
    acceptance against the **new** catalog/key/public-key triple. Do not copy
    the old catalog's accepted checkpoint into the new root. Promote Site only
-   after its signed-feed and deployed-output checks; do not redirect or remove
-   the old domain as part of this launch.
+   after its signed-feed and deployed-output checks.
+7. After acceptance is recorded, decommission the retired DNS, Worker, D1 and
+   R2 resources from an exact inventory. Capture deletion receipts and remove
+   the retired root from client trust configuration. Do not redirect the old
+   API into the new root: callers must use the new catalog identity and
+   signature domain.
 
 Cloudflare references: [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/),
 [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/),

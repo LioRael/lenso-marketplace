@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 
-// Read-only inventory of the legacy production root. Its signer and publisher
-// database are unavailable; these identifiers must never be reused by v2.
+// Read-only inventory of the retired production root. Its signer and publisher
+// database are unavailable; these identifiers are collision guards only and
+// must never be reused by the new root.
 const legacy = Object.freeze({
   bucket_name: "lenso-marketplace-production",
   catalog_id: "lenso-official",

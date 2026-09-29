@@ -157,8 +157,10 @@ a broken stdout does not roll back committed storage.
 The original production custody design used `marketplace-production` and
 `marketplace.lenso.dev`. The live signer and publisher database are unavailable;
 do not reinitialize that catalog. New production publication must follow the
-[parallel-root migration](../../docs/parallel-root-migration.md) with a distinct
-catalog, trust key, Worker, domain, D1 and R2.
+[new-root cutover](../../docs/parallel-root-migration.md) with a distinct
+catalog, trust key, Worker, domain, D1 and R2. Once the new root has passed
+consumer acceptance, retire the old resources explicitly; do not keep them as
+a compatibility service.
 A durable publisher database and backup/restore ownership must be wired before
 unattended renewal. An ephemeral Actions checkout is not the publisher database;
 this command alone does not configure or qualify an unattended workflow.
