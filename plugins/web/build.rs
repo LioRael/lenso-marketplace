@@ -12,6 +12,7 @@ fn main() {
         "model.ts",
         "navigation.ts",
         "catalog.ts",
+        "keyless.ts",
         "saved.ts",
         "sample.ts",
         "controls.ts",
