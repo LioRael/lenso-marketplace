@@ -1,0 +1,270 @@
+{
+  "schema": "lenso.marketplace.keyless-catalog.v1",
+  "catalog_id": "lenso-official-v2",
+  "revision": 1,
+  "issued_at": 1790715982,
+  "releases": [
+    {
+      "channel": "portable",
+      "plugin_id": "lenso.marketplace.echo",
+      "version": "0.1.3",
+      "record": {
+        "plugin_id": "lenso.marketplace.echo",
+        "version": "0.1.3",
+        "publisher_id": "lenso",
+        "title": "Echo",
+        "summary": "Trusted native Process Plugin for verifying Agent Tool invocation on macOS ARM64.",
+        "description": "Official Echo Process Plugin. Requires explicit adoption and a compatible aarch64-apple-darwin Process Host; native Process execution is not sandboxed.",
+        "source_url": "https://github.com/LioRael/lenso-marketplace/commit/990f1176f7a3a5dab4a90b7e918435b6d0e0cc8f",
+        "source_revision": "990f1176f7a3a5dab4a90b7e918435b6d0e0cc8f",
+        "license": "MIT",
+        "artifact": {
+          "url": "https://github.com/LioRael/lenso-marketplace/releases/download/marketplace-echo-v0.1.3/echo-0.1.3.lenso-plugin",
+          "digest": "sha256:0b877ae5a8c00590d12137a2d17ed9068ddfc77c29d648bfc84c1a31630cb74b",
+          "size": 591447,
+          "manifest_digest": "sha256:c23934d006d6bd45fa3e25caa7273a4895908577b49167086ca5617308c8410a"
+        },
+        "availability": "listed"
+      }
+    },
+    {
+      "channel": "linked_cargo",
+      "plugin_id": "lenso.secrets.env",
+      "version": "0.1.7",
+      "record": {
+        "plugin_id": "lenso.secrets.env",
+        "version": "0.1.7",
+        "publisher_id": "lenso",
+        "title": "Environment Secrets",
+        "summary": "Allowlisted environment-backed Secrets Provider for Lenso Apps. Resolves only explicitly configured logical references.",
+        "source_url": "https://github.com/LioRael/lenso-secrets-plugin/commit/43591a4374cf2a6ec586ba5c365bdf41eff1beb4",
+        "source_revision": "43591a4374cf2a6ec586ba5c365bdf41eff1beb4",
+        "license": "MIT",
+        "package": "lenso-secrets-env-plugin",
+        "registry_url": "https://crates.io/crates/lenso-secrets-env-plugin/0.1.7",
+        "crate_digest": "sha256:6dd6a27548c53acaa56d5b65faa6aab3c755e1fb5b00365c406b47aed79c4787",
+        "integration": "linked_plugin",
+        "targets": ["aarch64-unknown-linux-gnu"],
+        "availability": "listed",
+        "documentation": [
+          {
+            "id": "secrets-provider-guide",
+            "revision": "43591a4374cf2a6ec586ba5c365bdf41eff1beb4",
+            "language": "en",
+            "topic": "usage",
+            "url": "https://raw.githubusercontent.com/LioRael/lenso-secrets-plugin/43591a4374cf2a6ec586ba5c365bdf41eff1beb4/README.md",
+            "digest": "sha256:38904fbf66d398777eb0f78d8d08d3433609f609f255151a926bb05a829b0d0b",
+            "size": 4592,
+            "media_type": "text/markdown"
+          }
+        ]
+      }
+    },
+    {
+      "channel": "linked_cargo",
+      "plugin_id": "lenso.web-ingress",
+      "version": "0.4.9",
+      "record": {
+        "plugin_id": "lenso.web-ingress",
+        "version": "0.4.9",
+        "publisher_id": "lenso",
+        "title": "Web Ingress",
+        "summary": "Linked Rust HTTP Ingress Plugin for Lenso backends. Requires a Host-specific adapter.",
+        "source_url": "https://github.com/LioRael/lenso/commit/954a00b89b095f20fafb68071b7252d5d2c2e67b",
+        "source_revision": "954a00b89b095f20fafb68071b7252d5d2c2e67b",
+        "license": "MIT",
+        "package": "lenso-web-ingress-plugin",
+        "registry_url": "https://crates.io/crates/lenso-web-ingress-plugin/0.4.9",
+        "crate_digest": "sha256:942631263f7e574e3f6b7fcce73e797e4d2c8edf52428889ca8bfbe7d41032fc",
+        "integration": "host_provided",
+        "targets": ["aarch64-apple-darwin"],
+        "availability": "listed",
+        "documentation": [
+          {
+            "id": "web-component-guide",
+            "revision": "954a00b89b095f20fafb68071b7252d5d2c2e67b",
+            "language": "en",
+            "topic": "usage",
+            "url": "https://raw.githubusercontent.com/LioRael/lenso/954a00b89b095f20fafb68071b7252d5d2c2e67b/docs/components/web.md",
+            "digest": "sha256:a0b05599a1aba4c26e0468fd553f56e75d2e90a24de217cf693975632349d36d",
+            "size": 33956,
+            "media_type": "text/markdown"
+          }
+        ]
+      }
+    },
+    {
+      "channel": "package",
+      "plugin_id": "lenso.reference.knowledge-excerpt",
+      "version": "0.1.2",
+      "record": {
+        "plugin_id": "lenso.reference.knowledge-excerpt",
+        "version": "0.1.2",
+        "publisher_id": "lenso",
+        "title": "Knowledge Excerpt",
+        "summary": "Bun Plugin providing deterministic knowledge excerpts and optional durable Jobs for the reference knowledge-base App.",
+        "source_url": "https://github.com/LioRael/lenso-examples/commit/6f74cfe9a4fbcf2f466596b075ac887a7c2919d8",
+        "source_revision": "6f74cfe9a4fbcf2f466596b075ac887a7c2919d8",
+        "license": "MIT",
+        "distributions": [
+          {
+            "id": "npm",
+            "kind": "npm_package",
+            "package": "@lenso/knowledge-excerpt",
+            "version": "0.1.2",
+            "integrity": "sha256:3e27b13dd4f5fc12f4145c364e868751acb9d40103ff1e575d0e8dde936b5a69",
+            "registry_url": "https://registry.npmjs.org/@lenso/knowledge-excerpt/-/knowledge-excerpt-0.1.2.tgz",
+            "targets": ["aarch64-apple-darwin"]
+          }
+        ],
+        "availability": "listed",
+        "documentation": [
+          {
+            "id": "getting-started",
+            "revision": "6f74cfe9a4fbcf2f466596b075ac887a7c2919d8",
+            "language": "en",
+            "topic": "usage",
+            "url": "https://raw.githubusercontent.com/LioRael/lenso-examples/6f74cfe9a4fbcf2f466596b075ac887a7c2919d8/fixtures/vnext-knowledge-base-app/project/app/excerpt/README.md",
+            "digest": "sha256:c48eb90b56e41b2cf0ee0c6e19e80a3e8a685e299a02e343bf44152f80d4ffe9",
+            "size": 1445,
+            "media_type": "text/markdown"
+          }
+        ]
+      }
+    },
+    {
+      "channel": "release_content",
+      "plugin_id": "lenso.reference.knowledge-base-starter",
+      "version": "0.1.0",
+      "record": {
+        "plugin_id": "lenso.reference.knowledge-base-starter",
+        "version": "0.1.0",
+        "base_kind": "content_only",
+        "base_release_identity": "sha256:b58a9a61563d755c5050da841bccbd54d67b5a1646f3e9684c51c895a7bb7901",
+        "metadata": {
+          "publisher_id": "lenso",
+          "title": "Knowledge Base Starter",
+          "summary": "Editable source template for the reference knowledge-base App, including App-owned Rust business code, Bun excerpt tools and React frontend.",
+          "source_url": "https://github.com/LioRael/lenso-examples/commit/93d366522d7f33bd3f6ca79786beb165bbe52f5c",
+          "source_revision": "93d366522d7f33bd3f6ca79786beb165bbe52f5c",
+          "license": "MIT",
+          "documentation": [
+            {
+              "id": "getting-started",
+              "revision": "r1",
+              "language": "en",
+              "topic": "getting-started",
+              "url": "https://marketplace.lenso.dev/documents/sha256/ec74c89ab77c55f6651cef43b790b6114382da1b5f93c57f0e4d40ffe8689eef.md",
+              "digest": "sha256:ec74c89ab77c55f6651cef43b790b6114382da1b5f93c57f0e4d40ffe8689eef",
+              "size": 1905,
+              "media_type": "text/markdown"
+            }
+          ]
+        },
+        "content": [
+          {
+            "id": "starter",
+            "kind": "editable_template",
+            "url": "https://marketplace.lenso.dev/artifacts/5ba597240979579cc5d054522cf672f3e398d2cf61c792c1713eec723eaaccd2.tar.gz",
+            "digest": "sha256:5ba597240979579cc5d054522cf672f3e398d2cf61c792c1713eec723eaaccd2",
+            "size": 176374
+          }
+        ]
+      }
+    },
+    {
+      "channel": "release_content",
+      "plugin_id": "lenso.terminal.cli",
+      "version": "1.0.0",
+      "record": {
+        "plugin_id": "lenso.terminal.cli",
+        "version": "1.0.0",
+        "base_kind": "content_only",
+        "base_release_identity": "sha256:0f65f5d2e58126eed3e9d4428eb95311ffde0f996564b5c3b1496eeab563cb5c",
+        "metadata": {
+          "publisher_id": "lenso",
+          "title": "Terminal CLI Development Support",
+          "summary": "Source-only support Plugin providing the existing cli.ts and cli.rs compilation conventions and terminal router.",
+          "source_url": "https://github.com/LioRael/lenso/commit/0e4a0b5968986e682315766a9b58c99aa1c8dbb8",
+          "source_revision": "0e4a0b5968986e682315766a9b58c99aa1c8dbb8",
+          "license": "MIT",
+          "documentation": [
+            {
+              "id": "getting-started",
+              "revision": "r1",
+              "language": "en",
+              "topic": "getting-started",
+              "url": "https://marketplace.lenso.dev/documents/sha256/0bba8ee6308181446bd377b29bb74216c23ce476b45b169f45d13951abdcef48.md",
+              "digest": "sha256:0bba8ee6308181446bd377b29bb74216c23ce476b45b169f45d13951abdcef48",
+              "size": 2204,
+              "media_type": "text/markdown"
+            }
+          ]
+        },
+        "content": [
+          {
+            "id": "cli-support",
+            "kind": "development_extension",
+            "url": "https://marketplace.lenso.dev/artifacts/6361f17ff634a1d132c52871b546666bf7b043bc5e27d8943bff9543f3c18170.tar.gz",
+            "digest": "sha256:6361f17ff634a1d132c52871b546666bf7b043bc5e27d8943bff9543f3c18170",
+            "size": 29713
+          }
+        ]
+      }
+    }
+  ],
+  "statuses": [
+    {
+      "plugin_id": "lenso.marketplace.echo",
+      "version": "0.1.3",
+      "state": "listed"
+    },
+    {
+      "plugin_id": "lenso.secrets.env",
+      "version": "0.1.7",
+      "state": "listed"
+    },
+    {
+      "plugin_id": "lenso.web-ingress",
+      "version": "0.4.9",
+      "state": "listed"
+    },
+    {
+      "plugin_id": "lenso.reference.knowledge-excerpt",
+      "version": "0.1.2",
+      "state": "listed"
+    },
+    {
+      "plugin_id": "lenso.reference.knowledge-base-starter",
+      "version": "0.1.0",
+      "state": "listed"
+    },
+    {
+      "plugin_id": "lenso.terminal.cli",
+      "version": "1.0.0",
+      "state": "listed"
+    }
+  ],
+  "legacy_sources": {
+    "portable": {
+      "schema": "lenso.marketplace.snapshot.v1",
+      "revision": 2,
+      "payload_digest": "sha256:0681854426fdccc769610e41d9b455f6a33c28e3b7996ab0c21c48a21e7d3b23"
+    },
+    "linked_cargo": {
+      "schema": "lenso.marketplace.linked-cargo-snapshot.v1",
+      "revision": 1,
+      "payload_digest": "sha256:3b2ae3a79a909e81cad330cf67a4dffc06b6bbdb70c9e4553fe197385ce26903"
+    },
+    "package": {
+      "schema": "lenso.marketplace.package-snapshot.v1",
+      "revision": 1,
+      "payload_digest": "sha256:055b682b207ad542c603eb3f1799e484cc1dd50ffedb8b490aa6b67dca3c68b5"
+    },
+    "release_content": {
+      "schema": "lenso.marketplace.release-content.v2",
+      "revision": 1,
+      "payload_digest": "sha256:7192e0320aa817fe651f265ae38ed26fcd1b7f35f6325c9a6a9e2b797f9425ff"
+    }
+  }
+}
