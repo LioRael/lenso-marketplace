@@ -233,18 +233,17 @@ through `lenso app add PLUGIN_ID@VERSION --linked-snapshot ... --trust ... --cra
 It does not fetch the archive or prove registry provenance automatically; reviewers
 must verify registry availability and the generated Host build separately.
 
-## npm-only signed package release (staged)
+## npm-only signed package release
 
 The package-only channel has no fabricated Portable base. Its release JSON uses
 the `PackageRelease` schema from the new `lenso-plugin-catalog::package` module:
 one exact Plugin ID/version, publisher, source commit, and one to sixteen npm
 distributions. Each distribution has an ID, exact npm name and version,
-credential-free HTTPS registry URL, and SHA-256 `.tgz` digest. The current
-Marketplace dependency pin predates this protocol. Package-only operator
-commands are disabled in the default build. After the signed package protocol
-is remotely available, update the Market manifest and lock together, then
-build the publisher with `--features package-publication`. No local path
-override belongs in either committed dependency file.
+credential-free HTTPS registry URL, and SHA-256 `.tgz` digest. The pinned
+Marketplace dependency includes this protocol. Package-only operator commands
+are disabled in the default build; build the publisher with
+`--features package-publication` to enable them. No local path override belongs
+in either committed dependency file.
 
 ```sh
 lenso-marketplace-publisher operator.json submit-package AUTHOR /absolute/release.json npm /absolute/package.tgz

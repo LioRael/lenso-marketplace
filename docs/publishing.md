@@ -5,8 +5,11 @@ configuration or database. A maintainer verifies namespace ownership and reviews
 the exact release before publishing it. Submission transport is currently a
 GitHub Issue review, not a public upload API or self-service Marketplace account system.
 
-The workflow below is for a portable `plugin.lenso-plugin` archive. Linked Rust
-Cargo packages have a separate, operator-mediated source-only channel described
+The workflow below is for a `plugin.lenso-plugin` Bundle archive. A Bundle is
+distribution packaging: its selected implementation determines execution and
+isolation. In particular, a `nativeProcess` implementation runs a trusted
+native executable; it is not sandboxed merely because it arrived in a Bundle.
+Linked Rust Cargo packages have a separate, operator-mediated source-only channel described
 in the [operator guide](../tools/publisher/docs/operator.md#source-only-linked-cargo-release).
 The same author tool also prepares a source-only linked submission (below).
 

@@ -1,8 +1,8 @@
-const ARTIFACT_PATH = /^\/artifacts\/([a-f0-9]{64})\.lenso-plugin$/u;
+const ARTIFACT_PATH = /^\/artifacts\/([a-f0-9]{64})\.(lenso-plugin|tar\.gz)$/u;
 const MAX_ARTIFACT_BYTES = 256 * 1024 * 1024;
 
 /**
- * Serve an immutable bundle directly from the Marketplace R2 bucket. Agent
+ * Serve an immutable Bundle or signed source archive from the Marketplace R2 bucket. Agent
  * acquisition deliberately does not follow redirects, so this route is the
  * stable 200-origin for every signed artifact URL.
  */
@@ -21,7 +21,7 @@ export const artifactResponse = async (request, env) => {
     return new Response("Artifact storage unavailable", { status: 503 });
   }
   const object = await env.MARKETPLACE_OBJECTS.get(
-    `artifacts/${match[1]}.lenso-plugin`
+    `artifacts/${match[1]}.${match[2]}`
   );
   if (!object) {
     return new Response("Artifact not found", { status: 404 });
@@ -37,7 +37,10 @@ export const artifactResponse = async (request, env) => {
     headers: {
       "cache-control": "public, max-age=31536000, immutable",
       "content-length": String(object.size),
-      "content-type": "application/vnd.lenso.plugin",
+      "content-type":
+        match[2] === "tar.gz"
+          ? "application/gzip"
+          : "application/vnd.lenso.plugin",
     },
     status: 200,
   });

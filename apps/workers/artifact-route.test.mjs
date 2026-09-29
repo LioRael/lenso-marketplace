@@ -48,6 +48,42 @@ test("artifact route does not intercept unrelated paths", async () => {
   assert.deepEqual(env.calls, []);
 });
 
+test("source content archive supports immutable GET and bodyless HEAD", async () => {
+  for (const method of ["GET", "HEAD"]) {
+    const env = environment();
+    const response = await artifactResponse(
+      new Request(`https://marketplace.test/artifacts/${digest}.tar.gz`, {
+        method,
+      }),
+      env
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "application/gzip");
+    assert.equal(
+      response.headers.get("content-length"),
+      String(body.byteLength)
+    );
+    assert.equal(
+      response.headers.get("cache-control"),
+      "public, max-age=31536000, immutable"
+    );
+    assert.deepEqual(env.calls, [`artifacts/${digest}.tar.gz`]);
+    assert.deepEqual(
+      new Uint8Array(await response.arrayBuffer()),
+      method === "HEAD" ? new Uint8Array() : body
+    );
+  }
+  const env = environment();
+  assert.equal(
+    await artifactResponse(
+      new Request(`https://marketplace.test/artifacts/${digest}.zip`),
+      env
+    ),
+    null
+  );
+  assert.deepEqual(env.calls, []);
+});
+
 test("artifact route rejects unsupported methods", async () => {
   const env = environment();
   const response = await artifactResponse(
