@@ -37,6 +37,18 @@ const parallel = {
   worker: "lenso-marketplace-v2",
 };
 
+const stableDomain = {
+  ...valid,
+  bucket_name: "lenso-marketplace-v2-production",
+  catalog_id: "lenso-official-v2",
+  database_id: "22222222-2222-4222-8222-222222222222",
+  database_name: "lenso-marketplace-v2-production",
+  deployment_track: "stable-domain-new-root",
+  key_id: "lenso-marketplace-v2-2026",
+  legacy_public_key_hex: "b".repeat(64),
+  public_key_hex: "c".repeat(64),
+};
+
 const run = (input) => {
   const directory = mkdtempSync(join(tmpdir(), "lenso-marketplace-config-"));
   const inputPath = join(directory, "input.json");
@@ -104,6 +116,50 @@ test("renders an isolated parallel root without copying migration metadata", () 
   assert.ok(!Object.hasOwn(config, "legacy_public_key_hex"));
   assert.ok(!Object.hasOwn(config, "deployment_track"));
 });
+
+test("renders a stable-domain root with new trust and storage identities", () => {
+  const { outputPath, result } = run(stableDomain);
+  result();
+  const config = JSON.parse(readFileSync(outputPath, "utf-8"));
+  assert.equal(config.name, stableDomain.worker);
+  assert.equal(config.routes[0].pattern, stableDomain.hostname);
+  assert.equal(config.d1_databases[0].database_id, stableDomain.database_id);
+  assert.equal(config.r2_buckets[0].bucket_name, stableDomain.bucket_name);
+  assert.equal(config.vars.CATALOG_ID, stableDomain.catalog_id);
+  assert.equal(config.vars.CATALOG_KEY_ID, stableDomain.key_id);
+  assert.equal(config.vars.CATALOG_PUBLIC_KEY, stableDomain.public_key_hex);
+  assert.ok(!Object.hasOwn(config, "legacy_public_key_hex"));
+  assert.ok(!Object.hasOwn(config, "deployment_track"));
+});
+
+for (const [field, value] of [
+  ["worker", "lenso-marketplace-v2"],
+  ["hostname", "marketplace-v2.lenso.dev"],
+]) {
+  test(`stable-domain root refuses a changed canonical ${field}`, () => {
+    const { result, outputPath } = run({ ...stableDomain, [field]: value });
+    assert.throws(result);
+    assert.equal(existsSync(outputPath), false);
+  });
+}
+
+for (const field of [
+  "database_name",
+  "database_id",
+  "bucket_name",
+  "catalog_id",
+  "key_id",
+]) {
+  test(`stable-domain root refuses the legacy ${field}`, () => {
+    const input = { ...stableDomain, [field]: valid[field] };
+    if (field === "database_id") {
+      input.database_id = "cb599e1c-fb55-44f3-850b-679f2f934b67";
+    }
+    const { result, outputPath } = run(input);
+    assert.throws(result);
+    assert.equal(existsSync(outputPath), false);
+  });
+}
 
 for (const field of [
   "worker",

@@ -10,7 +10,10 @@ import {
 import { isAbsolute } from "node:path";
 
 import { cloudflareStorage } from "./cloudflare.mjs";
-import { assertParallelRoot } from "./parallel-root.mjs";
+import {
+  assertParallelRoot,
+  assertStableDomainRoot,
+} from "./parallel-root.mjs";
 import {
   promotePublication,
   promoteReleaseDetails,
@@ -51,10 +54,14 @@ const readDocument = (path) => {
 const validateParallelPromotion = (config) => {
   assert.ok(
     config.deploymentTrack === undefined ||
-      config.deploymentTrack === "parallel-new-root",
+      config.deploymentTrack === "parallel-new-root" ||
+      config.deploymentTrack === "stable-domain-new-root",
     "unknown deployment track"
   );
-  if (config.deploymentTrack !== "parallel-new-root") {
+  if (
+    config.deploymentTrack !== "parallel-new-root" &&
+    config.deploymentTrack !== "stable-domain-new-root"
+  ) {
     return;
   }
   assert.ok(
@@ -66,7 +73,7 @@ const validateParallelPromotion = (config) => {
   assert.equal(deployment.r2_buckets?.length, 1);
   assert.equal(deployment.routes?.length, 1);
   assert.equal(deployment.routes[0].custom_domain, true);
-  assertParallelRoot({
+  const rootInput = {
     bucket_name: deployment.r2_buckets[0].bucket_name,
     catalog_id: deployment.vars?.CATALOG_ID,
     database_id: deployment.d1_databases[0].database_id,
@@ -77,7 +84,12 @@ const validateParallelPromotion = (config) => {
     legacy_public_key_hex: config.legacyPublicKeyHex,
     public_key_hex: deployment.vars?.CATALOG_PUBLIC_KEY,
     worker: deployment.name,
-  });
+  };
+  if (config.deploymentTrack === "parallel-new-root") {
+    assertParallelRoot(rootInput);
+  } else {
+    assertStableDomainRoot(rootInput);
+  }
   assert.equal(config.accountId, deployment.account_id);
   assert.equal(config.databaseId, deployment.d1_databases[0].database_id);
   assert.equal(config.bucketName, deployment.r2_buckets[0].bucket_name);

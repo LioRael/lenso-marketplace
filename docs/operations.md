@@ -2,20 +2,20 @@
 
 ## Public deployment
 
-For a new single-root cutover, use the [new-root cutover](parallel-root-migration.md)
-gates. The `lenso-official` example describes the retired service and must not
-be used to initialize a new signer or overwrite its resources. The new root is
-the only supported publication and consumer trust path; the retired root is
-not a fallback.
+For a stable-domain cutover, use the [new-root cutover](parallel-root-migration.md)
+gates. The `lenso-official` catalog and key describe retired trust material and
+must not be used to initialize a new signer or overwrite their resources. The
+new root is the only supported publication and consumer trust path, while
+`marketplace.lenso.dev` remains the one public address.
 
 Build from the repository root with `pnpm build` and `pnpm build:workers`.
 The UI build writes `plugins/web/ui/dist`, which is deployed as
 Cloudflare Static Assets in the same release; `/api/*`, `/artifacts/*`, and
 `/documents/*` are routed through the Wasm Worker. The only public entrypoint is
-`apps/workers/worker.mjs`. A reviewed
-environment configuration must set the Worker/account, hostname, D1 and private
-R2 bindings, catalog ID, trusted key ID and public key. Never supply signing keys
-to the public Worker. The default config contains no test identity or resources.
+`apps/workers/worker.mjs`. A reviewed environment configuration must set the
+Worker/account, hostname, new D1 and private R2 bindings, catalog ID, trusted
+key ID and public key. Never supply signing keys to the public Worker. The
+default config contains no test identity or resources.
 
 The Workers Rust backend alone can be checked without the UI source or build:
 its Web Plugin dependency disables default features. That is not a deployable
@@ -42,14 +42,16 @@ approved production value; this example is not deployable):
 {
   "account_id": "<32 hex Cloudflare account ID>",
   "environment": "production",
+  "deployment_track": "stable-domain-new-root",
   "worker": "lenso-marketplace",
   "hostname": "marketplace.lenso.dev",
-  "database_name": "lenso-marketplace-production",
-  "database_id": "<D1 UUID>",
-  "bucket_name": "lenso-marketplace-production",
-  "catalog_id": "lenso-official",
-  "key_id": "lenso-marketplace-2026",
-  "public_key_hex": "<64 hex Ed25519 public key>",
+  "database_name": "<new D1 name>",
+  "database_id": "<new D1 UUID>",
+  "bucket_name": "<new private R2 bucket>",
+  "catalog_id": "<new catalog ID>",
+  "key_id": "<new key ID>",
+  "legacy_public_key_hex": "<verified old 64 hex public key>",
+  "public_key_hex": "<new 64 hex Ed25519 public key>",
   "cpu_ms": 1000,
   "workers_dev": true
 }

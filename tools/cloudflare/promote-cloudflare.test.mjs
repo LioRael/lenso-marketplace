@@ -138,3 +138,75 @@ writeFileSync(process.env.PUBLISHER_CALLS, "called");
   assert.match(result.stderr, /parallel root reuses legacy database_id/u);
   assert.equal(existsSync(calls), false);
 });
+
+test("stable-domain promotion rejects a changed canonical hostname", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "lenso-stable-promote-"));
+  t.after(() => rmSync(directory, { recursive: true }));
+  const publisherBinary = join(directory, "publisher.mjs");
+  const publisherConfig = join(directory, "publisher.json");
+  const deploymentConfig = join(directory, "wrangler.json");
+  const config = join(directory, "promotion.json");
+  const calls = join(directory, "calls.txt");
+  writeFileSync(
+    publisherBinary,
+    `#!/usr/bin/env node
+import { writeFileSync } from "node:fs";
+writeFileSync(process.env.PUBLISHER_CALLS, "called");
+`
+  );
+  chmodSync(publisherBinary, 0o700);
+  writeFileSync(
+    publisherConfig,
+    JSON.stringify({
+      catalog_id: "lenso-official-v2",
+      database: join(directory, "publisher.sqlite3"),
+      key_id: "lenso-marketplace-v2-2026",
+      public_key_hex: "c".repeat(64),
+    })
+  );
+  writeFileSync(
+    deploymentConfig,
+    JSON.stringify({
+      account_id: "a".repeat(32),
+      d1_databases: [
+        {
+          database_id: "22222222-2222-4222-8222-222222222222",
+          database_name: "lenso-marketplace-v2-production",
+        },
+      ],
+      name: "lenso-marketplace",
+      r2_buckets: [{ bucket_name: "lenso-marketplace-v2-production" }],
+      routes: [{ custom_domain: true, pattern: "marketplace-v2.lenso.dev" }],
+      vars: {
+        CATALOG_ID: "lenso-official-v2",
+        CATALOG_KEY_ID: "lenso-marketplace-v2-2026",
+        CATALOG_PUBLIC_KEY: "c".repeat(64),
+      },
+    })
+  );
+  writeFileSync(
+    config,
+    JSON.stringify({
+      accountId: "a".repeat(32),
+      bucketName: "lenso-marketplace-v2-production",
+      catalogId: "lenso-official-v2",
+      databaseId: "22222222-2222-4222-8222-222222222222",
+      deploymentConfig,
+      deploymentTrack: "stable-domain-new-root",
+      expected: null,
+      legacyPublicKeyHex: "b".repeat(64),
+      publisherBinary,
+      publisherConfig,
+    })
+  );
+  const result = spawnSync(process.execPath, [script, config], {
+    encoding: "utf-8",
+    env: { ...process.env, PUBLISHER_CALLS: calls },
+  });
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /stable-domain root must keep the canonical hostname/u
+  );
+  assert.equal(existsSync(calls), false);
+});

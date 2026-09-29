@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { assertParallelRoot } from "./parallel-root.mjs";
+import {
+  assertParallelRoot,
+  assertStableDomainRoot,
+} from "./parallel-root.mjs";
 
 const [inputPath, outputPath] = process.argv.slice(2);
 assert.ok(
@@ -14,7 +17,8 @@ assert.ok(
 const input = JSON.parse(readFileSync(inputPath, "utf-8"));
 assert.ok(
   input.deployment_track === undefined ||
-    input.deployment_track === "parallel-new-root",
+    input.deployment_track === "parallel-new-root" ||
+    input.deployment_track === "stable-domain-new-root",
   "unknown deployment track"
 );
 if ("workers_dev" in input) {
@@ -108,6 +112,9 @@ assert.ok(
 );
 if (input.deployment_track === "parallel-new-root") {
   assertParallelRoot(input);
+}
+if (input.deployment_track === "stable-domain-new-root") {
+  assertStableDomainRoot(input);
 }
 assert.ok(
   Number.isInteger(input.cpu_ms) && input.cpu_ms > 0 && input.cpu_ms <= 1000,
