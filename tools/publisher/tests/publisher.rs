@@ -1083,6 +1083,10 @@ fn operator_reviews_and_exports_source_only_linked_cargo_release() {
         String::from_utf8_lossy(&republished.stderr)
     );
     let next_envelope: serde_json::Value = serde_json::from_slice(&republished.stdout).unwrap();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let updated = lenso_plugin_catalog::linked_cargo::verify(
         next_envelope["envelope"].as_str().unwrap().as_bytes(),
         &trust,
