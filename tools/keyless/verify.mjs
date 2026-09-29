@@ -55,6 +55,24 @@ export const verificationArguments = (artifact, bundle, sourceCommit) => {
 export const digest = (bytes) =>
   createHash("sha256").update(bytes).digest("hex");
 
+export const publicGoodResults = (verified) => {
+  if (!Array.isArray(verified)) {
+    throw new TypeError("Verifier returned invalid verified attestations");
+  }
+  const publicGood = verified.every((result) => {
+    const certificate = result?.verificationResult?.signature?.certificate;
+    return (
+      typeof certificate?.certificateIssuer === "string" &&
+      certificate.certificateIssuer.split(",").includes("O=sigstore.dev") &&
+      certificate.sourceRepositoryVisibilityAtSigning === "public"
+    );
+  });
+  if (verified.length === 0 || !publicGood) {
+    throw new Error("Verifier returned no public-good attestation");
+  }
+  return verified;
+};
+
 export const readBoundedFile = async (path, limit = 4 * 1024 * 1024) => {
   const handle = await open(
     path,
@@ -143,10 +161,7 @@ export const verifyArtifact = async (
   } catch {
     throw new Error("Publisher verifier returned invalid output");
   }
-  if (!Array.isArray(verified) || verified.length === 0) {
-    throw new Error("Verifier returned no verified attestation");
-  }
-  return verified;
+  return publicGoodResults(verified);
 };
 
 if (

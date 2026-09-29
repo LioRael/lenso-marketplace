@@ -6,10 +6,48 @@ import { test } from "node:test";
 
 import {
   digest,
+  publicGoodResults,
   readBoundedFile,
   verificationArguments,
   verifierEnvironment,
 } from "./verify.mjs";
+
+const verifiedResult = (issuer, visibility) => ({
+  verificationResult: {
+    signature: {
+      certificate: {
+        certificateIssuer: issuer,
+        sourceRepositoryVisibilityAtSigning: visibility,
+      },
+    },
+  },
+});
+
+test("verified output must use Sigstore public-good trust and a public repository", () => {
+  const publicResult = verifiedResult(
+    "CN=sigstore-intermediate,O=sigstore.dev",
+    "public"
+  );
+  assert.deepEqual(publicGoodResults([publicResult]), [publicResult]);
+  for (const invalid of [
+    [],
+    {},
+    [verifiedResult("CN=GitHub private CA,O=GitHub", "public")],
+    [verifiedResult("CN=sigstore-intermediate,O=sigstore.dev", "private")],
+    [
+      verifiedResult(
+        "CN=sigstore-intermediate,O=sigstore.dev.attacker",
+        "public"
+      ),
+    ],
+    [{ predicate: { certificateIssuer: "O=sigstore.dev" } }],
+  ]) {
+    assert.throws(() => publicGoodResults(invalid));
+  }
+  assert.throws(() =>
+    publicGoodResults([verifiedResult("O=GitHub", "public"), publicResult])
+  );
+});
 
 test("verification pins repository, workflow, ref, exact source and signer", () => {
   const commit = "a".repeat(40);
