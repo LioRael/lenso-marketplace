@@ -6,7 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { Search, X, Sun, Moon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { useCatalog, useCatalogStale } from "./catalog";
+import { useCatalog, useCatalogStale, useKeylessDirectory } from "./catalog";
 import { styles as layout } from "./catalog-layout.stylex";
 import { Detail, Filters, Guide, ReleaseList, State } from "./components";
 import { controls } from "./controls";
@@ -47,6 +47,8 @@ const catalogHeading = (route: ReturnType<typeof useRoute>) => {
   }
   return route.publisher || "Plugins for your workspace";
 };
+const useRealDirectory = (route: ReturnType<typeof useRoute>) =>
+  useKeylessDirectory(!route.sample && route.view !== "guide");
 const useMarketplace = () => {
   useClientNavigation();
   const route = useRoute();
@@ -114,14 +116,17 @@ const useMarketplace = () => {
   }
   const api = route.sample
     ? "/sample-api/plugins"
-    : "/api/marketplace/v1/plugins";
+    : "/api/marketplace/v3/display";
+  const directory = useRealDirectory(route);
   const catalog = useCatalog(
-    route.view === "guide" ? null : `${api}?${queryParams}`
+    route.view === "guide" ? null : `${api}?${queryParams}`,
+    directory
   );
   const exact = useCatalog(
     selected
       ? `${api}/${encodeURIComponent(route.id ?? "")}/${encodeURIComponent(route.version ?? "")}`
-      : null
+      : null,
+    directory
   );
   const release = exact.data?.release;
   useEffect(() => {
@@ -263,7 +268,7 @@ const CatalogFreshness = ({ data }: { data?: Catalog }) => {
         <InlineAlert.Title>Catalog is out of date</InlineAlert.Title>
         <InlineAlert.Description>
           You can still browse and save plugins. New installations require a
-          current verified catalog in Console Agent.
+          current catalog and publisher verification by the CLI.
         </InlineAlert.Description>
       </InlineAlert.Content>
     </InlineAlert.Root>

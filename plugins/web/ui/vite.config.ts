@@ -58,6 +58,7 @@ export default defineConfig({
           "model.ts",
           "navigation.ts",
           "catalog.ts",
+          "keyless.ts",
           "saved.ts",
           "sample.ts",
           "controls.ts",

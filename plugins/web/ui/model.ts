@@ -14,7 +14,11 @@ export interface Release {
   source_url: string;
   source_revision: string;
   availability: string;
-  artifact: { digest: string; manifest_digest: string; size: number };
+  artifact?: { digest: string; manifest_digest: string; size: number };
+  channel?: "portable" | "linked_cargo" | "package" | "release_content";
+  package_size?: number;
+  integrity?: { label: string; value: string }[];
+  record?: Readonly<Record<string, unknown>>;
 }
 export interface Catalog {
   catalog_id: string;

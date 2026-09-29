@@ -289,6 +289,9 @@ export const ReleaseList = ({
                 {release.publisher_id}
               </a>
               <span>{release.version}</span>
+              {release.availability !== "listed" && (
+                <span>{release.availability}</span>
+              )}
             </div>
           )}
         </div>
@@ -488,11 +491,11 @@ export const Detail = ({
             <dt>License</dt>
             <dd>{release.license}</dd>
           </div>
-          {release.availability !== "sample" && (
+          {release.package_size !== undefined && (
             <div>
               <dt>Package size</dt>
               <dd>
-                {(release.artifact.size / 1024).toLocaleString(undefined, {
+                {(release.package_size / 1024).toLocaleString(undefined, {
                   maximumFractionDigits: 1,
                 })}{" "}
                 KiB
@@ -533,15 +536,12 @@ export const Detail = ({
               </Disclosure.Header>
               <Disclosure.Panel>
                 <p className="integrity-note">
-                  The catalog signature verifies this release record. It is not
-                  a security review of the plugin.
+                  The CLI verifies the publisher provenance before adoption.
+                  This page displays the current catalog and archive digests; it
+                  does not verify provenance or review plugin security.
                 </p>
                 <dl className="integrity-facts">
-                  {[
-                    ["Archive SHA-256", release.artifact.digest],
-                    ["Manifest SHA-256", release.artifact.manifest_digest],
-                    ["Source revision", release.source_revision],
-                  ].map(([label, value]) => (
+                  {(release.integrity ?? []).map(({ label, value }) => (
                     <div key={label}>
                       <dt>{label}</dt>
                       <dd className="code">{value}</dd>

@@ -8,7 +8,7 @@
     "dev": "vite --config plugins/web/ui/vite.config.ts",
     "lint": "ultracite check --deny-warnings",
     "format:check": "oxfmt --check .",
-    "test:browser": "bash scripts/verify-browser.sh",
+    "test:browser": "bash scripts/verify-browser-current.sh",
     "test:native": "bash scripts/check-native.sh",
     "test:workers": "node --test apps/workers/*.test.mjs tests/workers/sdk-flow.test.mjs tools/cloudflare/*.test.mjs tools/keyless/*.test.mjs",
     "build:workers": "bash apps/workers/build.sh",

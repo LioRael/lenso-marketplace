@@ -28,5 +28,6 @@ jobs:
       - run: pnpm test:native
       - run: pnpm exec playwright install --with-deps chromium
       - run: cargo install lenso-cli --version 0.5.2 --locked
+      - run: bash scripts/verify-browser.sh --api-only
       - run: pnpm test:browser
       - run: pnpm exec tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck contracts/directory/generated/bindings.ts

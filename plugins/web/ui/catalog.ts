@@ -1,66 +1,94 @@
 import { useEffect, useState } from "react";
 
+import { loadKeylessCatalog, selectCatalog } from "./keyless";
 import type { Catalog } from "./model";
 import { sampleResponse } from "./sample";
 
 interface Result {
-  endpoint: string;
   data?: Catalog;
   error?: string;
   status?: number;
 }
-export const useCatalog = (endpoint: string | null) => {
+export const useKeylessDirectory = (enabled: boolean) => {
   const [result, setResult] = useState<Result>();
   const [pending, setPending] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    if (!endpoint || endpoint.startsWith("/sample-api/")) {
+    if (!enabled) {
       return;
     }
-    const controller = new AbortController();
-    setPending(true);
+    let controller: AbortController | undefined;
     const load = async () => {
+      controller?.abort();
+      controller = new AbortController();
+      const { signal } = controller;
+      setResult(undefined);
+      setPending(true);
       try {
-        const response = await fetch(endpoint, { signal: controller.signal });
-        if (!response.ok) {
-          const message =
-            response.status === 404
-              ? "This exact release is not in the catalog."
-              : "The catalog could not be loaded. Try again.";
-          if (!controller.signal.aborted) {
-            setResult({ endpoint, error: message, status: response.status });
-          }
-          return;
-        }
-        const data: Catalog = await response.json();
-        if (!controller.signal.aborted) {
-          setResult({ data, endpoint });
+        const data = await loadKeylessCatalog(signal);
+        if (!signal.aborted) {
+          setResult({ data });
         }
       } catch {
-        if (!controller.signal.aborted) {
+        if (!signal.aborted) {
           setResult({
-            endpoint,
-            error: "Check your connection and try again.",
+            error:
+              "The current catalog could not be confirmed. Check your connection and try again.",
           });
         }
       } finally {
-        if (!controller.signal.aborted) {
+        if (!signal.aborted) {
           setPending(false);
         }
       }
     };
+    const refreshVisible = () => {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    };
     void load();
-    return () => controller.abort();
-  }, [endpoint, attempt]);
-  const current =
-    endpoint && result?.endpoint === endpoint ? result : undefined;
-  const sample = sampleResponse(endpoint);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      controller?.abort();
+      document.removeEventListener("visibilitychange", refreshVisible);
+    };
+  }, [enabled, attempt]);
   return {
-    data: sample?.data ?? current?.data,
-    error: sample?.error ?? current?.error,
-    loading: !sample && Boolean(endpoint) && (pending || !current),
+    data: enabled ? result?.data : undefined,
+    error: enabled ? result?.error : undefined,
+    loading: enabled && (pending || !result),
     retry: () => setAttempt((value) => value + 1),
-    status: sample?.status ?? current?.status,
+  };
+};
+
+export const useCatalog = (
+  endpoint: string | null,
+  directory: ReturnType<typeof useKeylessDirectory>
+) => {
+  const sample = sampleResponse(endpoint);
+  const data =
+    endpoint && directory.data
+      ? selectCatalog(directory.data, endpoint)
+      : undefined;
+  const missing = Boolean(
+    endpoint &&
+    /\/display\/[^/]+\/[^/]+$/u.test(
+      new URL(endpoint, location.origin).pathname
+    ) &&
+    data &&
+    !data.release
+  );
+  return {
+    data: sample?.data ?? data,
+    error:
+      sample?.error ??
+      (missing
+        ? "This exact release is not in the current catalog."
+        : directory.error),
+    loading: !sample && Boolean(endpoint) && directory.loading,
+    retry: directory.retry,
+    status: sample?.status ?? (missing ? 404 : undefined),
   };
 };
 

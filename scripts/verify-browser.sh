@@ -69,5 +69,10 @@ else:
     raise SystemExit('Host did not become ready: '+text)
 PY
 )"
-MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/browser.mjs"
-MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/version-navigation.mjs"
+if [[ "${1:-}" == "--api-only" ]]; then
+  MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/legacy-api.mjs"
+else
+  # These v1 GUI assertions are historical, not current v3 browser acceptance.
+  MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/browser.mjs"
+  MARKETPLACE_TEST_URL="$server_url" node "$marketplace_root/plugins/web/tests/version-navigation.mjs"
+fi
