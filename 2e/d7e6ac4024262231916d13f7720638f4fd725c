@@ -1,0 +1,19 @@
+plugins/web/build.rs
+  s_7d146975368699::t_509e690b6e4e21 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ed7e6ac4024262231916d13f7720638f4fd725c",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
