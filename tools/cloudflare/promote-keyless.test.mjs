@@ -214,3 +214,23 @@ test("unconfirmed CAS is not blindly retried", async () => {
   await assert.rejects(promoteKeyless(config), /unconfirmed/);
   assert.equal(calls.filter((value) => value === "cas").length, 1);
 });
+
+test("revoked exact versions cannot be relisted", async () => {
+  const { config } = setup();
+  const first = fixture();
+  first.statuses[0] = {
+    ...first.statuses[0],
+    state: "revoked",
+    reason: "Security review",
+  };
+  config.catalogBytes = Buffer.from(JSON.stringify(first));
+  const receipt = await promoteKeyless(config);
+  config.expected = {
+    revision: receipt.revision,
+    catalog_digest: receipt.catalog_digest,
+  };
+  const next = fixture();
+  next.revision = 2;
+  config.catalogBytes = Buffer.from(JSON.stringify(next));
+  await assert.rejects(promoteKeyless(config), /Revocation is terminal/);
+});
