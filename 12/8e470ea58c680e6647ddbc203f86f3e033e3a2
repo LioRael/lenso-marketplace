@@ -1,0 +1,21 @@
+tools/cloudflare/README.md
+  s_7d146975368699::t_4f6367c1fdf266 1-9,165-176
+docs/keyless-catalog-migration.md
+  s_7d146975368699::t_4f6367c1fdf266 26,28-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "128e470ea58c680e6647ddbc203f86f3e033e3a2",
+  "prompts": {},
+  "sessions": {
+    "s_7d146975368699": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c54a-381f-7362-9b4d-95aea89e2437",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
