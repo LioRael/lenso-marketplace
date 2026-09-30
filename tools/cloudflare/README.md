@@ -1,4 +1,12 @@
-# Private publication promotion
+# Legacy Ed25519 publication promotion
+
+This guide preserves the historical Ed25519 operator adapters and tests. It is
+not the current production publishing procedure. The canonical service now uses
+the [keyless catalog path](../../docs/keyless-catalog-migration.md): GitHub OIDC
+and Sigstore provenance, a verified immutable catalog/bundle, and an atomic
+current head. Ordinary users do not keep signing private keys or schedule renewals.
+The legacy commands below remain available for historical verification; do not
+use them to replace the keyless current head or introduce new signing keys.
 
 `promotePublication` owns the Marketplace publication pointer transition. It
 receives primary D1 and R2 bindings from a protected operator composition. It
@@ -154,18 +162,18 @@ in errors. Transport failures remain uncertain until the promotion operation
 reconciles durable state. Exact successful pointer receipts are printed to stdout;
 a broken stdout does not roll back committed storage.
 
-The original production custody design used the `lenso-official` catalog and
-`marketplace.lenso.dev`. The live signer and publisher database are unavailable;
-do not reinitialize that catalog. New production publication must follow the
-[stable-domain trust-root cutover](../../docs/parallel-root-migration.md) with a
-distinct catalog, trust key, D1 and R2 while retaining the canonical Worker and
-hostname. `marketplace-v2.lenso.dev` is not a production alias. Once the new
-root has passed consumer acceptance, archive or retire the old storage
-resources explicitly; do not keep the old catalog as a compatibility service.
-A durable publisher database and backup/restore ownership must be wired before
-unattended renewal. An ephemeral Actions checkout is not the publisher database;
-this command alone does not configure or qualify an unattended workflow.
-Cloudflare account execution and consumer endpoint acceptance remain pending.
+The original `lenso-official` signer and publisher database were unavailable.
+The [stable-domain trust-root cutover](../../docs/parallel-root-migration.md)
+records the earlier Ed25519 migration, not today's publication requirements.
+The current keyless catalog retains `lenso-official-v2` and the canonical
+`marketplace.lenso.dev` hostname. `marketplace-v2.lenso.dev` is not a production
+alias. New catalog publication follows the fixed reviewed GitHub attestation
+workflow and protected keyless promotion adapter. It does not require an
+owner-held catalog signing key, a private signing database or periodic renewal.
+See the [keyless delivery receipts](../../docs/keyless-catalog-migration.md#delivery-receipts-and-pending-work)
+for completed production steps and outstanding consumer work. Historical storage
+or key cleanup is a separate explicitly authorized operation; this guide does
+not instruct operators to delete existing private inputs.
 
 Protocol references: [D1 query API](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/query/)
 and [R2 aws4fetch](https://developers.cloudflare.com/r2/examples/aws/aws4fetch/).

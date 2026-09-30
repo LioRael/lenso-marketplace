@@ -23,11 +23,14 @@ There is no new owner-held signing private key. Registry publication continues t
 
 The inspector's manual tool/root options remain an operator interface, not the normal adoption experience. Implemented paths are not a production cutover receipt. Managed verifier support currently covers macOS ARM64/x64 and Linux GNU ARM64/x64; unsupported platforms fail closed.
 
-## Remaining cutover gates
+## Delivery receipts and pending work
 
-1. Pass the exact candidate CI gates and land those exact commits.
-2. Retain the real attestation, exact catalog/bundle digests and source-SHA verification receipt; policy-only changes do not require signing new bytes.
-3. Publish the authorized necessary CLI versions and validate ordinary adoption of all four channels, including removal.
-4. Apply the D1 migration, deploy/promote at the canonical domain, and verify production consumers before retiring legacy signing and renewal machinery.
+Marketplace commit `2ed7e6ac4024262231916d13f7720638f4fd725c` passed its exact Foundation, Quality and Workers gates before landing. The production Worker version is `e90bfc3c-c69a-4077-950a-965125566ea3` at the unchanged canonical domain. The D1 migration and protected promotion established keyless revision 1. Its non-cached current head and exact immutable objects were read back after deployment.
+
+The real attestation binds source commit `bda1f4f56d299a6a5e09fe94f14cd685c36c539e` to the six-record catalog. The retained catalog digest is `sha256:cf96b4caf1fb0005f05bb9553427313ed112f543b66e49b2477003078ae8eb3d` (11,128 bytes); the bundle digest is `sha256:b1de046e5676593a4582c476acd98206d7511cc7573792b910069d080a3c0eb1` (11,463 bytes). Policy-only changes do not require signing new catalog bytes.
+
+Published `@lenso/cli@0.17.4` contains native CLI `0.6.4`. [Native AMD64 acceptance](https://github.com/LioRael/lenso-js/actions/runs/36654935991) passed at exact workflow commit `04a40669c46356323f0bad65cedd2752b046e52b`, subsequently landed: the public npm archive and native executable matched reviewed hashes, then normal `--marketplace` adoption previewed and copied `lenso.reference.knowledge-base-starter@0.1.0` with automatically managed verification. This receipt covers content-only adoption without executing copied content. It does not claim a new end-to-end runtime test of every channel; original channel qualification and typed consumer checks are separate evidence.
+
+Site's final build, production switch and production consumer readback remain pending. Do not describe the whole cutover as complete until those receipts exist. Ordinary adoption and the deployed Marketplace browser no longer depend on legacy weekly catalog expiry. No legacy signing renewal is required for the keyless current head.
 
 No automatic legacy signature renewal is introduced. Legacy guides and test flows remain labeled historical references. This code change does not delete legacy keys, private databases or trust checkpoints.
